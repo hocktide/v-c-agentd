@@ -1,0 +1,3 @@
+[submodule "lib/vcblockchain"]
+	path = lib/vcblockchain
+	url = git@github.com:VeloPayments/vcblockchain.git
