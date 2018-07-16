@@ -89,7 +89,7 @@ This must be an existing directory.
 The `listen` attribute specifies a domain name / IP address and port to which
 the agent listens for connections from peers.
 
-    listen 0.0.0.0 941
+    listen 0.0.0.0:941
 
 The `chroot` attribute specifies the location for the new root where child
 processes for the agent service will live.  The parent agent service acts as a
