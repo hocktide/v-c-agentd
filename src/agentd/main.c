@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <vpr/allocator/malloc_allocator.h>
+#include <vpr/parameters.h>
 
-int main(int argc, char* argv[])
+int main(int UNUSED(argc), char** UNUSED(argv))
 {
     allocator_options_t alloc_opts;
     malloc_allocator_options_init(&alloc_opts);
