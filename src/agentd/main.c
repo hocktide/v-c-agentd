@@ -1,3 +1,11 @@
+/**
+ * \file agentd/main.c
+ *
+ * \brief Main entry point for the Velo Blockchain Agent.
+ *
+ * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ */
+
 #include <stdio.h>
 #include <vpr/allocator/malloc_allocator.h>
 #include <vpr/parameters.h>
