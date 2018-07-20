@@ -99,7 +99,7 @@ usergroup {
     return USERGROUP;
 }
 
-\([.]\/\)?\([^./]+[^/]*\)\(\/[^./]+[^/]*\)+ {
+(([^./[:space:]][^/[:space:]]*)|[.])([/][^./[:space:]][^/[:space:]]*)+ {
     /* path token */
     yylval->string = strdup(yytext);
     return PATH;

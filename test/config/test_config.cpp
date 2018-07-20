@@ -301,6 +301,144 @@ TEST(config_test, rootblock_conf)
 }
 
 /**
+ * Test that a rootblock path can be parsed.
+ */
+TEST(config_test, rootblock_path_conf)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(
+        nullptr,
+        state = yy_scan_string("rootblock root/root.cert", scanner));
+    ASSERT_EQ(0, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+    /* there are no errors. */
+    ASSERT_EQ(0U, user_context.errors.size());
+
+    /* verify user config. */
+    ASSERT_NE(nullptr, user_context.config);
+    ASSERT_EQ(nullptr, user_context.config->logdir);
+    ASSERT_FALSE(user_context.config->loglevel_set);
+    ASSERT_EQ(0L, user_context.config->loglevel);
+    ASSERT_EQ(nullptr, user_context.config->secret);
+    ASSERT_STREQ("root/root.cert", user_context.config->rootblock);
+    ASSERT_EQ(nullptr, user_context.config->datastore);
+    ASSERT_EQ(nullptr, user_context.config->listen_head);
+    ASSERT_EQ(nullptr, user_context.config->chroot);
+    ASSERT_EQ(nullptr, user_context.config->usergroup);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
+ * Test that a rootblock dot path can be parsed.
+ */
+TEST(config_test, rootblock_dot_path_conf)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(
+        nullptr,
+        state = yy_scan_string("rootblock ./root/root.cert", scanner));
+    ASSERT_EQ(0, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+    /* there are no errors. */
+    ASSERT_EQ(0U, user_context.errors.size());
+
+    /* verify user config. */
+    ASSERT_NE(nullptr, user_context.config);
+    ASSERT_EQ(nullptr, user_context.config->logdir);
+    ASSERT_FALSE(user_context.config->loglevel_set);
+    ASSERT_EQ(0L, user_context.config->loglevel);
+    ASSERT_EQ(nullptr, user_context.config->secret);
+    ASSERT_STREQ("./root/root.cert", user_context.config->rootblock);
+    ASSERT_EQ(nullptr, user_context.config->datastore);
+    ASSERT_EQ(nullptr, user_context.config->listen_head);
+    ASSERT_EQ(nullptr, user_context.config->chroot);
+    ASSERT_EQ(nullptr, user_context.config->usergroup);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
+ * Test that relative paths starting with .. are not allowed.
+ */
+TEST(config_test, rootblock_no_dotdot)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(
+        nullptr,
+        state = yy_scan_string("rootblock ../root/root.cert", scanner));
+    ASSERT_EQ(1, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
+ * Test that no absolute paths are allowed in rootblock.
+ */
+TEST(config_test, rootblock_no_absolute)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(
+        nullptr,
+        state = yy_scan_string("rootblock /root/root.cert", scanner));
+    ASSERT_EQ(1, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
  * Test that the datastroe parameter adds data to the config.
  */
 TEST(config_test, datastore_config)
