@@ -28,7 +28,9 @@ int parse_commandline_options(
     MODEL_ASSERT(NULL != argv);
 
     optind = 0;
-    optreset = 1;
+#ifdef __OpenBSD__
+    optreset = 1; /* in OpenBSD, we must also specify optreset. */
+#endif
 
     while ((ch = getopt(argc, argv, "F")) != -1)
     {
