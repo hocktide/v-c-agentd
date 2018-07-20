@@ -6,14 +6,26 @@
  * \copyright 2018 Velo Payments, Inc.  All rights reserved.
  */
 
-#include <stdio.h>
+#include <agentd/commandline.h>
 #include <vpr/allocator/malloc_allocator.h>
-#include <vpr/parameters.h>
 
-int main(int UNUSED(argc), char** UNUSED(argv))
+int main(int argc, char** argv)
 {
-    allocator_options_t alloc_opts;
-    malloc_allocator_options_init(&alloc_opts);
-    dispose((disposable_t*)&alloc_opts);
-    return 0;
+    bootstrap_config_t bconf;
+    int retval = 0;
+
+    /* initialize bootstrap config. */
+    bootstrap_config_init(&bconf);
+
+    /* attempt to parse command-line options. */
+    retval = parse_commandline_options(&bconf, argc, argv);
+    if (0 != retval)
+    {
+        goto cleanup_bconf;
+    }
+
+cleanup_bconf:
+    dispose((disposable_t*)&bconf);
+
+    return retval;
 }
