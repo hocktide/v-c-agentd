@@ -11,6 +11,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <vpr/disposable.h>
 
 extern "C" {
 #include <config/agentd.tab.h>
@@ -24,9 +25,30 @@ using namespace std;
  */
 struct test_context
 {
+    disposable_t hdr;
     vector<string> errors;
     agent_config_t* config;
 };
+
+/**
+ * \brief Dispose a test context.
+ */
+static void test_context_dispose(void* disp)
+{
+    test_context* ctx = (test_context*)disp;
+
+    if (nullptr != ctx->config)
+        dispose((disposable_t*)ctx->config);
+}
+
+/**
+ * \brief Initialize a test_context structure.
+ */
+static void test_context_init(test_context* ctx)
+{
+    ctx->hdr.dispose = &test_context_dispose;
+    ctx->config = nullptr;
+}
 
 /**
  * \brief Simple error setting override.
@@ -58,7 +80,7 @@ TEST(config_test, empty_config)
     config_context_t context;
     test_context user_context;
 
-    user_context.config = nullptr;
+    test_context_init(&user_context);
 
     context.set_error = &set_error;
     context.val_callback = &config_callback;
@@ -84,6 +106,8 @@ TEST(config_test, empty_config)
     ASSERT_EQ(nullptr, user_context.config->listen_head);
     ASSERT_EQ(nullptr, user_context.config->chroot);
     ASSERT_EQ(nullptr, user_context.config->usergroup);
+
+    dispose((disposable_t*)&user_context);
 }
 
 /**
@@ -96,7 +120,7 @@ TEST(config_test, logdir_config)
     config_context_t context;
     test_context user_context;
 
-    user_context.config = nullptr;
+    test_context_init(&user_context);
 
     context.set_error = &set_error;
     context.val_callback = &config_callback;
@@ -122,6 +146,8 @@ TEST(config_test, logdir_config)
     ASSERT_EQ(nullptr, user_context.config->listen_head);
     ASSERT_EQ(nullptr, user_context.config->chroot);
     ASSERT_EQ(nullptr, user_context.config->usergroup);
+
+    dispose((disposable_t*)&user_context);
 }
 
 /**
@@ -134,7 +160,7 @@ TEST(config_test, loglevel_config)
     config_context_t context;
     test_context user_context;
 
-    user_context.config = nullptr;
+    test_context_init(&user_context);
 
     context.set_error = &set_error;
     context.val_callback = &config_callback;
@@ -160,6 +186,8 @@ TEST(config_test, loglevel_config)
     ASSERT_EQ(nullptr, user_context.config->listen_head);
     ASSERT_EQ(nullptr, user_context.config->chroot);
     ASSERT_EQ(nullptr, user_context.config->usergroup);
+
+    dispose((disposable_t*)&user_context);
 }
 
 /**
@@ -172,7 +200,7 @@ TEST(config_test, loglevel_bad_range)
     config_context_t context;
     test_context user_context;
 
-    user_context.config = nullptr;
+    test_context_init(&user_context);
 
     context.set_error = &set_error;
     context.val_callback = &config_callback;
@@ -186,6 +214,8 @@ TEST(config_test, loglevel_bad_range)
 
     /* there is one error. */
     ASSERT_EQ(1U, user_context.errors.size());
+
+    dispose((disposable_t*)&user_context);
 }
 
 /**
@@ -198,7 +228,7 @@ TEST(config_test, secret_config)
     config_context_t context;
     test_context user_context;
 
-    user_context.config = nullptr;
+    test_context_init(&user_context);
 
     context.set_error = &set_error;
     context.val_callback = &config_callback;
@@ -224,6 +254,8 @@ TEST(config_test, secret_config)
     ASSERT_EQ(nullptr, user_context.config->listen_head);
     ASSERT_EQ(nullptr, user_context.config->chroot);
     ASSERT_EQ(nullptr, user_context.config->usergroup);
+
+    dispose((disposable_t*)&user_context);
 }
 
 /**
@@ -236,7 +268,7 @@ TEST(config_test, rootblock_conf)
     config_context_t context;
     test_context user_context;
 
-    user_context.config = nullptr;
+    test_context_init(&user_context);
 
     context.set_error = &set_error;
     context.val_callback = &config_callback;
@@ -264,6 +296,8 @@ TEST(config_test, rootblock_conf)
     ASSERT_EQ(nullptr, user_context.config->listen_head);
     ASSERT_EQ(nullptr, user_context.config->chroot);
     ASSERT_EQ(nullptr, user_context.config->usergroup);
+
+    dispose((disposable_t*)&user_context);
 }
 
 /**
@@ -276,7 +310,7 @@ TEST(config_test, datastore_config)
     config_context_t context;
     test_context user_context;
 
-    user_context.config = nullptr;
+    test_context_init(&user_context);
 
     context.set_error = &set_error;
     context.val_callback = &config_callback;
@@ -302,6 +336,8 @@ TEST(config_test, datastore_config)
     ASSERT_EQ(nullptr, user_context.config->listen_head);
     ASSERT_EQ(nullptr, user_context.config->chroot);
     ASSERT_EQ(nullptr, user_context.config->usergroup);
+
+    dispose((disposable_t*)&user_context);
 }
 
 /**
@@ -314,7 +350,7 @@ TEST(config_test, listen_single)
     config_context_t context;
     test_context user_context;
 
-    user_context.config = nullptr;
+    test_context_init(&user_context);
 
     context.set_error = &set_error;
     context.val_callback = &config_callback;
@@ -345,6 +381,8 @@ TEST(config_test, listen_single)
     EXPECT_EQ(0UL, user_context.config->listen_head->addr->s_addr);
     EXPECT_EQ(1234, user_context.config->listen_head->port);
     ASSERT_EQ(nullptr, user_context.config->listen_head->hdr.next);
+
+    dispose((disposable_t*)&user_context);
 }
 
 /**
@@ -357,7 +395,7 @@ TEST(config_test, listen_double)
     config_context_t context;
     test_context user_context;
 
-    user_context.config = nullptr;
+    test_context_init(&user_context);
 
     context.set_error = &set_error;
     context.val_callback = &config_callback;
@@ -397,6 +435,8 @@ TEST(config_test, listen_double)
     ASSERT_NE(nullptr, listen);
     EXPECT_EQ(0UL, listen->addr->s_addr);
     EXPECT_EQ(1234, listen->port);
+
+    dispose((disposable_t*)&user_context);
 }
 
 /**
@@ -409,7 +449,7 @@ TEST(config_test, chroot_config)
     config_context_t context;
     test_context user_context;
 
-    user_context.config = nullptr;
+    test_context_init(&user_context);
 
     context.set_error = &set_error;
     context.val_callback = &config_callback;
@@ -435,6 +475,8 @@ TEST(config_test, chroot_config)
     ASSERT_EQ(nullptr, user_context.config->listen_head);
     ASSERT_STREQ("root", user_context.config->chroot);
     ASSERT_EQ(nullptr, user_context.config->usergroup);
+
+    dispose((disposable_t*)&user_context);
 }
 
 /**
@@ -447,7 +489,7 @@ TEST(config_test, usergroup_config)
     config_context_t context;
     test_context user_context;
 
-    user_context.config = nullptr;
+    test_context_init(&user_context);
 
     context.set_error = &set_error;
     context.val_callback = &config_callback;
@@ -475,4 +517,6 @@ TEST(config_test, usergroup_config)
     ASSERT_NE(nullptr, user_context.config->usergroup);
     ASSERT_STREQ("foo", user_context.config->usergroup->user);
     ASSERT_STREQ("bar", user_context.config->usergroup->group);
+
+    dispose((disposable_t*)&user_context);
 }

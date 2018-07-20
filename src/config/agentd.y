@@ -54,6 +54,7 @@ static config_user_group_t* create_user_group(
     config_context_t*, const char*, const char*);
 static config_listen_address_t* create_listen_address(
     config_context_t*, struct in_addr*, int64_t);
+static void config_dispose(void* disp);
 %}
 
 /* use the full pure API for Bison. */
@@ -207,6 +208,7 @@ static agent_config_t* new_config(config_context_t* context)
     }
 
     memset(ret, 0, sizeof(agent_config_t));
+    ret->hdr.dispose = &config_dispose;
 
     return ret;
 }
@@ -382,6 +384,41 @@ create_listen_address(
     listen->port = (in_port_t)port;
 
     return listen;
+}
+
+/**
+ * \brief dispose of a config structure.
+ */
+static void config_dispose(void* disp)
+{
+    agent_config_t* cfg = (agent_config_t*)disp;
+
+    if (NULL != cfg->logdir)
+        free((char*)cfg->logdir);
+    if (NULL != cfg->secret)
+        free((char*)cfg->secret);
+    if (NULL != cfg->rootblock)
+        free((char*)cfg->rootblock);
+    if (NULL != cfg->datastore)
+        free((char*)cfg->datastore);
+    if (NULL != cfg->chroot)
+        free((char*)cfg->chroot);
+
+    while (NULL != cfg->listen_head)
+    {
+        config_listen_address_t* tmp =
+            (config_listen_address_t*)cfg->listen_head->hdr.next;
+        free(cfg->listen_head->addr);
+        free(cfg->listen_head);
+        cfg->listen_head = tmp;
+    }
+
+    if (NULL != cfg->usergroup)
+    {
+        free((char*)cfg->usergroup->user);
+        free((char*)cfg->usergroup->group);
+        free(cfg->usergroup);
+    }
 }
 
 /**

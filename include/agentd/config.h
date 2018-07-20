@@ -17,6 +17,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <vpr/disposable.h>
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
@@ -57,6 +58,7 @@ typedef struct config_user_group
  */
 typedef struct agent_config
 {
+    disposable_t hdr;
     const char* logdir;
     bool loglevel_set;
     int64_t loglevel;
