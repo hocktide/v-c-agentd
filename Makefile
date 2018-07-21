@@ -154,14 +154,14 @@ $(HOST_CHECKED_EXE) : vcblockchain-build $(HOST_CHECKED_OBJECTS)
 	mkdir -p $(dir $@)
 	$(HOST_CHECKED_CC) -o $@ $(HOST_CHECKED_OBJECTS) \
 	    $(VCBLOCKCHAIN_HOST_RELEASE_LINK) \
-	    -L $(TOOLCHAIN_DIR)/host/lib -lfl -ly
+	    -L $(TOOLCHAIN_DIR)/host/lib -Wl,-Bstatic -lfl -ly -Wl,-Bdynamic
 
 #Host release executable
 $(HOST_RELEASE_EXE) : vcblockchain-build $(HOST_RELEASE_OBJECTS)
 	mkdir -p $(dir $@)
 	$(HOST_RELEASE_CC) -o $@ $(HOST_RELEASE_OBJECTS) \
 	    $(VCBLOCKCHAIN_HOST_RELEASE_LINK) \
-	    -L $(TOOLCHAIN_DIR)/host/lib -lfl -ly
+	    -L $(TOOLCHAIN_DIR)/host/lib -Wl,-Bstatic -lfl -ly -Wl,-Bdynamic
 
 #Google Test object
 $(GTEST_OBJ): $(GTEST_DIR)/src/gtest-all.cc
@@ -242,7 +242,7 @@ $(TESTAGENTD): vcblockchain-build $(HOST_CHECKED_OBJECTS) $(TEST_OBJECTS) $(GTES
 	    $(HOST_CHECKED_OBJECTS) $(GTEST_OBJ) -lpthread \
 	    -L $(TOOLCHAIN_DIR)/host/lib64 -lstdc++ \
 	    $(VCBLOCKCHAIN_HOST_RELEASE_LINK) \
-	    -L $(TOOLCHAIN_DIR)/host/lib -lfl -ly
+	    -L $(TOOLCHAIN_DIR)/host/lib -Wl,-Bstatic -lfl -ly -Wl,-Bdynamic
 
 model-check:
 	for n in $(MODEL_MAKEFILES); do \
