@@ -32,7 +32,7 @@ GTEST_OBJ=$(TEST_BUILD_DIR)/gtest-all.o
 #agentd source files
 SRCDIR=$(CURDIR)/src
 DIRS=$(SRCDIR) $(SRCDIR)/agentd $(SRCDIR)/bootstrap_config \
-    $(SRCDIR)/commandline $(SRCDIR)/config
+    $(SRCDIR)/command $(SRCDIR)/commandline $(SRCDIR)/config
 SOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.c))
 YACCSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.y))
 LEXSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.l))

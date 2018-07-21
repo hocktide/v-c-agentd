@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 #include <agentd/commandline.h>
+#include <agentd/command.h>
 #include <vpr/disposable.h>
 
 using namespace std;
@@ -111,6 +112,31 @@ TEST(parse_commandline_options_test, no_command_fails)
     ASSERT_NE(0,
         parse_commandline_options(
             &bconf, sizeof(args) / sizeof(char*), args));
+
+    dispose((disposable_t*)&bconf);
+}
+
+/**
+ * \brief The readconfig command is a valid command.
+ */
+TEST(parse_commandline_options_test, readconfig_command)
+{
+    bootstrap_config_t bconf;
+    char exename[] = { 'a', 'g', 'e', 'n', 't', 'd', 0 };
+    char cmd[] = { 'r', 'e', 'a', 'd', 'c', 'o', 'n', 'f', 'i', 'g', 0 };
+    char* args[] = { exename, cmd };
+
+    bootstrap_config_init(&bconf);
+
+    /* precondition: command should be NULL. */
+    ASSERT_EQ(nullptr, bconf.command);
+
+    ASSERT_EQ(0,
+        parse_commandline_options(
+            &bconf, sizeof(args) / sizeof(char*), args));
+
+    /* postcondition: command is set to command_readconfig. */
+    ASSERT_EQ(&command_readconfig, bconf.command);
 
     dispose((disposable_t*)&bconf);
 }
