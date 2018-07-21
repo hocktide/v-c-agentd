@@ -29,6 +29,19 @@ int main(int argc, char** argv)
     {
         retval = bconf.command(&bconf);
     }
+    else if (NULL != bconf.private_command)
+    {
+        /* we don't return here. */
+        bconf.private_command();
+
+        /* the compiler does not know this, so set a valid return value. */
+        retval = 0;
+    }
+    else
+    {
+        fprintf(stderr, "Invalid configuration state.\n");
+        retval = 1;
+    }
 
 cleanup_bconf:
     dispose((disposable_t*)&bconf);
