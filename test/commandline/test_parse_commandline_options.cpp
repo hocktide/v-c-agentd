@@ -62,6 +62,56 @@ TEST(parse_commandline_options_test, foreground_option)
 }
 
 /**
+ * \brief Parsing a -c config should set the config file name.
+ */
+TEST(parse_commandline_options_test, config_option_space)
+{
+    bootstrap_config_t bconf;
+    char exename[] = { 'a', 'g', 'e', 'n', 't', 'd', 0 };
+    char flags[] = { '-', 'c', 0 };
+    char config[] = { 'o', 't', 'h', 'e', 'r', '.', 'c', 'o', 'n', 'f', 0 };
+    char cmd[] = { 'h', 'e', 'l', 'p', 0 };
+    char* args[] = { exename, flags, config, cmd };
+
+    bootstrap_config_init(&bconf);
+
+    parse_commandline_options(
+        &bconf, sizeof(args) / sizeof(char*), args);
+
+    /* agentd has its config file overridden. */
+    EXPECT_STREQ("other.conf", bconf.config_file);
+    /* the help command is set. */
+    EXPECT_EQ(&command_help, bconf.command);
+
+    dispose((disposable_t*)&bconf);
+}
+
+/**
+ * \brief Parsing a -c config should set the config file name (no space).
+ */
+TEST(parse_commandline_options_test, config_option_no_space)
+{
+    bootstrap_config_t bconf;
+    char exename[] = { 'a', 'g', 'e', 'n', 't', 'd', 0 };
+    char flags[] = { '-', 'c', 'o', 't', 'h', 'e', 'r', '.', 'c', 'o', 'n',
+        'f', 0 };
+    char cmd[] = { 'h', 'e', 'l', 'p', 0 };
+    char* args[] = { exename, flags, cmd };
+
+    bootstrap_config_init(&bconf);
+
+    parse_commandline_options(
+        &bconf, sizeof(args) / sizeof(char*), args);
+
+    /* agentd has its config file overridden. */
+    EXPECT_STREQ("other.conf", bconf.config_file);
+    /* the help command is set. */
+    EXPECT_EQ(&command_help, bconf.command);
+
+    dispose((disposable_t*)&bconf);
+}
+
+/**
  * \brief Parsing an invalid options raises an error and prints usage.
  */
 TEST(parse_commandline_options_test, invalid_option)

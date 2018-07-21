@@ -33,12 +33,16 @@ void parse_commandline_options(
     optreset = 1; /* in OpenBSD, we must also specify optreset. */
 #endif
 
-    while ((ch = getopt(argc, argv, "F")) != -1)
+    while ((ch = getopt(argc, argv, "Fc:")) != -1)
     {
         switch (ch)
         {
             case 'F':
                 bootstrap_config_set_foreground(bconf, true);
+                break;
+
+            case 'c':
+                bootstrap_config_set_config_file(bconf, optarg);
                 break;
 
             default:
