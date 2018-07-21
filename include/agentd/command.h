@@ -33,6 +33,11 @@ extern "C" {
 int command_readconfig(struct bootstrap_config* bconf);
 
 /**
+ * \brief Read the config file from a stream.
+ */
+void private_command_readconfig();
+
+/**
  * \brief Print help information to standard output.
  *
  * \param bconf         The bootstrap configuration for this command.

@@ -197,3 +197,61 @@ TEST(parse_commandline_options_test, readconfig_command)
 
     dispose((disposable_t*)&bconf);
 }
+
+/**
+ * \brief The readconfig private command is a valid private command.
+ */
+TEST(parse_commandline_options_test, readconfig_private_command)
+{
+    bootstrap_config_t bconf;
+    char exename[] = { 'a', 'g', 'e', 'n', 't', 'd', 0 };
+    char flags[] = { '-', 'P', 0 };
+    char cmd[] = { 'r', 'e', 'a', 'd', 'c', 'o', 'n', 'f', 'i', 'g', 0 };
+    char* args[] = { exename, flags, cmd };
+
+    bootstrap_config_init(&bconf);
+
+    /* precondition: command should be NULL. */
+    ASSERT_EQ(nullptr, bconf.command);
+    /* precondition: private_command should be NULL. */
+    ASSERT_EQ(nullptr, bconf.private_command);
+
+    parse_commandline_options(
+        &bconf, sizeof(args) / sizeof(char*), args);
+
+    /* postcondition: command is set to NULL. */
+    ASSERT_EQ(nullptr, bconf.command);
+    /* postcondition: private command is set to private_command_readconfig. */
+    ASSERT_EQ(&private_command_readconfig, bconf.private_command);
+
+    dispose((disposable_t*)&bconf);
+}
+
+/**
+ * \brief An invalid private command calls error_usage.
+ */
+TEST(parse_commandline_options_test, readconfig_invalid_private_command)
+{
+    bootstrap_config_t bconf;
+    char exename[] = { 'a', 'g', 'e', 'n', 't', 'd', 0 };
+    char flags[] = { '-', 'P', 0 };
+    char cmd[] = { 'f', 'o', 'o', 0 };
+    char* args[] = { exename, flags, cmd };
+
+    bootstrap_config_init(&bconf);
+
+    /* precondition: command should be NULL. */
+    ASSERT_EQ(nullptr, bconf.command);
+    /* precondition: private_command should be NULL. */
+    ASSERT_EQ(nullptr, bconf.private_command);
+
+    parse_commandline_options(
+        &bconf, sizeof(args) / sizeof(char*), args);
+
+    /* postcondition: command is set to command_error_usage. */
+    ASSERT_EQ(&command_error_usage, bconf.command);
+    /* postcondition: private command is NULL. */
+    ASSERT_EQ(nullptr, bconf.private_command);
+
+    dispose((disposable_t*)&bconf);
+}

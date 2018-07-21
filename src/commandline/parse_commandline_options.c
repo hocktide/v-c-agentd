@@ -28,32 +28,47 @@ void parse_commandline_options(
     MODEL_ASSERT(1 <= argc);
     MODEL_ASSERT(NULL != argv);
 
+    /* reset the option indicator. */
     optind = 0;
 #ifdef __OpenBSD__
     optreset = 1; /* in OpenBSD, we must also specify optreset. */
 #endif
 
-    while ((ch = getopt(argc, argv, "Fc:")) != -1)
+    /* read through command-line options. */
+    while ((ch = getopt(argc, argv, "FP:c:")) != -1)
     {
         switch (ch)
         {
+            /* run the agent in the foreground. */
             case 'F':
                 bootstrap_config_set_foreground(bconf, true);
                 break;
 
+            /* run a private (privsep) command. */
+            case 'P':
+                commandline_dispatch_private_command(bconf, optarg);
+                break;
+
+            /* override the config file location. */
             case 'c':
                 bootstrap_config_set_config_file(bconf, optarg);
                 break;
 
+            /* unknown option. */
             default:
                 bootstrap_config_set_command(bconf, &command_error_usage);
                 return;
         }
     }
 
-    /* skip parsed options. */
-    argc -= optind;
-    argv += optind;
+    /* only dispatch a command if a private command has not been set, and an
+      * error command has not already been set. */
+    if (NULL == bconf->private_command && NULL == bconf->command)
+    {
+        /* skip parsed options. */
+        argc -= optind;
+        argv += optind;
 
-    commandline_dispatch_command(bconf, argc, argv);
+        commandline_dispatch_command(bconf, argc, argv);
+    }
 }

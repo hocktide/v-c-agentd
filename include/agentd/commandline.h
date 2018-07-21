@@ -52,6 +52,15 @@ int commandline_print_usage(FILE* out, int returncode);
 void commandline_dispatch_command(
     bootstrap_config_t* bconf, int argc, char** argv);
 
+/**
+ * \brief Dispatch a private command.
+ *
+ * \param bconf         The bootstrap config.
+ * \param command       The name of the command to dispatch.
+ */
+void commandline_dispatch_private_command(
+    bootstrap_config_t* bconf, const char* command);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
