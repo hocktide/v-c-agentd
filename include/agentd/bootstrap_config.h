@@ -55,6 +55,9 @@ typedef struct bootstrap_config
     /** \brief Private (privsep) command to execute. */
     bootstrap_config_private_command_t private_command;
 
+    /** \brief Config file location. */
+    const char* config_file;
+
 } bootstrap_config_t;
 
 /**
@@ -91,6 +94,17 @@ void bootstrap_config_set_command(
  */
 void bootstrap_config_set_private_command(
     bootstrap_config_t* bconf, bootstrap_config_private_command_t command);
+
+/**
+ * \brief Set the config file for agentd.  The string value is copied; the
+ * caller retains ownership of the original string, and the
+ * \ref bootstrap_config_t structure maintains its own copy.
+ *
+ * \param bconf         The bootstrap configuration data to update.
+ * \param config        The config file to read.
+ */
+void bootstrap_config_set_config_file(
+    bootstrap_config_t* bconf, const char* config_file);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

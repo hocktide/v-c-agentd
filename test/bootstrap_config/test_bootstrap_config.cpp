@@ -27,6 +27,8 @@ TEST(bootstrap_config_test, bootstrap_config_init)
     EXPECT_EQ(nullptr, bconf.command);
     /* by default, private_command is NULL. */
     EXPECT_EQ(nullptr, bconf.private_command);
+    /* by default, the config file is set to etc/agentd.conf. */
+    EXPECT_STREQ("etc/agentd.conf", bconf.config_file);
 
     dispose((disposable_t*)&bconf);
 }
@@ -92,6 +94,27 @@ TEST(bootstrap_config_test, bootstrap_config_set_private_command)
     /* Postcondition: private_command is set. */
     EXPECT_EQ(
         (bootstrap_config_private_command_t)0x1234, bconf.private_command);
+
+    dispose((disposable_t*)&bconf);
+}
+
+/**
+ * \brief bootstrap_config_set_config_file sets the config file.
+ */
+TEST(bootstrap_config_test, bootstrap_config_set_config_file)
+{
+    bootstrap_config_t bconf;
+
+    bootstrap_config_init(&bconf);
+
+    /* Precondition: config file is set to the default name. */
+    ASSERT_STREQ("etc/agentd.conf", bconf.config_file);
+
+    /* Change the config file location. */
+    bootstrap_config_set_config_file(&bconf, "etc/awesome_agentd.conf");
+
+    /* Postcondition: foreground is true. */
+    EXPECT_STREQ("etc/awesome_agentd.conf", bconf.config_file);
 
     dispose((disposable_t*)&bconf);
 }

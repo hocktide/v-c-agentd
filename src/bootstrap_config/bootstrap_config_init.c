@@ -22,9 +22,14 @@ void bootstrap_config_init(bootstrap_config_t* bconf)
 {
     MODEL_ASSERT(NULL != bconf);
 
+    /* clear out the config structure. */
     memset(bconf, 0, sizeof(bootstrap_config_t));
 
+    /* set our dispose method. */
     bconf->hdr.dispose = &bootstrap_config_dispose;
+
+    /* by default, the config file is located in etc/agentd.config. */
+    bconf->config_file = strdup("etc/agentd.conf");
 }
 
 /**
@@ -36,5 +41,9 @@ static void bootstrap_config_dispose(void* disp)
 {
     bootstrap_config_t* bconf = (bootstrap_config_t*)disp;
     MODEL_ASSERT(NULL != bconf);
-    (void)bconf;
+    MODEL_ASSERT(NULL != bconf->config_file);
+
+    /* if the config_file is set, free it. */
+    if (NULL != bconf->config_file)
+        free((char*)bconf->config_file);
 }
