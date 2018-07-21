@@ -32,6 +32,8 @@ TEST(parse_commandline_options_test, empty_arguments)
 
     /* by default, agentd runs as a daemon. */
     EXPECT_FALSE(bconf.foreground);
+    /* the help command is set. */
+    EXPECT_EQ(&command_help, bconf.command);
 
     dispose((disposable_t*)&bconf);
 }
@@ -55,6 +57,8 @@ TEST(parse_commandline_options_test, foreground_option)
 
     /* agentd has been set to run in the foreground. */
     EXPECT_TRUE(bconf.foreground);
+    /* the help command is set. */
+    EXPECT_EQ(&command_help, bconf.command);
 
     dispose((disposable_t*)&bconf);
 }

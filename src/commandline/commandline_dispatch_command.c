@@ -37,8 +37,8 @@ int commandline_dispatch_command(
     /* help command. */
     if (!strcmp(argv[0], "help"))
     {
-        /* TODO - set a command instead of executing it. */
-        return commandline_print_usage(stdout, 0);
+        bootstrap_config_set_command(bconf, &command_help);
+        return 0;
     }
     /* readconfig command. */
     else if (!strcmp(argv[0], "readconfig"))

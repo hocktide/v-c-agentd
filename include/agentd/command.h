@@ -32,6 +32,15 @@ extern "C" {
  */
 int command_readconfig(struct bootstrap_config* bconf);
 
+/**
+ * \brief Print help information to standard output.
+ *
+ * \param bconf         The bootstrap configuration for this command.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int command_help(struct bootstrap_config* bconf);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

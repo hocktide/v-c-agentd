@@ -21,8 +21,11 @@ int commandline_print_usage(FILE* out, int returncode)
 
     fprintf(out, "Usage: agentd [-F] command\n\n");
     fprintf(out, "Where:\n");
-    fprintf(out, "\t\t-F   \tRun in foreground (non-daemon mode).\n");
+    fprintf(out, "\t\t-F         \tRun in foreground (non-daemon mode).\n");
     fprintf(out, "\n");
+    fprintf(out, "supported commands:\n");
+    fprintf(out, "\t\thelp       \tPrint this help info.\n");
+    fprintf(out, "\t\treadconfig \tRead the config file and display settings.\n");
 
     return returncode;
 }

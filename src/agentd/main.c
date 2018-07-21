@@ -24,6 +24,12 @@ int main(int argc, char** argv)
         goto cleanup_bconf;
     }
 
+    /* do we have a command to execute? */
+    if (NULL != bconf.command)
+    {
+        retval = bconf.command(&bconf);
+    }
+
 cleanup_bconf:
     dispose((disposable_t*)&bconf);
 
