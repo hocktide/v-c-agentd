@@ -26,9 +26,8 @@ TEST(parse_commandline_options_test, empty_arguments)
 
     bootstrap_config_init(&bconf);
 
-    ASSERT_EQ(0,
-        parse_commandline_options(
-            &bconf, sizeof(empty_args) / sizeof(char*), empty_args));
+    parse_commandline_options(
+        &bconf, sizeof(empty_args) / sizeof(char*), empty_args);
 
     /* by default, agentd runs as a daemon. */
     EXPECT_FALSE(bconf.foreground);
@@ -51,9 +50,8 @@ TEST(parse_commandline_options_test, foreground_option)
 
     bootstrap_config_init(&bconf);
 
-    ASSERT_EQ(0,
-        parse_commandline_options(
-            &bconf, sizeof(args) / sizeof(char*), args));
+    parse_commandline_options(
+        &bconf, sizeof(args) / sizeof(char*), args);
 
     /* agentd has been set to run in the foreground. */
     EXPECT_TRUE(bconf.foreground);
@@ -76,9 +74,11 @@ TEST(parse_commandline_options_test, invalid_option)
 
     bootstrap_config_init(&bconf);
 
-    ASSERT_NE(0,
-        parse_commandline_options(
-            &bconf, sizeof(args) / sizeof(char*), args));
+    parse_commandline_options(
+        &bconf, sizeof(args) / sizeof(char*), args);
+
+    /* the error_usage command is set. */
+    EXPECT_EQ(&command_error_usage, bconf.command);
 
     dispose((disposable_t*)&bconf);
 }
@@ -95,9 +95,11 @@ TEST(parse_commandline_options_test, invalid_command)
 
     bootstrap_config_init(&bconf);
 
-    ASSERT_NE(0,
-        parse_commandline_options(
-            &bconf, sizeof(args) / sizeof(char*), args));
+    parse_commandline_options(
+        &bconf, sizeof(args) / sizeof(char*), args);
+
+    /* the error_usage command is set. */
+    EXPECT_EQ(&command_error_usage, bconf.command);
 
     dispose((disposable_t*)&bconf);
 }
@@ -113,9 +115,11 @@ TEST(parse_commandline_options_test, no_command_fails)
 
     bootstrap_config_init(&bconf);
 
-    ASSERT_NE(0,
-        parse_commandline_options(
-            &bconf, sizeof(args) / sizeof(char*), args));
+    parse_commandline_options(
+        &bconf, sizeof(args) / sizeof(char*), args);
+
+    /* the error_usage command is set. */
+    EXPECT_EQ(&command_error_usage, bconf.command);
 
     dispose((disposable_t*)&bconf);
 }
@@ -135,9 +139,8 @@ TEST(parse_commandline_options_test, readconfig_command)
     /* precondition: command should be NULL. */
     ASSERT_EQ(nullptr, bconf.command);
 
-    ASSERT_EQ(0,
-        parse_commandline_options(
-            &bconf, sizeof(args) / sizeof(char*), args));
+    parse_commandline_options(
+        &bconf, sizeof(args) / sizeof(char*), args);
 
     /* postcondition: command is set to command_readconfig. */
     ASSERT_EQ(&command_readconfig, bconf.command);

@@ -18,10 +18,8 @@
  * \param bconf         The bootstrap config.
  * \param argc          The number of command arguments.
  * \param argv          The command argument vector.
- *
- * \returns 0 on success and non-zero on failure.
  */
-int commandline_dispatch_command(
+void commandline_dispatch_command(
     bootstrap_config_t* bconf, int argc, char** argv)
 {
     MODEL_ASSERT(NULL != bconf);
@@ -31,25 +29,22 @@ int commandline_dispatch_command(
     /* verify that we have at least one argument. */
     if (argc < 1)
     {
-        return 1;
+        fprintf(stderr, "Expecting command.\n\n");
+        bootstrap_config_set_command(bconf, &command_error_usage);
     }
-
     /* help command. */
-    if (!strcmp(argv[0], "help"))
+    else if (!strcmp(argv[0], "help"))
     {
         bootstrap_config_set_command(bconf, &command_help);
-        return 0;
     }
     /* readconfig command. */
     else if (!strcmp(argv[0], "readconfig"))
     {
         bootstrap_config_set_command(bconf, &command_readconfig);
-        return 0;
     }
     else
     {
-        fprintf(stderr, "Unknown command '%s'.\n", argv[0]);
-
-        return commandline_print_usage(stderr, 1);
+        fprintf(stderr, "Unknown command '%s'.\n\n", argv[0]);
+        bootstrap_config_set_command(bconf, &command_error_usage);
     }
 }

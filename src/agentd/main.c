@@ -17,16 +17,13 @@ int main(int argc, char** argv)
     /* initialize bootstrap config. */
     bootstrap_config_init(&bconf);
 
-    /* attempt to parse command-line options. */
-    retval = parse_commandline_options(&bconf, argc, argv);
-    if (0 != retval)
-    {
-        goto cleanup_bconf;
-    }
+    /* parse command-line options. */
+    parse_commandline_options(&bconf, argc, argv);
 
     /* do we have a command to execute? */
     if (NULL != bconf.command)
     {
+        /* execute the command. */
         retval = bconf.command(&bconf);
     }
     else if (NULL != bconf.private_command)
@@ -39,11 +36,12 @@ int main(int argc, char** argv)
     }
     else
     {
+        /* this should not happen. */
         fprintf(stderr, "Invalid configuration state.\n");
         retval = 1;
     }
 
-cleanup_bconf:
+    /* clean up bootstrap config. */
     dispose((disposable_t*)&bconf);
 
     return retval;

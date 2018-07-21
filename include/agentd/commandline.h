@@ -28,10 +28,9 @@ extern "C" {
  * \param bconf         The bootstrap config to update with these options.
  * \param argc          The number of arguments to parse.
  * \param argv          An array of command-line arguments.
- *
- * \returns 0 on success and non-zero on failure.
  */
-int parse_commandline_options(bootstrap_config_t* bconf, int argc, char** argv);
+void parse_commandline_options(
+    bootstrap_config_t* bconf, int argc, char** argv);
 
 /**
  * \brief Print usage and return the given response code.
@@ -49,10 +48,8 @@ int commandline_print_usage(FILE* out, int returncode);
  * \param bconf         The bootstrap config.
  * \param argc          The number of command arguments.
  * \param argv          The command argument vector.
- *
- * \returns 0 on success and non-zero on failure.
  */
-int commandline_dispatch_command(
+void commandline_dispatch_command(
     bootstrap_config_t* bconf, int argc, char** argv);
 
 /* make this header C++ friendly. */

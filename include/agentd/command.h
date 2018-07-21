@@ -41,6 +41,15 @@ int command_readconfig(struct bootstrap_config* bconf);
  */
 int command_help(struct bootstrap_config* bconf);
 
+/**
+ * \brief Print help information to standard error and exit with an error code.
+ *
+ * \param bconf         The bootstrap configuration for this command.
+ *
+ * \returns non-zero error code.
+ */
+int command_error_usage(struct bootstrap_config* bconf);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
