@@ -127,6 +127,7 @@ TEST_CXXFLAGS=$(HOST_RELEASE_CXXFLAGS) $(COMMON_INCLUDES) -I $(GTEST_DIR) \
 
 .PHONY: ALL clean vcblockchain-build vcblockchain-test vcblockchain-clean
 .PHONY: agentd-build host.exe.release host.exe.checked test test.agentd
+.PHONY: install agentd-install
 
 MODEL_MAKEFILES?= \
 	$(foreach file,\
@@ -135,6 +136,21 @@ MODEL_MAKEFILES?= \
 ALL: agentd-build
 
 test: vcblockchain-test test.agentd
+
+install: agentd-install
+
+agentd-install: ALL
+	@if [ "${PREFIX}" == "" ]; then echo "PREFIX must be set for install."; exit 1; fi
+	mkdir -p ${PREFIX}/bin ${PREFIX}/lib ${PREFIX}/etc ${PREFIX}/data
+	install ${HOST_RELEASE_EXE} ${PREFIX}/bin
+	ldd ${HOST_RELEASE_EXE} | egrep "[.]so" | grep -v ld.so \
+	    | sed 's/(.*)//; s/\(.*\)=>/\1/' \
+	    | awk '{ print $$NF }' \
+	    | xargs -I instfile install instfile ${PREFIX}/lib
+	if [ -f /usr/libexec/ld.so ]; then \
+	    mkdir -p ${PREFIX}/usr/libexec; \
+	    install /usr/libexec/ld.so ${PREFIX}/usr/libexec; \
+	fi
 
 test.agentd: vcblockchain-build $(TEST_DIRS) host.exe.checked $(TESTAGENTD)
 	LD_LIBRARY_PATH=$(TOOLCHAIN_DIR)/host/lib:$(TOOLCHAIN_DIR)/host/lib64:$(LD_LIBRARY_PATH) $(TESTAGENTD)
