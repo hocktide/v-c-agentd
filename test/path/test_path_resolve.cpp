@@ -34,9 +34,9 @@ TEST(path_resolve, simple_path)
 {
     char* resolved = nullptr;
 
-    ASSERT_EQ(0, path_resolve("bash", "/bin", &resolved));
+    ASSERT_EQ(0, path_resolve("cat", "/bin", &resolved));
 
-    EXPECT_STREQ("/bin/bash", resolved);
+    EXPECT_STREQ("/bin/cat", resolved);
 
     free(resolved);
 }
@@ -59,9 +59,9 @@ TEST(path_resolve, multi_path)
     char* resolved = nullptr;
 
     ASSERT_EQ(0,
-        path_resolve("bash", "/etasuetheoasu:/teasuthoseu:/bin", &resolved));
+        path_resolve("cat", "/etasuetheoasu:/teasuthoseu:/bin", &resolved));
 
-    EXPECT_STREQ("/bin/bash", resolved);
+    EXPECT_STREQ("/bin/cat", resolved);
 
     free(resolved);
 }
@@ -96,9 +96,9 @@ TEST(path_resolve, canonical_absolute_path)
 {
     char* resolved = nullptr;
 
-    ASSERT_EQ(0, path_resolve("/bin//bash", "", &resolved));
+    ASSERT_EQ(0, path_resolve("/bin//cat", "", &resolved));
 
-    EXPECT_STREQ("/bin/bash", resolved);
+    EXPECT_STREQ("/bin/cat", resolved);
 
     free(resolved);
 }
@@ -111,7 +111,7 @@ TEST(path_resolve, canonical_relative_path_fail)
 {
     char* resolved = nullptr;
 
-    ASSERT_NE(0, path_resolve("./bin//bash", "", &resolved));
+    ASSERT_NE(0, path_resolve("./bin//cat", "", &resolved));
 }
 
 /**
