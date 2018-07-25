@@ -28,6 +28,22 @@ extern "C" {
  */
 int path_append_default(const char* path, char** outpath);
 
+/**
+ * \brief Given a filename and a path, attempt to resolve the filename using
+ * this path.
+ *
+ * On success, resolved is updated to the resolved filename.  This value is
+ * owned by the caller and must be free()d when no longer needed.
+ *
+ * \param filename          The filename to resolve.
+ * \param path              A colon separated list of path values.
+ * \param resolved          The character pointer that this parameter points to
+ *                          is updated to the resolved path on success.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int path_resolve(const char* filename, const char* path, char** resolved);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
