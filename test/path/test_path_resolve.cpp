@@ -10,6 +10,7 @@
 #include <agentd/commandline.h>
 #include <agentd/command.h>
 #include <agentd/path.h>
+#include <limits.h>
 #include <string>
 #include <vpr/disposable.h>
 
@@ -33,9 +34,9 @@ TEST(path_resolve, simple_path)
 {
     char* resolved = nullptr;
 
-    ASSERT_EQ(0, path_resolve("sh", "/bin", &resolved));
+    ASSERT_EQ(0, path_resolve("bash", "/bin", &resolved));
 
-    EXPECT_STREQ("/bin/sh", resolved);
+    EXPECT_STREQ("/bin/bash", resolved);
 
     free(resolved);
 }
@@ -58,9 +59,9 @@ TEST(path_resolve, multi_path)
     char* resolved = nullptr;
 
     ASSERT_EQ(0,
-        path_resolve("sh", "/etasuetheoasu:/teasuthoseu:/bin", &resolved));
+        path_resolve("bash", "/etasuetheoasu:/teasuthoseu:/bin", &resolved));
 
-    EXPECT_STREQ("/bin/sh", resolved);
+    EXPECT_STREQ("/bin/bash", resolved);
 
     free(resolved);
 }
@@ -95,9 +96,9 @@ TEST(path_resolve, canonical_absolute_path)
 {
     char* resolved = nullptr;
 
-    ASSERT_EQ(0, path_resolve("/bin//sh", "", &resolved));
+    ASSERT_EQ(0, path_resolve("/bin//bash", "", &resolved));
 
-    EXPECT_STREQ("/bin/sh", resolved);
+    EXPECT_STREQ("/bin/bash", resolved);
 
     free(resolved);
 }
@@ -110,7 +111,7 @@ TEST(path_resolve, canonical_relative_path_fail)
 {
     char* resolved = nullptr;
 
-    ASSERT_NE(0, path_resolve("./bin//sh", "", &resolved));
+    ASSERT_NE(0, path_resolve("./bin//bash", "", &resolved));
 }
 
 /**
@@ -120,7 +121,7 @@ TEST(path_resolve, canonical_relative_path_fail)
 TEST(path_resolve, canonical_relative_path)
 {
     char* resolved = nullptr;
-    char* pwd = getwd(nullptr);
+    char* pwd = getcwd(nullptr, PATH_MAX);
     string expected_resolved = string(pwd) + "/build/host/checked/bin/agentd";
 
     ASSERT_EQ(0,
