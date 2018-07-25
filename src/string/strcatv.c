@@ -46,7 +46,7 @@ char* strcatv(const char* string1, ...)
     char* outstr = (char*)malloc(size);
     if (NULL == outstr)
     {
-        return NULL;
+        goto done;
     }
 
     /* copy all strings into this string. */
@@ -61,6 +61,10 @@ char* strcatv(const char* string1, ...)
     }
 
     outstr[offset] = 0;
+
+done:
+    va_end(count_list);
+    va_end(str_list);
 
     return outstr;
 }
