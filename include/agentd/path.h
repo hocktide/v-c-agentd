@@ -44,6 +44,20 @@ int path_append_default(const char* path, char** outpath);
  */
 int path_resolve(const char* filename, const char* path, char** resolved);
 
+/**
+ * \brief Given a pathname, return the directory portion of this pathname.
+ *
+ * On success, dirname is updated to the directory portion of the filename.
+ * This value is owned by the caller and must be free()d when no longer needed.
+ *
+ * \param filename          The filename to resolve.
+ * \param dirname           The character pointer that this parameter points to
+ *                          is updated to the directory name on success.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int path_dirname(const char* filename, char** dirname);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
