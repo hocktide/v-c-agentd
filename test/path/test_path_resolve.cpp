@@ -33,10 +33,11 @@ TEST(path_resolve, empty_path_no_local)
 TEST(path_resolve, simple_path)
 {
     char* resolved = nullptr;
+    const char* CATLOC = getenv("TEST_BIN");
 
     ASSERT_EQ(0, path_resolve("cat", "/bin", &resolved));
 
-    EXPECT_STREQ("/bin/cat", resolved);
+    EXPECT_STREQ(CATLOC, resolved);
 
     free(resolved);
 }
@@ -57,11 +58,12 @@ TEST(path_resolve, simple_path_non_existent_binary)
 TEST(path_resolve, multi_path)
 {
     char* resolved = nullptr;
+    const char* CATLOC = getenv("TEST_BIN");
 
     ASSERT_EQ(0,
         path_resolve("cat", "/etasuetheoasu:/teasuthoseu:/bin", &resolved));
 
-    EXPECT_STREQ("/bin/cat", resolved);
+    EXPECT_STREQ(CATLOC, resolved);
 
     free(resolved);
 }
@@ -95,10 +97,11 @@ TEST(path_resolve, nonexistent_absolute_path)
 TEST(path_resolve, canonical_absolute_path)
 {
     char* resolved = nullptr;
+    const char* CATLOC = getenv("TEST_BIN");
 
     ASSERT_EQ(0, path_resolve("/bin//cat", "", &resolved));
 
-    EXPECT_STREQ("/bin/cat", resolved);
+    EXPECT_STREQ(CATLOC, resolved);
 
     free(resolved);
 }
