@@ -28,4 +28,5 @@ void bootstrap_config_set_config_file(
         free((char*)bconf->config_file);
 
     bconf->config_file = strdup(config_file);
+    bconf->config_file_override = true;
 }

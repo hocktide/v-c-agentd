@@ -29,6 +29,8 @@ TEST(bootstrap_config_test, bootstrap_config_init)
     EXPECT_EQ(nullptr, bconf.private_command);
     /* by default, the config file is set to etc/agentd.conf. */
     EXPECT_STREQ("etc/agentd.conf", bconf.config_file);
+    /* by default, config_file_override is false. */
+    EXPECT_FALSE(bconf.config_file_override);
 
     dispose((disposable_t*)&bconf);
 }
@@ -109,12 +111,16 @@ TEST(bootstrap_config_test, bootstrap_config_set_config_file)
 
     /* Precondition: config file is set to the default name. */
     ASSERT_STREQ("etc/agentd.conf", bconf.config_file);
+    /* Precondition: config file override is false. */
+    ASSERT_FALSE(bconf.config_file_override);
 
     /* Change the config file location. */
     bootstrap_config_set_config_file(&bconf, "etc/awesome_agentd.conf");
 
-    /* Postcondition: foreground is true. */
+    /* Postcondition: config file is updated. */
     EXPECT_STREQ("etc/awesome_agentd.conf", bconf.config_file);
+    /* Postcondition: config file override is true. */
+    EXPECT_TRUE(bconf.config_file_override);
 
     dispose((disposable_t*)&bconf);
 }

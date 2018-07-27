@@ -57,6 +57,7 @@ typedef struct bootstrap_config
 
     /** \brief Config file location. */
     const char* config_file;
+    bool config_file_override;
 
     /** \brief Absolute location of the binary. */
     const char* binary;
