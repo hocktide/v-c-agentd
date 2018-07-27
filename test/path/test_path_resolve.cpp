@@ -25,6 +25,8 @@ TEST(path_resolve, empty_path_no_local)
     char* resolved = nullptr;
 
     ASSERT_NE(0, path_resolve("foosh", "", &resolved));
+
+    EXPECT_EQ(nullptr, resolved);
 }
 
 /**
@@ -50,6 +52,8 @@ TEST(path_resolve, simple_path_non_existent_binary)
     char* resolved = nullptr;
 
     ASSERT_NE(0, path_resolve("foosh", "/bin", &resolved));
+
+    EXPECT_EQ(nullptr, resolved);
 }
 
 /**
@@ -77,6 +81,8 @@ TEST(path_resolve, multi_path_non_existent_binary)
 
     ASSERT_NE(0,
         path_resolve("foosh", "/etasuetheoasu:/teasuthoseu:/bin", &resolved));
+
+    EXPECT_EQ(nullptr, resolved);
 }
 
 /**
@@ -88,6 +94,8 @@ TEST(path_resolve, nonexistent_absolute_path)
     char* resolved = nullptr;
 
     ASSERT_NE(0, path_resolve("/bin/fooshsthsthsth", "", &resolved));
+
+    EXPECT_EQ(nullptr, resolved);
 }
 
 /**
@@ -115,6 +123,8 @@ TEST(path_resolve, canonical_relative_path_fail)
     char* resolved = nullptr;
 
     ASSERT_NE(0, path_resolve("./bin//cat", "", &resolved));
+
+    EXPECT_EQ(nullptr, resolved);
 }
 
 /**

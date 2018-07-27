@@ -132,6 +132,7 @@ static int valid_executable(const char* filename, char** fullpath)
     if (0 != access(*fullpath, X_OK))
     {
         free(*fullpath);
+        *fullpath = NULL;
         return 1;
     }
 
