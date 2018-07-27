@@ -100,6 +100,22 @@ TEST(path_dirname, multi_subdir)
 }
 
 /**
+ * An absolute directory is properly extracted.
+ */
+TEST(path_dirname, multi_subdir_absolute)
+{
+    char* dir;
+
+    /* path_dirname should succeed. */
+    ASSERT_EQ(0, path_dirname("/build/host/checked/src/path/foo.txt", &dir));
+
+    /* the dirname string matches what we expect. */
+    EXPECT_STREQ("/build/host/checked/src/path", dir);
+
+    free(dir);
+}
+
+/**
  * A filename relative to the current directory is properly handled.
  */
 TEST(path_dirname, explicit_curdir)

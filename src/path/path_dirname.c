@@ -91,6 +91,16 @@ int path_dirname(const char* filename, char** dirname)
                 }
                 else
                 {
+                    /* this is the first run.  If the filename is absolute, copy
+                     * a slash to the beginning of dirname.
+                     */
+                    if ('/' == filename[0])
+                    {
+                        strncat(*dirname, "/", pathrem);
+                        pathrem -= 1;
+                    }
+
+                    /* set the directory separator. */
                     dirsep = "/";
                 }
 
