@@ -118,3 +118,44 @@ TEST(bootstrap_config_test, bootstrap_config_set_config_file)
 
     dispose((disposable_t*)&bconf);
 }
+
+/**
+ * \brief bootstrap_config_set_binary sets the absolute location of the binary
+ * provided.
+ */
+TEST(bootstrap_config_test, bootstrap_config_set_binary)
+{
+    bootstrap_config_t bconf;
+    const char* CATLOC = getenv("TEST_BIN");
+
+    bootstrap_config_init(&bconf);
+
+    /* Precondition: binary name is null by default. */
+    ASSERT_EQ(NULL, bconf.binary);
+
+    /* Set the binary name. */
+    ASSERT_EQ(0, bootstrap_config_set_binary(&bconf, "cat"));
+
+    /* Postcondition: binary name is correct. */
+    EXPECT_STREQ(CATLOC, bconf.binary);
+
+    dispose((disposable_t*)&bconf);
+}
+
+/**
+ * \brief bootstrap_config_set_binary fails if the binary can't be found.
+ */
+TEST(bootstrap_config_test, bootstrap_config_set_binary_bad_binary)
+{
+    bootstrap_config_t bconf;
+
+    bootstrap_config_init(&bconf);
+
+    /* Precondition: binary name is null by default. */
+    ASSERT_EQ(NULL, bconf.binary);
+
+    /* Set the binary name. */
+    ASSERT_NE(0, bootstrap_config_set_binary(&bconf, "esathualceuhalrou"));
+
+    dispose((disposable_t*)&bconf);
+}

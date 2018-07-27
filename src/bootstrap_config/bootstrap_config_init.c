@@ -46,4 +46,8 @@ static void bootstrap_config_dispose(void* disp)
     /* if the config_file is set, free it. */
     if (NULL != bconf->config_file)
         free((char*)bconf->config_file);
+
+    /* if the binary is set, free it. */
+    if (NULL != bconf->binary)
+        free((char*)bconf->binary);
 }

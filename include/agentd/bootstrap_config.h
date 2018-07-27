@@ -58,6 +58,9 @@ typedef struct bootstrap_config
     /** \brief Config file location. */
     const char* config_file;
 
+    /** \brief Absolute location of the binary. */
+    const char* binary;
+
 } bootstrap_config_t;
 
 /**
@@ -105,6 +108,22 @@ void bootstrap_config_set_private_command(
  */
 void bootstrap_config_set_config_file(
     bootstrap_config_t* bconf, const char* config_file);
+
+/**
+ * \brief Set the binary name for agentd.
+ *
+ * The string value provided, typically as argv[0], is canonicalized and used as
+ * the basis of the real path to this binary.  On success, the binary name is
+ * updated.  On failure, this method returns a non-zero status.  The caller
+ * retains ownership of the bname parameter; this method makes an internal copy
+ * of the canonical name, which is freed when this bootstrap config structure is
+ * dispose()d.
+ *
+ * \param bconf         The bootstrap configuration data to update.
+ * \param bname         The name of the binary to be canonicalized and set.
+ */
+int bootstrap_config_set_binary(
+    bootstrap_config_t* bconf, const char* bname);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
