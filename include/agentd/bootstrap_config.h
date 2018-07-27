@@ -61,6 +61,8 @@ typedef struct bootstrap_config
     /** \brief Absolute location of the binary. */
     const char* binary;
 
+    /** \brief Prefix directory. */
+    const char* prefix_dir;
 } bootstrap_config_t;
 
 /**
@@ -124,6 +126,19 @@ void bootstrap_config_set_config_file(
  */
 int bootstrap_config_set_binary(
     bootstrap_config_t* bconf, const char* bname);
+
+/**
+ * \brief Resolve the prefix directory using the binary name.
+ *
+ * This method can only be called after \ref bootstrap_config_set_binary() was
+ * called and returned a successful status code.  This method sets the prefix
+ * directory based on the binary name.  This prefix directory is used for
+ * creating a temporary \ref chroot() so the config file can be read.
+ *
+ * \param bconf         The bootstrap configuration data to update.
+ */
+int bootstrap_config_resolve_prefix_dir(
+    bootstrap_config_t* bconf);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

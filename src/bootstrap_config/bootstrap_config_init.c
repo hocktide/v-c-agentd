@@ -50,4 +50,8 @@ static void bootstrap_config_dispose(void* disp)
     /* if the binary is set, free it. */
     if (NULL != bconf->binary)
         free((char*)bconf->binary);
+
+    /* if the prefix directory is set, free it. */
+    if (NULL != bconf->prefix_dir)
+        free((char*)bconf->prefix_dir);
 }
