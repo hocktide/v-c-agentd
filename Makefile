@@ -159,7 +159,7 @@ agentd-install: ALL
 	fi
 
 test.agentd: vcblockchain-build $(TEST_DIRS) host.exe.checked $(TESTAGENTD)
-	TEST_BIN=$$(realpath $$(which cat)) \
+	TEST_BIN=$(realpath $(shell which cat)) \
 	LD_LIBRARY_PATH=$(TOOLCHAIN_DIR)/host/lib:$(TOOLCHAIN_DIR)/host/lib64:$(LD_LIBRARY_PATH) \
 	$(TESTAGENTD)
 
