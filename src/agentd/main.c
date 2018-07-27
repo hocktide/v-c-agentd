@@ -30,7 +30,7 @@ int main(int argc, char** argv)
     retval = create_bootstrap_config(&bconf, argv[0]);
     if (0 != retval)
     {
-        goto cleanup_bconf;
+        return retval;
     }
 
     /* parse command-line options. */
@@ -57,7 +57,6 @@ int main(int argc, char** argv)
         retval = 1;
     }
 
-cleanup_bconf:
     /* clean up bootstrap config. */
     dispose((disposable_t*)&bconf);
 
