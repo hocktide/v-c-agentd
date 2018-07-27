@@ -7,15 +7,31 @@
  */
 
 #include <agentd/commandline.h>
+#include <stdio.h>
 #include <vpr/allocator/malloc_allocator.h>
 
+/* forward decls */
+static int create_bootstrap_config(bootstrap_config_t* bconf, char* progname);
+
+/**
+ * \brief Main entry point.
+ *
+ * \param argc          Number of arguments.
+ * \param argv          List of arguments.
+ *
+ * \returns 0 on successful execution, and non-zero on failure.
+ */
 int main(int argc, char** argv)
 {
     bootstrap_config_t bconf;
     int retval = 0;
 
     /* initialize bootstrap config. */
-    bootstrap_config_init(&bconf);
+    retval = create_bootstrap_config(&bconf, argv[0]);
+    if (0 != retval)
+    {
+        goto cleanup_bconf;
+    }
 
     /* parse command-line options. */
     parse_commandline_options(&bconf, argc, argv);
@@ -41,8 +57,50 @@ int main(int argc, char** argv)
         retval = 1;
     }
 
+cleanup_bconf:
     /* clean up bootstrap config. */
     dispose((disposable_t*)&bconf);
+
+    return retval;
+}
+
+/**
+ * \brief Create the bootstrap config and manage binary / installation prefix
+ * resolution.
+ *
+ * \param bconf         The \ref bootstrap_config_t instance to configure.
+ * \param progname      The program name.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+static int create_bootstrap_config(bootstrap_config_t* bconf, char* progname)
+{
+    int retval = 0;
+
+    /* initialize bootstrap config. */
+    bootstrap_config_init(bconf);
+
+    /* get the axecutable location. */
+    retval = bootstrap_config_set_binary(bconf, progname);
+    if (0 != retval)
+    {
+        fprintf(stderr, "Could not get absolute path to agentd binary.\n");
+        goto cleanup_bconf;
+    }
+
+    /* resolve the prefix directory using the binary name. */
+    retval = bootstrap_config_resolve_prefix_dir(bconf);
+    if (0 != retval)
+    {
+        fprintf(stderr, "Could not resolve the installation prefix.\n");
+        goto cleanup_bconf;
+    }
+
+    /* success. */
+    return retval;
+
+cleanup_bconf:
+    dispose((disposable_t*)bconf);
 
     return retval;
 }
