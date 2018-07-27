@@ -28,6 +28,7 @@ int bootstrap_config_resolve_prefix_dir(
     char* bindir = NULL;
     MODEL_ASSERT(NULL != bconf);
     MODEL_ASSERT(NULL != bconf->binary);
+    MODEL_ASSERT(NULL == bconf->prefix_dir);
 
     /* if the binary is NULL, then it don't attempt to resolve it.  * */
     if (NULL == bconf->binary)

@@ -34,6 +34,7 @@ int bootstrap_config_set_binary(
 
     MODEL_ASSERT(NULL != bconf);
     MODEL_ASSERT(NULL != bname);
+    MODEL_ASSERT(NULL == bconf->binary);
 
     /* attempt to get the complete path searched for an executable. */
     if (0 != path_append_default(pathenv, &path))
