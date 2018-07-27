@@ -43,59 +43,53 @@ int path_resolve(const char* filename, const char* path, char** resolved)
     /* start by setting resolved to NULL. */
     *resolved = NULL;
 
-    /* if this is an absolute path, canonicalize it. */
-    if (filename[0] == '/' || filename[0] == '.')
+    /* attempt to canonicalize this as a valid executable. */
+    if (0 == valid_executable(filename, resolved))
     {
-        /* can we canonicalize this as a valid executable? */
-        if (0 == valid_executable(filename, resolved))
-        {
-            retval = 0;
-            goto done;
-        }
+        retval = 0;
+        goto done;
     }
-    else
+
+    /* duplicate the working path so it can be manipulated by strtok. */
+    workpath = strdup(path);
+    if (NULL == workpath)
     {
-        /* duplicate the working path so it can be manipulated by strtok. */
-        workpath = strdup(path);
-        if (NULL == workpath)
+        retval = 1;
+        goto done;
+    }
+
+    /* iterate through path entries */
+    for (
+        /* initialize pathent with the first path entry. */
+        pathent = strtok_r(workpath, ":", &pathlast);
+        /* continue while there are path entries. */
+        NULL != pathent;
+        /* get the next entry. */
+        pathent = strtok_r(NULL, ":", &pathlast))
+    {
+        /* build a path using the current path entry and the filename. */
+        char* fullpath = strcatv(pathent, "/", filename, NULL);
+        if (NULL == fullpath)
         {
             retval = 1;
-            goto done;
+            goto cleanup_workpath;
         }
 
-        /* iterate through path entries */
-        for (
-            /* initialize pathent with the first path entry. */
-            pathent = strtok_r(workpath, ":", &pathlast);
-            /* continue while there are path entries. */
-            NULL != pathent;
-            /* get the next entry. */
-            pathent = strtok_r(NULL, ":", &pathlast))
+        /* check to see if this is a valid executable. */
+        retval = valid_executable(fullpath, resolved);
+
+        /* clean up fullpath. */
+        free(fullpath);
+
+        /* if this is a valid executable, exit the loop and clean up. */
+        if (0 == retval)
         {
-            /* build a path using the current path entry and the filename. */
-            char* fullpath = strcatv(pathent, "/", filename, NULL);
-            if (NULL == fullpath)
-            {
-                retval = 1;
-                goto cleanup_workpath;
-            }
-
-            /* check to see if this is a valid executable. */
-            retval = valid_executable(fullpath, resolved);
-
-            /* clean up fullpath. */
-            free(fullpath);
-
-            /* if this is a valid executable, exit the loop and clean up. */
-            if (0 == retval)
-            {
-                goto cleanup_workpath;
-            }
+            goto cleanup_workpath;
         }
-
-        /* no valid executable was found. */
-        retval = 1;
     }
+
+    /* no valid executable was found. */
+    retval = 1;
 
 cleanup_workpath:
     if (NULL != workpath)

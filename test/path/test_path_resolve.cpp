@@ -145,3 +145,22 @@ TEST(path_resolve, canonical_relative_path)
     free(pwd);
     free(resolved);
 }
+
+/**
+ * \brief If a relative path NOT starting with "." is encountered, attempt to
+ * canonicalize it.  If it can be resolved and is executable, succeed.
+ */
+TEST(path_resolve, canonical_relative_path2)
+{
+    char* resolved = nullptr;
+    char* pwd = getcwd(nullptr, PATH_MAX);
+    string expected_resolved = string(pwd) + "/build/host/checked/bin/agentd";
+
+    ASSERT_EQ(0,
+        path_resolve("build/host/checked/bin/agentd", "", &resolved));
+
+    EXPECT_STREQ(expected_resolved.c_str(), resolved);
+
+    free(pwd);
+    free(resolved);
+}
