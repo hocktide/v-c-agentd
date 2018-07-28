@@ -24,6 +24,10 @@ int privsep_drop_privileges(uid_t uid, gid_t gid)
 {
     int retval = 1;
 
+/* On OpenBSD and other Unix implementations, the effective uid / gid must be
+ * adjusted first.
+ */
+#ifdef __OpenBSD__
     /* set the effective group ID. */
     retval = setegid(gid);
     if (0 != retval)
@@ -37,6 +41,7 @@ int privsep_drop_privileges(uid_t uid, gid_t gid)
     {
         return retval;
     }
+#endif /*__OpenBSD__*/
 
     /* set the group ID. */
     retval = setgid(gid);
