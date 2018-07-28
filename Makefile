@@ -33,7 +33,7 @@ GTEST_OBJ=$(TEST_BUILD_DIR)/gtest-all.o
 SRCDIR=$(CURDIR)/src
 DIRS=$(SRCDIR) $(SRCDIR)/agentd $(SRCDIR)/bootstrap_config \
     $(SRCDIR)/command $(SRCDIR)/commandline $(SRCDIR)/config $(SRCDIR)/ipc \
-    $(SRCDIR)/path $(SRCDIR)/string
+    $(SRCDIR)/path $(SRCDIR)/privsep $(SRCDIR)/string
 SOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.c))
 YACCSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.y))
 LEXSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.l))
@@ -44,7 +44,7 @@ STRIPPED_LEXSOURCES=$(patsubst $(SRCDIR)/%,%,$(LEXSOURCES))
 #agentd test files
 TESTDIR=$(CURDIR)/test
 TESTDIRS=$(TESTDIR) $(TESTDIR)/bootstrap_config $(TESTDIR)/commandline \
-    $(TESTDIR)/config $(TESTDIR)/ipc $(TESTDIR)/path $(TESTDIR)/string
+    $(TESTDIR)/config $(TESTDIR)/path $(TESTDIR)/string
 TEST_BUILD_DIR=$(HOST_CHECKED_BUILD_DIR)/test
 TEST_DIRS=$(filter-out $(TESTDIR), \
     $(patsubst $(TESTDIR)/%,$(TEST_BUILD_DIR)/%,$(TESTDIRS)))
