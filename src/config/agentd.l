@@ -15,8 +15,8 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-FILE* set_input_filedescriptor(
-    yyscan_t scanner, int fd, YY_BUFFER_STATE* state);
+FILE* config_set_input_filedescriptor(
+    yyscan_t scanner, int fd, void* state);
 %}
 
 %option reentrant
@@ -123,10 +123,19 @@ usergroup {
 
 /**
  * \brief Set the scanner to read from a Unix file descriptor.
+ *
+ * \param scanner       The scanner context structure.
+ * \param fd            The file descriptor to use.
+ * \param state         The buffer state structure used by the scanner.
+ *
+ * \returns the minted file handle, to be closed by the caller when scanning
+ * is complete.
  */
-FILE* set_input_filedescriptor(
-    yyscan_t scanner, int fd, YY_BUFFER_STATE* state)
+FILE* config_set_input_filedescriptor(
+    yyscan_t scanner, int fd, void* st)
 {
+    YY_BUFFER_STATE* state = (YY_BUFFER_STATE*)st;
+
     FILE* f = fdopen(fd, "r");
 
     if (NULL != f)

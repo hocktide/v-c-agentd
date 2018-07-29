@@ -13,6 +13,7 @@
 #include <netinet/in.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stddef.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -113,6 +114,19 @@ typedef struct config_context
 #define YY_TYPEDEF_YY_SCANNER_T
 typedef void* yyscan_t;
 #endif /*YY_TYPEDEF_YY_SCANNER_T*/
+
+/**
+ * \brief Set the scanner to read from a Unix file descriptor.
+ *
+ * \param scanner       The scanner context structure.
+ * \param fd            The file descriptor to use.
+ * \param state         The buffer state structure used by the scanner.
+ *
+ * \returns the minted file handle, to be closed by the caller when scanning
+ * is complete.
+ */
+FILE* config_set_input_filedescriptor(
+    yyscan_t scanner, int fd, void* state);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
