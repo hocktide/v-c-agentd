@@ -197,10 +197,20 @@ $(TEST_BUILD_DIR)/%.o: $(TESTDIR)/%.cpp
 	mkdir -p $(dir $@)
 	$(HOST_RELEASE_CXX) $(TEST_CXXFLAGS) -c -o $@ $<
 
+#host checked build objects depend on lex and yacc objects
+$(HOST_CHECKED_LEXOBJECTS): $(HOST_CHECKED_YACCOBJECTS)
+$(HOST_CHECKED_COBJECTS): $(HOST_CHECKED_LEXOBJECTS)
+$(HOST_CHECKED_COBJECTS): $(HOST_CHECKED_YACCOBJECTS)
+
 #Host checked build objects
 $(HOST_CHECKED_BUILD_DIR)/%.o: $(SRCDIR)/%.c
 	mkdir -p $(dir $@)
 	$(HOST_CHECKED_CC) $(HOST_CHECKED_CFLAGS) -c -o $@ $<
+
+#host release build objects depend on lex and yacc objects
+$(HOST_RELEASE_LEXOBJECTS): $(HOST_RELEASE_YACCOBJECTS)
+$(HOST_RELEASE_COBJECTS): $(HOST_RELEASE_LEXOBJECTS)
+$(HOST_RELEASE_COBJECTS): $(HOST_RELEASE_YACCOBJECTS)
 
 #Host release build objects
 $(HOST_RELEASE_BUILD_DIR)/%.o: $(SRCDIR)/%.c
@@ -231,7 +241,7 @@ $(HRBD)/%.tab.c $(HRBD)/%.tab.h : $(SRCDIR)/%.y
 #Host release build lex objects
 $(HRBD)/%.yy.c: $(SRCDIR)/%.l
 	mkdir -p $(dir $@)
-	$(HOST_RELEASE_LEX) -s --header-file -o $(HRBD)/$*.yy.c \
+	$(HOST_RELEASE_LEX) -s --header-file=$(HRBD)/$*.yy.h -o $(HRBD)/$*.yy.c \
 	    $(SRCDIR)/$*.l
 
 #host checked lex objects depend on the availability of host checked yacc
