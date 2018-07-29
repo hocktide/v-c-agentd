@@ -27,8 +27,8 @@ TEST(bootstrap_config_test, bootstrap_config_init)
     EXPECT_EQ(nullptr, bconf.command);
     /* by default, private_command is NULL. */
     EXPECT_EQ(nullptr, bconf.private_command);
-    /* by default, the config file is set to etc/agentd.conf. */
-    EXPECT_STREQ("etc/agentd.conf", bconf.config_file);
+    /* by default, the config file is set to /etc/agentd.conf. */
+    EXPECT_STREQ("/etc/agentd.conf", bconf.config_file);
     /* by default, config_file_override is false. */
     EXPECT_FALSE(bconf.config_file_override);
 
@@ -110,7 +110,7 @@ TEST(bootstrap_config_test, bootstrap_config_set_config_file)
     bootstrap_config_init(&bconf);
 
     /* Precondition: config file is set to the default name. */
-    ASSERT_STREQ("etc/agentd.conf", bconf.config_file);
+    ASSERT_STREQ("/etc/agentd.conf", bconf.config_file);
     /* Precondition: config file override is false. */
     ASSERT_FALSE(bconf.config_file_override);
 

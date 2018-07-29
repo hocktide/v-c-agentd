@@ -29,7 +29,7 @@ void bootstrap_config_init(bootstrap_config_t* bconf)
     bconf->hdr.dispose = &bootstrap_config_dispose;
 
     /* by default, the config file is located in etc/agentd.config. */
-    bconf->config_file = strdup("etc/agentd.conf");
+    bconf->config_file = strdup("/etc/agentd.conf");
 }
 
 /**
