@@ -63,6 +63,25 @@ int privsep_drop_privileges(uid_t user, gid_t gid);
  */
 int privsep_exec_private(const char* command);
 
+/**
+ * \brief Set file descriptors for a new process.
+ *
+ * Descriptors are described in pairs.  The first descriptor is the current
+ * descriptor, and the second descriptor is the descriptor that the first is
+ * mapped to in the new process.  A negative value ends this sequence.  A
+ * negative value must be the last value in this sequence to act as a sentry
+ * value.
+ *
+ * This method also closes all standard descriptors, such as standard in,
+ * standard out, and standard error.
+ *
+ * \param curr          The current descriptor.
+ * \param mapped        The mapped descriptor.
+ *
+ * \returns Zero on success and non-zero on failure.
+ */
+int privsep_setfds(int curr, int mapped, ...);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
