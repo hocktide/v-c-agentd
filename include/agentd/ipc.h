@@ -9,12 +9,23 @@
 #ifndef AGENTD_IPC_HEADER_GUARD
 #define AGENTD_IPC_HEADER_GUARD
 
+#include <stdint.h>
 #include <vpr/disposable.h>
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 extern "C" {
 #endif  //__cplusplus
+
+#define IPC_DATA_TYPE_BOM 0x00
+#define IPC_DATA_TYPE_UINT8 0x01
+#define IPC_DATA_TYPE_UINT32 0x03
+#define IPC_DATA_TYPE_UINT64 0x04
+#define IPC_DATA_TYPE_INT8 0x09
+#define IPC_DATA_TYPE_INT32 0x0A
+#define IPC_DATA_TYPE_INT64 0x0B
+#define IPC_DATA_TYPE_STRING 0x10
+#define IPC_DATA_TYPE_EOM 0xFF
 
 /**
  * \brief Socket context used for asynchronous (non-blocking) I/O.  Contains an
@@ -74,6 +85,67 @@ int ipc_make_block(int sock);
  * \returns 0 on success and non-zero on failure.
  */
 int ipc_make_noblock(int sock, ipc_socket_context_t* ctx);
+
+/**
+ * \brief Write a character string to the blocking socket.
+ *
+ * On success, the character string value is written, along with type
+ * information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           The string to write.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int ipc_write_string_block(int sock, const char* val);
+
+/**
+ * \brief Write a uint64_t value to the blocking socket.
+ *
+ * On success, the value is written, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           The value to write.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int ipc_write_uint64_block(int sock, uint64_t val);
+
+/**
+ * \brief Write an int64_t value to the blocking socket.
+ *
+ * On success, the value is written, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           The value to write.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int ipc_write_int64_block(int sock, int64_t val);
+
+/**
+ * \brief Write a uint8_t value to the blocking socket.
+ *
+ * On success, the value is written, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           The value to write.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int ipc_write_uint8_block(int sock, uint8_t val);
+
+/**
+ * \brief Write an int8_t value to the blocking socket.
+ *
+ * On success, the value is written, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           The value to write.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int ipc_write_int8_block(int sock, int8_t val);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
