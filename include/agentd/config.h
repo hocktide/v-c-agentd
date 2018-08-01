@@ -26,6 +26,11 @@ extern "C" {
 #endif  //__cplusplus
 
 /**
+ * \brief Forward declaration of bootstrap config.
+ */
+struct bootstrap_config;
+
+/**
  * \brief A config list node is a single-linked list node that provides support
  * for multiple entries.
  */
@@ -163,11 +168,27 @@ int config_write_block(int s, agent_config_t* conf);
  * dispose() when no longer needed.
  *
  * \param s             The socket descriptor to read.
- * \param conf          The config structure to read.
+ * \param conf          The config structure to populate.
  *
  * \returns 0 on success and non-zero on failure.
  */
 int config_read_block(int s, agent_config_t* conf);
+
+/**
+ * \brief Spawn a process to read config data, populating the provided config
+ * structure.
+ *
+ * On success, a config structure is initialized with data from the config
+ * reader process.  This is owned by the caller and must be disposed by calling
+ * \ref dispose() when no longer needed.
+ *
+ * \param bconf         The bootstrap configuration used to spawn the config
+ *                      reader process.
+ * \param conf          The config structure to populate.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
