@@ -143,7 +143,7 @@ static int config_read_logdir(int s, agent_config_t* conf)
     if (NULL != conf->logdir)
         return 1;
 
-    /* attempt to read the loglevel. */
+    /* attempt to read the logdir. */
     if (0 != ipc_read_string_block(s, (char**)&conf->logdir))
         return 2;
 
@@ -166,7 +166,7 @@ static int config_read_loglevel(int s, agent_config_t* conf)
         return 1;
 
     /* attempt to read the loglevel. */
-    if (0 != ipc_read_uint64_block(s, &conf->loglevel))
+    if (0 != ipc_read_int64_block(s, &conf->loglevel))
         return 2;
 
     /* loglevel must be between 0 and 9. */

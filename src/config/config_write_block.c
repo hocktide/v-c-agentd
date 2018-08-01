@@ -126,7 +126,7 @@ static int config_write_loglevel(int s, agent_config_t* conf)
             return 1;
 
         /* write the loglevel to the stream. */
-        if (0 != ipc_write_uint64_block(s, conf->loglevel))
+        if (0 != ipc_write_int64_block(s, conf->loglevel))
             return 2;
     }
 
