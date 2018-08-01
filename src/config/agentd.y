@@ -54,7 +54,7 @@ static config_user_group_t* create_user_group(
     config_context_t*, const char*, const char*);
 static config_listen_address_t* create_listen_address(
     config_context_t*, struct in_addr*, int64_t);
-static void config_dispose(void* disp);
+void config_dispose(void* disp);
 %}
 
 /* use the full pure API for Bison. */
@@ -389,7 +389,7 @@ create_listen_address(
 /**
  * \brief dispose of a config structure.
  */
-static void config_dispose(void* disp)
+void config_dispose(void* disp)
 {
     agent_config_t* cfg = (agent_config_t*)disp;
 

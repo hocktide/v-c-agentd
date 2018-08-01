@@ -54,6 +54,18 @@ typedef struct config_user_group
     const char* group;
 } config_user_group_t;
 
+#define CONFIG_STREAM_TYPE_BOM 0x00
+#define CONFIG_STREAM_TYPE_LOGDIR 0x01
+#define CONFIG_STREAM_TYPE_LOGLEVEL 0x02
+#define CONFIG_STREAM_TYPE_SECRET 0x03
+#define CONFIG_STREAM_TYPE_ROOTBLOCK 0x04
+#define CONFIG_STREAM_TYPE_DATASTORE 0x05
+#define CONFIG_STREAM_TYPE_LISTEN_ADDR 0x06
+#define CONFIG_STREAM_TYPE_CHROOT 0x07
+#define CONFIG_STREAM_TYPE_USERGROUP 0x08
+#define CONFIG_STREAM_TYPE_EOM 0x80
+#define CONFIG_STREAM_TYPE_ERROR 0xFF
+
 /**
  * \brief Root of the agent configuration AST.
  */
@@ -127,6 +139,35 @@ typedef void* yyscan_t;
  */
 FILE* config_set_input_filedescriptor(
     yyscan_t scanner, int fd, void* state);
+
+/**
+ * \brief Internal method for disposing a config structure.  Do not call.
+ */
+void config_dispose(void* disp);
+
+/**
+ * \brief Write a config structure to a blocking stream.
+ *
+ * \param s             The socket descriptor to write.
+ * \param conf          The config structure to write.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int config_write_block(int s, agent_config_t* conf);
+
+/**
+ * \brief Initialize and read an agent config structure from a blocking stream.
+ *
+ * On success, a config structure is initialized with data from the blocking
+ * stream.  This is owned by the caller and must be disposed by calling \ref
+ * dispose() when no longer needed.
+ *
+ * \param s             The socket descriptor to read.
+ * \param conf          The config structure to read.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int config_read_block(int s, agent_config_t* conf);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
