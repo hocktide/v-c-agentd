@@ -269,3 +269,531 @@ TEST(ipc, ipc_write_int8_block)
     close(lhs);
     close(rhs);
 }
+
+/**
+ * \brief It is possible to read a string value from a blocking socket.
+ */
+TEST(ipc, ipc_read_string_block_success)
+{
+    int lhs, rhs;
+    const char TEST_STRING[] = "This is a test.";
+    char* str = nullptr;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write a string block to the lhs socket. */
+    ASSERT_EQ(0, ipc_write_string_block(lhs, TEST_STRING));
+
+    /* read a string block from the rhs socket. */
+    ASSERT_EQ(0, ipc_read_string_block(rhs, &str));
+
+    /* the string is valid. */
+    ASSERT_NE(nullptr, str);
+
+    /* the string is a copy of the test string. */
+    EXPECT_STREQ(TEST_STRING, str);
+
+    /* clean up. */
+    free(str);
+    close(lhs);
+    close(rhs);
+}
+
+/**
+ * \brief If another value is seen instead of a string, fail.
+ */
+TEST(ipc, ipc_read_string_block_bad_type)
+{
+    int lhs, rhs;
+    uint64_t badval = 1;
+    char* str = nullptr;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write a string block to the lhs socket. */
+    ASSERT_EQ(0, ipc_write_uint64_block(lhs, badval));
+
+    /* read a string block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_string_block(rhs, &str));
+
+    /* the string is NULL. */
+    ASSERT_EQ(nullptr, str);
+
+    /* clean up. */
+    close(lhs);
+    close(rhs);
+}
+
+/**
+ * \brief If the size is not read, fail.
+ */
+TEST(ipc, ipc_read_string_block_bad_size)
+{
+    int lhs, rhs;
+    char* str = nullptr;
+    uint8_t type = IPC_DATA_TYPE_STRING;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write the string type to the lhs socket. */
+    ASSERT_EQ(sizeof(type), (size_t)write(lhs, &type, sizeof(type)));
+
+    /* close the lhs socket. */
+    close(lhs);
+
+    /* read a string block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_string_block(rhs, &str));
+
+    /* the string is NULL. */
+    ASSERT_EQ(nullptr, str);
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
+ * \brief If the string is not read, fail.
+ */
+TEST(ipc, ipc_read_string_block_bad_data)
+{
+    int lhs, rhs;
+    char* str = nullptr;
+    uint8_t type = IPC_DATA_TYPE_STRING;
+    uint32_t size = htonl(10);
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write the string type to the lhs socket. */
+    ASSERT_EQ(sizeof(type), (size_t)write(lhs, &type, sizeof(type)));
+
+    /* write the string size to the lhs socket. */
+    ASSERT_EQ(sizeof(size), (size_t)write(lhs, &size, sizeof(size)));
+
+    /* close the lhs socket. */
+    close(lhs);
+
+    /* read a string block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_string_block(rhs, &str));
+
+    /* the string is NULL. */
+    ASSERT_EQ(nullptr, str);
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
+ * \brief It is possible to read a uint64_t value from a blocking socket.
+ */
+TEST(ipc, ipc_read_uint64_block_success)
+{
+    int lhs, rhs;
+    uint64_t val = 910028;
+    uint64_t read_val = 0;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write a uint64_t block to the lhs socket. */
+    ASSERT_EQ(0, ipc_write_uint64_block(lhs, val));
+
+    /* read a uint64_t block from the rhs socket. */
+    ASSERT_EQ(0, ipc_read_uint64_block(rhs, &read_val));
+
+    /* the value is a copy of the test value. */
+    EXPECT_EQ(val, read_val);
+
+    /* clean up. */
+    close(lhs);
+    close(rhs);
+}
+
+/**
+ * \brief If another value is seen instead of a uint64_t, fail.
+ */
+TEST(ipc, ipc_read_uint64_block_bad_type)
+{
+    int lhs, rhs;
+    uint8_t badval = 1U;
+    uint64_t read_val = 0U;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write a uint8_t block to the lhs socket. */
+    ASSERT_EQ(0, ipc_write_uint8_block(lhs, badval));
+
+    /* reading a uint64 block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_uint64_block(rhs, &read_val));
+
+    /* clean up. */
+    close(lhs);
+    close(rhs);
+}
+
+/**
+ * \brief If the size is not read, fail.
+ */
+TEST(ipc, ipc_read_uint64_block_bad_size)
+{
+    int lhs, rhs;
+    uint64_t read_val = 0U;
+    uint8_t type = IPC_DATA_TYPE_UINT64;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write the uint64 type to the lhs socket. */
+    ASSERT_EQ(sizeof(type), (size_t)write(lhs, &type, sizeof(type)));
+
+    /* close the lhs socket. */
+    close(lhs);
+
+    /* reading a uint64_t block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_uint64_block(rhs, &read_val));
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
+ * \brief If the value is not read, fail.
+ */
+TEST(ipc, ipc_read_uint64_block_bad_data)
+{
+    int lhs, rhs;
+    uint64_t read_val = 0U;
+    uint8_t type = IPC_DATA_TYPE_UINT64;
+    uint32_t size = htonl(sizeof(read_val));
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write the uint64_t type to the lhs socket. */
+    ASSERT_EQ(sizeof(type), (size_t)write(lhs, &type, sizeof(type)));
+
+    /* write the uint64_t size to the lhs socket. */
+    ASSERT_EQ(sizeof(size), (size_t)write(lhs, &size, sizeof(size)));
+
+    /* close the lhs socket. */
+    close(lhs);
+
+    /* reading a uint64_t block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_uint64_block(rhs, &read_val));
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
+ * \brief It is possible to read a int64_t value from a blocking socket.
+ */
+TEST(ipc, ipc_read_int64_block_success)
+{
+    int lhs, rhs;
+    int64_t val = -910028;
+    int64_t read_val = 0;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write a int64_t block to the lhs socket. */
+    ASSERT_EQ(0, ipc_write_int64_block(lhs, val));
+
+    /* read a int64_t block from the rhs socket. */
+    ASSERT_EQ(0, ipc_read_int64_block(rhs, &read_val));
+
+    /* the value is a copy of the test value. */
+    EXPECT_EQ(val, read_val);
+
+    /* clean up. */
+    close(lhs);
+    close(rhs);
+}
+
+/**
+ * \brief If another value is seen instead of a int64_t, fail.
+ */
+TEST(ipc, ipc_read_int64_block_bad_type)
+{
+    int lhs, rhs;
+    uint8_t badval = 1U;
+    int64_t read_val = 0U;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write a uint8_t block to the lhs socket. */
+    ASSERT_EQ(0, ipc_write_uint8_block(lhs, badval));
+
+    /* reading a int64 block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_int64_block(rhs, &read_val));
+
+    /* clean up. */
+    close(lhs);
+    close(rhs);
+}
+
+/**
+ * \brief If the size is not read, fail.
+ */
+TEST(ipc, ipc_read_int64_block_bad_size)
+{
+    int lhs, rhs;
+    int64_t read_val = 0U;
+    uint8_t type = IPC_DATA_TYPE_UINT64;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write the int64 type to the lhs socket. */
+    ASSERT_EQ(sizeof(type), (size_t)write(lhs, &type, sizeof(type)));
+
+    /* close the lhs socket. */
+    close(lhs);
+
+    /* reading a int64_t block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_int64_block(rhs, &read_val));
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
+ * \brief If the value is not read, fail.
+ */
+TEST(ipc, ipc_read_int64_block_bad_data)
+{
+    int lhs, rhs;
+    int64_t read_val = 0U;
+    uint8_t type = IPC_DATA_TYPE_UINT64;
+    uint32_t size = htonl(sizeof(read_val));
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write the int64_t type to the lhs socket. */
+    ASSERT_EQ(sizeof(type), (size_t)write(lhs, &type, sizeof(type)));
+
+    /* write the int64_t size to the lhs socket. */
+    ASSERT_EQ(sizeof(size), (size_t)write(lhs, &size, sizeof(size)));
+
+    /* close the lhs socket. */
+    close(lhs);
+
+    /* reading a int64_t block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_int64_block(rhs, &read_val));
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
+ * \brief It is possible to read a uint8_t value from a blocking socket.
+ */
+TEST(ipc, ipc_read_uint8_block_success)
+{
+    int lhs, rhs;
+    uint8_t val = 28;
+    uint8_t read_val = 0;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write a uint8_t block to the lhs socket. */
+    ASSERT_EQ(0, ipc_write_uint8_block(lhs, val));
+
+    /* read a uint8_t block from the rhs socket. */
+    ASSERT_EQ(0, ipc_read_uint8_block(rhs, &read_val));
+
+    /* the value is a copy of the test value. */
+    EXPECT_EQ(val, read_val);
+
+    /* clean up. */
+    close(lhs);
+    close(rhs);
+}
+
+/**
+ * \brief If another value is seen instead of a uint8_t, fail.
+ */
+TEST(ipc, ipc_read_uint8_block_bad_type)
+{
+    int lhs, rhs;
+    uint64_t badval = 1U;
+    uint8_t read_val = 0U;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write a uint64_t block to the lhs socket. */
+    ASSERT_EQ(0, ipc_write_uint64_block(lhs, badval));
+
+    /* reading a uint8 block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_uint8_block(rhs, &read_val));
+
+    /* clean up. */
+    close(lhs);
+    close(rhs);
+}
+
+/**
+ * \brief If the size is not read, fail.
+ */
+TEST(ipc, ipc_read_uint8_block_bad_size)
+{
+    int lhs, rhs;
+    uint8_t read_val = 0U;
+    uint8_t type = IPC_DATA_TYPE_UINT8;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write the uint8 type to the lhs socket. */
+    ASSERT_EQ(sizeof(type), (size_t)write(lhs, &type, sizeof(type)));
+
+    /* close the lhs socket. */
+    close(lhs);
+
+    /* reading a uint8_t block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_uint8_block(rhs, &read_val));
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
+ * \brief If the value is not read, fail.
+ */
+TEST(ipc, ipc_read_uint8_block_bad_data)
+{
+    int lhs, rhs;
+    uint8_t read_val = 0U;
+    uint8_t type = IPC_DATA_TYPE_UINT8;
+    uint32_t size = htonl(sizeof(read_val));
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write the uint8_t type to the lhs socket. */
+    ASSERT_EQ(sizeof(type), (size_t)write(lhs, &type, sizeof(type)));
+
+    /* write the uint8_t size to the lhs socket. */
+    ASSERT_EQ(sizeof(size), (size_t)write(lhs, &size, sizeof(size)));
+
+    /* close the lhs socket. */
+    close(lhs);
+
+    /* reading a uint8_t block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_uint8_block(rhs, &read_val));
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
+ * \brief It is possible to read a int8_t value from a blocking socket.
+ */
+TEST(ipc, ipc_read_int8_block_success)
+{
+    int lhs, rhs;
+    int8_t val = 28;
+    int8_t read_val = 0;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write a int8_t block to the lhs socket. */
+    ASSERT_EQ(0, ipc_write_int8_block(lhs, val));
+
+    /* read a int8_t block from the rhs socket. */
+    ASSERT_EQ(0, ipc_read_int8_block(rhs, &read_val));
+
+    /* the value is a copy of the test value. */
+    EXPECT_EQ(val, read_val);
+
+    /* clean up. */
+    close(lhs);
+    close(rhs);
+}
+
+/**
+ * \brief If another value is seen instead of a int8_t, fail.
+ */
+TEST(ipc, ipc_read_int8_block_bad_type)
+{
+    int lhs, rhs;
+    uint64_t badval = 1U;
+    int8_t read_val = 0U;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write a uint64_t block to the lhs socket. */
+    ASSERT_EQ(0, ipc_write_uint64_block(lhs, badval));
+
+    /* reading a int8 block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_int8_block(rhs, &read_val));
+
+    /* clean up. */
+    close(lhs);
+    close(rhs);
+}
+
+/**
+ * \brief If the size is not read, fail.
+ */
+TEST(ipc, ipc_read_int8_block_bad_size)
+{
+    int lhs, rhs;
+    int8_t read_val = 0U;
+    uint8_t type = IPC_DATA_TYPE_INT8;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write the int8 type to the lhs socket. */
+    ASSERT_EQ(sizeof(type), (size_t)write(lhs, &type, sizeof(type)));
+
+    /* close the lhs socket. */
+    close(lhs);
+
+    /* reading a int8_t block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_int8_block(rhs, &read_val));
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
+ * \brief If the value is not read, fail.
+ */
+TEST(ipc, ipc_read_int8_block_bad_data)
+{
+    int lhs, rhs;
+    int8_t read_val = 0U;
+    uint8_t type = IPC_DATA_TYPE_UINT8;
+    uint32_t size = htonl(sizeof(read_val));
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write the int8_t type to the lhs socket. */
+    ASSERT_EQ(sizeof(type), (size_t)write(lhs, &type, sizeof(type)));
+
+    /* write the int8_t size to the lhs socket. */
+    ASSERT_EQ(sizeof(size), (size_t)write(lhs, &size, sizeof(size)));
+
+    /* close the lhs socket. */
+    close(lhs);
+
+    /* reading a int8_t block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_int8_block(rhs, &read_val));
+
+    /* clean up. */
+    close(rhs);
+}

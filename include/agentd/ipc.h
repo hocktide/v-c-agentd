@@ -147,6 +147,69 @@ int ipc_write_uint8_block(int sock, uint8_t val);
  */
 int ipc_write_int8_block(int sock, int8_t val);
 
+/**
+ * \brief Read a character string from the blocking socket.
+ *
+ * On success, a character string value is allocated and read, along with type
+ * information and size.  The caller owns this character string and is
+ * responsible for freeing it when it is no longer in use.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           Pointer to the string pointer to hold the string value
+ *                      on success.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int ipc_read_string_block(int sock, char** val);
+
+/**
+ * \brief Read a uint64_t value from the blocking socket.
+ *
+ * On success, the value is read, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           Pointer to hold the value.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int ipc_read_uint64_block(int sock, uint64_t* val);
+
+/**
+ * \brief Read an int64_t value from the blocking socket.
+ *
+ * On success, the value is read, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           Pointer to hold the value.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int ipc_read_int64_block(int sock, int64_t* val);
+
+/**
+ * \brief Read a uint8_t value from the blocking socket.
+ *
+ * On success, the value is read, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           Pointer to hold the value.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int ipc_read_uint8_block(int sock, uint8_t* val);
+
+/**
+ * \brief Read an int8_t value from the blocking socket.
+ *
+ * On success, the value is read, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           Pointer to hold the value.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int ipc_read_int8_block(int sock, int8_t* val);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
