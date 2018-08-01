@@ -40,6 +40,14 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
     uid_t uid;
     gid_t gid;
 
+    /* verify that this process is running as root. */
+    if (0 != geteuid())
+    {
+        fprintf(stderr, "agentd must be run as root.\n");
+        retval = 1;
+        goto done;
+    }
+
     /* create a socketpair for communication. */
     retval = ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &clientsock, &serversock);
     if (0 != retval)
