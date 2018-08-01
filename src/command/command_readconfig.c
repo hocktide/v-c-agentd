@@ -138,7 +138,7 @@ int command_readconfig(struct bootstrap_config* bconf)
         if (NULL != conf.logdir)
             printf("Log directory: %s\n", conf.logdir);
         if (conf.loglevel_set)
-            printf("Log level: %lld\n", conf.loglevel);
+            printf("Log level: %d\n", (int)conf.loglevel);
         if (NULL != conf.secret)
             printf("Secret file: %s\n", conf.secret);
         if (NULL != conf.rootblock)
