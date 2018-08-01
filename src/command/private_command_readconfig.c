@@ -111,6 +111,12 @@ static void private_config_set_error(
     exit(1);
 }
 
+/**
+ * \brief Handle receiving a config structure.
+ *
+ * \param context       The config context for this callback.
+ * \param config        The config structure of which the user takes ownership.
+ */
 static void private_config_callback(
     config_context_t* context, agent_config_t* config)
 {
