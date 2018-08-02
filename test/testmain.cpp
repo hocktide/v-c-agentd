@@ -1,3 +1,11 @@
+/**
+ * \file test/testmain.c
+ *
+ * \brief Entry point for the unit test executable.
+ *
+ * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ */
+
 #include <gtest/gtest.h>
 #include <iostream>
 
