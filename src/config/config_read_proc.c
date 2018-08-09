@@ -35,7 +35,7 @@
 int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
 {
     int retval = 1;
-    int clientsock, serversock;
+    int clientsock = -1, serversock = -1;
     int procid = 0;
     uid_t uid;
     gid_t gid;
@@ -70,6 +70,7 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
     {
         /* close parent's end of the socket pair. */
         close(clientsock);
+        clientsock = -1;
 
         /* get the user and group IDs for nobody. */
         retval = privsep_lookup_usergroup("nobody", "nogroup", &uid, &gid);
@@ -133,6 +134,7 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
     {
         int pidstatus;
         close(serversock);
+        serversock = -1;
 
         /* read the config data from the client socket. */
         if (0 != config_read_block(clientsock, conf))
@@ -154,5 +156,13 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
     }
 
 done:
+    /* clean up clientsock. */
+    if (0 <= clientsock)
+        close(clientsock);
+
+    /* clean up serversock. */
+    if (0 <= serversock)
+        close(serversock);
+
     return retval;
 }
