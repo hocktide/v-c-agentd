@@ -157,11 +157,11 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
 
 done:
     /* clean up clientsock. */
-    if (0 > clientsock)
+    if (0 <= clientsock)
         close(clientsock);
 
     /* clean up serversock. */
-    if (0 > serversock)
+    if (0 <= serversock)
         close(serversock);
 
     return retval;
