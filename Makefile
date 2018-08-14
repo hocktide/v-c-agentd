@@ -43,8 +43,9 @@ STRIPPED_LEXSOURCES=$(patsubst $(SRCDIR)/%,%,$(LEXSOURCES))
 
 #agentd test files
 TESTDIR=$(CURDIR)/test
-TESTDIRS=$(TESTDIR) $(TESTDIR)/bootstrap_config $(TESTDIR)/commandline \
-    $(TESTDIR)/config $(TESTDIR)/ipc $(TESTDIR)/path $(TESTDIR)/string
+TESTDIRS=$(TESTDIR) $(TESTDIR)/bitcap $(TESTDIR)/bootstrap_config \
+    $(TESTDIR)/commandline $(TESTDIR)/config $(TESTDIR)/ipc $(TESTDIR)/path \
+    $(TESTDIR)/string
 TEST_BUILD_DIR=$(HOST_CHECKED_BUILD_DIR)/test
 TEST_DIRS=$(filter-out $(TESTDIR), \
     $(patsubst $(TESTDIR)/%,$(TEST_BUILD_DIR)/%,$(TESTDIRS)))
