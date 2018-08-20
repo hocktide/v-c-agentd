@@ -21,9 +21,9 @@ VCBLOCKCHAIN_CFLAGS= \
 VCBLOCKCHAIN_HOST_CHECKED_LIB_DIR?=$(VCBLOCKCHAIN_DIR)/build/host/checked
 VCBLOCKCHAIN_HOST_RELEASE_LIB_DIR?=$(VCBLOCKCHAIN_DIR)/build/host/release
 VCBLOCKCHAIN_HOST_CHECKED_LINK?= \
-    -L $(VCBLOCKCHAIN_HOST_CHECKED_LIB_DIR) -lvcblockchain
+    -L $(VCBLOCKCHAIN_HOST_CHECKED_LIB_DIR) -lvcblockchain -lpthread
 VCBLOCKCHAIN_HOST_RELEASE_LINK?= \
-    -L $(VCBLOCKCHAIN_HOST_RELEASE_LIB_DIR) -lvcblockchain
+    -L $(VCBLOCKCHAIN_HOST_RELEASE_LIB_DIR) -lvcblockchain -lpthread
 
 #Google Test options
 GTEST_DIR?=$(CURDIR)/lib/vcblockchain/lib/googletest/googletest
@@ -32,8 +32,9 @@ GTEST_OBJ=$(TEST_BUILD_DIR)/gtest-all.o
 #agentd source files
 SRCDIR=$(CURDIR)/src
 DIRS=$(SRCDIR) $(SRCDIR)/agentd $(SRCDIR)/bootstrap_config \
-    $(SRCDIR)/command $(SRCDIR)/commandline $(SRCDIR)/config $(SRCDIR)/inet \
-    $(SRCDIR)/ipc $(SRCDIR)/path $(SRCDIR)/privsep $(SRCDIR)/string
+    $(SRCDIR)/command $(SRCDIR)/commandline $(SRCDIR)/config \
+    $(SRCDIR)/dataservice $(SRCDIR)/inet $(SRCDIR)/ipc $(SRCDIR)/path \
+    $(SRCDIR)/privsep $(SRCDIR)/string
 SOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.c))
 YACCSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.y))
 LEXSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.l))
@@ -44,8 +45,8 @@ STRIPPED_LEXSOURCES=$(patsubst $(SRCDIR)/%,%,$(LEXSOURCES))
 #agentd test files
 TESTDIR=$(CURDIR)/test
 TESTDIRS=$(TESTDIR) $(TESTDIR)/bitcap $(TESTDIR)/bootstrap_config \
-    $(TESTDIR)/commandline $(TESTDIR)/config $(TESTDIR)/ipc $(TESTDIR)/path \
-    $(TESTDIR)/string
+    $(TESTDIR)/commandline $(TESTDIR)/config $(TESTDIR)/dataservice \
+    $(TESTDIR)/ipc $(TESTDIR)/path $(TESTDIR)/string
 TEST_BUILD_DIR=$(HOST_CHECKED_BUILD_DIR)/test
 TEST_DIRS=$(filter-out $(TESTDIR), \
     $(patsubst $(TESTDIR)/%,$(TEST_BUILD_DIR)/%,$(TESTDIRS)))
@@ -160,6 +161,7 @@ agentd-install: ALL
 	fi
 
 test.agentd: vcblockchain-build $(TEST_DIRS) host.exe.checked $(TESTAGENTD)
+	rm -rf $(HOST_CHECKED_BUILD_DIR)/databases
 	TEST_BIN=$(realpath $(shell which cat)) \
 	LD_LIBRARY_PATH=$(TOOLCHAIN_DIR)/host/lib:$(TOOLCHAIN_DIR)/host/lib64:$(LD_LIBRARY_PATH) \
 	$(TESTAGENTD)
