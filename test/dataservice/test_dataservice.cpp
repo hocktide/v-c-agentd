@@ -282,3 +282,256 @@ TEST(dataservice_test, root_context_reduce_capabilities)
     /* dispose of the context. */
     dispose((disposable_t*)&ctx);
 }
+
+/**
+ * Test that a child context can be created from a root context.
+ */
+TEST(dataservice_test, child_context_create)
+{
+    const char* DB_PATH =
+        "build/host/checked/databases/553f6a65-ed63-466d-93d7-193d7b0b8c49";
+    char command[1024];
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* create the database directory. */
+    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
+    system(command);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+
+    /* there should be a disposer set. */
+    ASSERT_NE(nullptr, ctx.hdr.dispose);
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    /* only allow transaction queries. */
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_TRANSACTION_READ);
+    /* make sure the child create and close contexts are set. */
+    BITCAP_SET_TRUE(
+        reducedcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+    BITCAP_SET_TRUE(
+        reducedcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
+
+    /* explicitly grant the create and close child caps to the child context. */
+    BITCAP_SET_TRUE(
+        child.childcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+    BITCAP_SET_TRUE(
+        child.childcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* the child context cannot create other child contexts. */
+    EXPECT_FALSE(
+        BITCAP_ISSET(
+            child.childcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE));
+
+    /* the child context can close itself. */
+    EXPECT_TRUE(
+        BITCAP_ISSET(
+            child.childcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE));
+
+    /* verify that this child context can read transactions. */
+    EXPECT_TRUE(
+        BITCAP_ISSET(
+            child.childcaps, DATASERVICE_API_CAP_APP_TRANSACTION_READ));
+
+    /* verify that other capabilities, like database backup, are disabled. */
+    EXPECT_FALSE(
+        BITCAP_ISSET(
+            child.childcaps, DATASERVICE_API_CAP_LL_DATABASE_BACKUP));
+
+    /* verify that trying to create the child context a second time fails. */
+    ASSERT_NE(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* dispose of the context. */
+    dispose((disposable_t*)&ctx);
+}
+
+/**
+ * Test that a child context cannot be created from a root context if the root
+ * context does not have the create child context capability.
+ */
+TEST(dataservice_test, child_context_create_denied)
+{
+    const char* DB_PATH =
+        "build/host/checked/databases/553f6a65-ed63-466d-93d7-193d7b0b8c49";
+    char command[1024];
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* create the database directory. */
+    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
+    system(command);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+
+    /* there should be a disposer set. */
+    ASSERT_NE(nullptr, ctx.hdr.dispose);
+
+    /* explicitly deny child context creation in the parent context. */
+    BITCAP_SET_FALSE(ctx.apicaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    /* only allow transaction queries. */
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_TRANSACTION_READ);
+    /* make sure the child create and close contexts are set. */
+    BITCAP_SET_TRUE(
+        reducedcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+    BITCAP_SET_TRUE(
+        reducedcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
+
+    /* explicitly grant the create and close child caps to the child context. */
+    BITCAP_SET_TRUE(
+        child.childcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+    BITCAP_SET_TRUE(
+        child.childcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
+
+    /* creating a child fails because root cannot create child contexts. */
+    ASSERT_NE(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* dispose of the context. */
+    dispose((disposable_t*)&ctx);
+}
+
+/**
+ * Test that a child context can be closed.
+ */
+TEST(dataservice_test, child_context_close)
+{
+    const char* DB_PATH =
+        "build/host/checked/databases/553f6a65-ed63-466d-93d7-193d7b0b8c49";
+    char command[1024];
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* create the database directory. */
+    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
+    system(command);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+
+    /* there should be a disposer set. */
+    ASSERT_NE(nullptr, ctx.hdr.dispose);
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    /* only allow transaction queries. */
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_TRANSACTION_READ);
+    /* make sure the child create and close contexts are set. */
+    BITCAP_SET_TRUE(
+        reducedcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+    BITCAP_SET_TRUE(
+        reducedcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
+
+    /* explicitly grant the create and close child caps to the child context. */
+    BITCAP_SET_TRUE(
+        child.childcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+    BITCAP_SET_TRUE(
+        child.childcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* closing the child context succeeds. */
+    ASSERT_EQ(0, dataservice_child_context_close(&child));
+
+    /* dispose of the context. */
+    dispose((disposable_t*)&ctx);
+}
+
+/**
+ * Test that closing a child context fails if it lacks the close cap.
+ */
+TEST(dataservice_test, child_context_close_denied)
+{
+    const char* DB_PATH =
+        "build/host/checked/databases/553f6a65-ed63-466d-93d7-193d7b0b8c49";
+    char command[1024];
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* create the database directory. */
+    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
+    system(command);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+
+    /* there should be a disposer set. */
+    ASSERT_NE(nullptr, ctx.hdr.dispose);
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    /* only allow transaction queries. */
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_TRANSACTION_READ);
+
+    /* make sure the child create context cap is set. */
+    BITCAP_SET_TRUE(
+        reducedcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* explicitly deny child close context cap. */
+    BITCAP_SET_FALSE(
+        reducedcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
+
+    /* explicitly grant the create and close child caps to the child context. */
+    BITCAP_SET_TRUE(
+        child.childcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+    BITCAP_SET_TRUE(
+        child.childcaps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* closing the child context fails. */
+    ASSERT_NE(0, dataservice_child_context_close(&child));
+
+    /* dispose of the context. */
+    dispose((disposable_t*)&ctx);
+}

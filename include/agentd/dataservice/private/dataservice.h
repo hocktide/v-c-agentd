@@ -86,6 +86,34 @@ int dataservice_root_context_init(
 int dataservice_root_context_reduce_capabilities(
     dataservice_root_context_t* ctx, uint32_t* caps);
 
+/**
+ * \brief Create a child context with further reduced capabilities.
+ *
+ * \param root          The root context from which the child context inherits
+ *                      its capabilities.
+ * \param child         The child context to initialize.
+ * \param caps          The capabilities bitset to use for the reduction
+ *                      operation.  It is ANDed against the root capabilities
+ *                      to create a reduced child context.  The data
+ *                      structure must be the same size as the capabilities
+ *                      structure defined in dataservice_child_context_t.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int dataservice_child_context_create(
+    dataservice_root_context_t* root, dataservice_child_context_t* child,
+    uint32_t* caps);
+
+/**
+ * \brief Close a child context.
+ *
+ * \param child         The child context to close.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int dataservice_child_context_close(
+    dataservice_child_context_t* child);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
