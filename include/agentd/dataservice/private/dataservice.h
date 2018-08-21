@@ -114,6 +114,46 @@ int dataservice_child_context_create(
 int dataservice_child_context_close(
     dataservice_child_context_t* child);
 
+/**
+ * \brief Query a global setting via the dataservice_global_setting_enum
+ * enumeration.
+ *
+ * \param ctx           The child context from which the global setting is
+ *                      queried.
+ * \param key           The key value to query.
+ * \param buffer        The buffer to which the value is written.
+ * \param size          The size of the buffer; updated to the size read if
+ *                      successful or the size required if a would truncate
+ *                      error occurs.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success
+ *          - 1 if the value is not found.
+ *          - 2 if the value would be truncated.
+ *          - non-zero on failure.
+ */
+int dataservice_global_settings_get(
+    dataservice_child_context_t* child, uint64_t key, char* buffer,
+    size_t* size);
+
+/**
+ * \brief Set a global setting via the dataservice_global_setting_enum
+ * enumeration.
+ *
+ * \param ctx           The child context from which the global setting is
+ *                      set.
+ * \param key           The key value to set.
+ * \param buffer        The buffer from which the setting is set.
+ * \param size          The size of the buffer.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success
+ *          - non-zero on failure.
+ */
+int dataservice_global_settings_set(
+    dataservice_child_context_t* child, uint64_t key, const char* buffer,
+    size_t size);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

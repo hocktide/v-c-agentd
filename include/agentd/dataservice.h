@@ -130,6 +130,29 @@ enum dataservice_api_cap_enum
     DATASERVICE_API_CAP_BITS_MAX
 };
 
+/**
+ * \brief Global settings that can be set or queried.
+ */
+enum dataservice_global_setting_enum
+{
+    /**
+     * \brief Lower bound of global settings.  Must be the first value in this
+     * enumeration.
+     */
+    DATASERVICE_GLOBAL_SETTING_LOWER_BOUND,
+
+    /**
+     * \brief Schema version.  Must proceed directly after lower bound.
+     */
+    DATASERVICE_GLOBAL_SETTING_SCHEMA_VERSION =
+        DATASERVICE_GLOBAL_SETTING_LOWER_BOUND,
+
+    /**
+     * \brief Upper bound.  Must be the last value in this enumeration.
+     */
+    DATASERVICE_GLOBAL_SETTING_UPPER_BOUND
+};
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
