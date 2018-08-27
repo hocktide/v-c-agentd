@@ -153,6 +153,142 @@ enum dataservice_global_setting_enum
     DATASERVICE_GLOBAL_SETTING_UPPER_BOUND
 };
 
+/**
+ * \brief Data service API methods.
+ */
+enum dataservice_api_method_enum
+{
+    /**
+     * \brief Lower bound of API methods.  Must be the first value in this
+     * enumeration.
+     */
+    DATASERVICE_API_METHOD_LOWER_BOUND,
+
+    /**
+     * \brief Create a root context.  Must proceed directly after lower bound.
+     */
+    DATASERVICE_API_METHOD_LL_ROOT_CONTEXT_CREATE =
+        DATASERVICE_API_METHOD_LOWER_BOUND,
+
+    /**
+     * \brief Further reduce capabilities for this API.
+     */
+    DATASERVICE_API_METHOD_LL_ROOT_CONTEXT_REDUCE_CAPS,
+
+    /**
+     * \brief Create a child context with reduced capabilities from the root
+     * context.
+     */
+    DATASERVICE_API_METHOD_LL_CHILD_CONTEXT_CREATE,
+
+    /**
+     * \brief Close a child context.
+     */
+    DATASERVICE_API_METHOD_LL_CHILD_CONTEXT_CLOSE,
+
+    /**
+     * \brief Read a backup of the database.
+     */
+    DATASERVICE_API_METHOD_LL_DATABASE_BACKUP,
+
+    /**
+     * \brief Restore a backup of the database.
+     */
+    DATASERVICE_API_METHOD_LL_DATABASE_RESTORE,
+
+    /**
+     * \brief Upgrade the database schema.
+     */
+    DATASERVICE_API_METHOD_LL_DATABASE_UPGRADE,
+
+    /**
+     * \brief Query a global setting.
+     */
+    DATASERVICE_API_METHOD_APP_GLOBAL_SETTING_READ,
+
+    /**
+     * \brief Set a global setting.
+     */
+    DATASERVICE_API_METHOD_APP_GLOBAL_SETTING_WRITE,
+
+    /**
+     * \brief Read the latest block ID.
+     */
+    DATASERVICE_API_METHOD_APP_BLOCK_ID_LATEST_READ,
+
+    /**
+     * \brief Read the next block ID given a block ID.
+     */
+    DATASERVICE_API_METHOD_APP_BLOCK_ID_NEXT_READ,
+
+    /**
+     * \brief Read the previous block ID given a block ID.
+     */
+    DATASERVICE_API_METHOD_APP_BLOCK_ID_PREV_READ,
+
+    /**
+     * \brief Read the block ID of a given transaction by ID.
+     */
+    DATASERVICE_API_METHOD_APP_BLOCK_ID_WITH_TRANSACTION_READ,
+
+    /**
+     * \brief Read a block by ID.
+     */
+    DATASERVICE_API_METHOD_APP_BLOCK_READ,
+
+    /**
+     * \brief Read a transaction by ID.
+     */
+    DATASERVICE_API_METHOD_APP_TRANSACTION_READ,
+
+    /**
+     * \brief Submit a transaction to the process queue.
+     */
+    DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_SUBMIT,
+
+    /**
+     * \brief Read the first transaction from the process queue.
+     */
+    DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_FIRST_READ,
+
+    /**
+     * \brief Read the next transaction from the process queue.
+     */
+    DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_NEXT_READ,
+
+    /**
+     * \brief Write a block to the block table.
+     *
+     * This transaction automatically populates the transaction table with
+     * transactions in this block and cleans up the process queue of all
+     * matching transactions.
+     */
+    DATASERVICE_API_METHOD_APP_BLOCK_WRITE,
+
+    /**
+     * \brief The number of methods in this API.
+     *
+     * Must be immediately after the last enumerated bit value.
+     */
+    DATASERVICE_API_METHOD_UPPER_BOUND
+};
+
+/**
+ * \brief Event loop for the data service.  This is the entry point for the data
+ * service.  It handles the details of reacting to events sent over the data
+ * service socket.
+ *
+ * \param datasock      The data service socket.  The data service listens for
+ *                      requests on this socket and sends responses.
+ * \param logsock       The logging service socket.  The data service logs data
+ *                      on this socket.
+ *
+ * \returns a status code on service exit indicating a normal or abnormal exit.
+ *          - 0 on normal exit.
+ *          - non-zero on abnormal exit.
+ */
+int dataservice_event_loop(int datasock, int logsock);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

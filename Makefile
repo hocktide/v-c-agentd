@@ -29,6 +29,10 @@ VCBLOCKCHAIN_HOST_RELEASE_LINK?= \
 GTEST_DIR?=$(CURDIR)/lib/vcblockchain/lib/googletest/googletest
 GTEST_OBJ=$(TEST_BUILD_DIR)/gtest-all.o
 
+#Libevent options
+LIBEVENT_DIR?=$(CURDIR)/lib/vcblockchain/lib/libevent
+LIBEVENT_CFLAGS=-I $(LIBEVENT_DIR)/include
+
 #agentd source files
 SRCDIR=$(CURDIR)/src
 DIRS=$(SRCDIR) $(SRCDIR)/agentd $(SRCDIR)/bootstrap_config \
@@ -107,7 +111,7 @@ HOST_CHECKED_YACC=$(TOOLCHAIN_DIR)/host/bin/bison
 
 #platform compiler flags
 COMMON_INCLUDES=$(MODEL_CHECK_INCLUDES) $(VCBLOCKCHAIN_CFLAGS) \
-                -I $(CURDIR)/include
+                $(LIBEVENT_CFLAGS) -I $(CURDIR)/include
 COMMON_CFLAGS=$(COMMON_INCLUDES) -Wall -Werror -Wextra \
     -I $(TOOLCHAIN_DIR)/host/include
 HOST_CHECKED_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_CHECKED_BUILD_DIR) \

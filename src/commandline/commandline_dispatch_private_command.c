@@ -27,7 +27,14 @@ void commandline_dispatch_private_command(
     /* is this the readconfig command? */
     if (!strcmp(command, "readconfig"))
     {
-        bootstrap_config_set_private_command(bconf, private_command_readconfig);
+        bootstrap_config_set_private_command(
+            bconf, private_command_readconfig);
+    }
+    /* is this the dataservice private command? */
+    else if (!strcmp(command, "dataservice"))
+    {
+        bootstrap_config_set_private_command(
+            bconf, private_command_dataservice);
     }
     else
     {
@@ -35,6 +42,7 @@ void commandline_dispatch_private_command(
          * provide any more hints. Users should not be using -P. */
 
         fprintf(stderr, "Invalid option.\n\n");
-        bootstrap_config_set_command(bconf, &command_error_usage);
+        bootstrap_config_set_command(
+            bconf, &command_error_usage);
     }
 }

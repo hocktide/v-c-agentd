@@ -9,7 +9,9 @@
 #ifndef AGENTD_IPC_HEADER_GUARD
 #define AGENTD_IPC_HEADER_GUARD
 
+#include <stddef.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <vpr/disposable.h>
 
 /* make this header C++ friendly. */
@@ -27,6 +29,43 @@ extern "C" {
 #define IPC_DATA_TYPE_STRING 0x10
 #define IPC_DATA_TYPE_EOM 0xFF
 
+/* forward decl for ipc_socket_context. */
+struct ipc_socket_context;
+
+/**
+ * \brief Socket event flags.
+ */
+typedef enum ipc_socket_event_flags_enum
+{
+    /**
+     * \brief The socket is available for reading.
+     */
+    IPC_SOCKET_EVENT_READ = 0x01,
+
+    /**
+     * \brief The socket is available for writing.
+     */
+    IPC_SOCKET_EVENT_WRITE = 0x02,
+
+    /**
+     * \brief An error has occurred on this socket.
+     */
+    IPC_SOCKET_EVENT_ERROR = 0x04
+
+} ipc_socket_event_flags_enum_t;
+
+/**
+ * \brief Callback method for an IPC socket event.
+ *
+ * \param ctx           The non-blocking socket context in which this event
+ *                      occurred.
+ * \param event_flags   The event flags that caused this callback.  See
+ *                      \ref ipc_socket_event_flags_enum_t.
+ * \param user_context  The user context associated with this socket.
+ */
+typedef void (*ipc_socket_event_cb_t)(
+    struct ipc_socket_context* ctx, int event_flags, void* user_context);
+
 /**
  * \brief Socket context used for asynchronous (non-blocking) I/O.  Contains an
  * opaque reference to the underlying async I/O implementation.
@@ -36,8 +75,23 @@ extern "C" {
 typedef struct ipc_socket_context
 {
     disposable_t hdr;
+    int fd;
+    ipc_socket_event_cb_t read;
+    ipc_socket_event_cb_t write;
     void* impl;
+    void* user_context;
 } ipc_socket_context_t;
+
+/**
+ * \brief IPC Event Loop context.
+ *
+ * Is disposable.
+ */
+typedef struct ipc_event_loop_context
+{
+    disposable_t hdr;
+    void* impl;
+} ipc_event_loop_context_t;
 
 /**
  * \brief Create a socket pair of the given type and protocol for the given
@@ -79,12 +133,13 @@ int ipc_make_block(int sock);
  * Furthermore, the ipc_socket_context_t structure is owned by the caller and
  * must be disposed using the dispose() method.
  *
- * \param sd            The socket descriptor to make asynchronous.
+ * \param sock          The socket descriptor to make asynchronous.
  * \param ctx           The socket context to initialize using this call.
+ * \param user_context  The user context for this connection.
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_make_noblock(int sock, ipc_socket_context_t* ctx);
+int ipc_make_noblock(int sock, ipc_socket_context_t* ctx, void* user_context);
 
 /**
  * \brief Write a character string to the blocking socket.
@@ -209,6 +264,142 @@ int ipc_read_uint8_block(int sock, uint8_t* val);
  * \returns 0 on success and non-zero on failure.
  */
 int ipc_read_int8_block(int sock, int8_t* val);
+
+/**
+ * \brief Initialize the event loop for handling IPC non-blocking I/O.
+ *
+ * On success, this event loop is owned by the caller and must be disposed when
+ * no longer needed by calling the dispose() method.
+ *
+ * \param loop          The event loop context to initialize.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int ipc_event_loop_init(ipc_event_loop_context_t* loop);
+
+/**
+ * \brief Add a non-blocking socket to the event loop.
+ *
+ * On success, the event loop will manage events on this non-blocking socket.
+ * Note that the ownership for this socket context remains with the caller.  It
+ * is the caller's responsibility to remove this socket from the event loop and
+ * to dispose the socket.
+ *
+ * \param loop          The event loop context to which this socket is added.
+ * \param sock          The socket context to add to the event loop.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int ipc_event_loop_add(
+    ipc_event_loop_context_t* loop, ipc_socket_context_t* sock);
+
+/**
+ * \brief Remove a non-blocking socket from the event loop.
+ *
+ * On success, the event loop will no longer manage events on this non-blocking
+ * socket.  Note that the ownership for this socket context remains with the
+ * caller.  It is the caller's responsibility to dispose the socket.
+ *
+ * \param loop          The event loop context from which this socket is
+ *                      removed.
+ * \param sock          This socket context is removed from the event loop.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int ipc_event_loop_remove(
+    ipc_event_loop_context_t* loop, ipc_socket_context_t* sock);
+
+/**
+ * \brief Run the event loop for IPC non-blocking I/O.
+ *
+ * \param loop          The event loop context to run.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int ipc_event_loop_run(ipc_event_loop_context_t* loop);
+
+/**
+ * \brief Get the number of bytes available in the write buffer.
+ *
+ * \note This method can only be called after a socket has been added to the
+ * event loop.  Otherwise, the result is undefined.
+ *
+ * \param sock          The non-blocking socket to query.
+ *
+ * \returns a number greater than or equal to zero, indicating the number of
+ * bytes available for writing.
+ */
+size_t ipc_socket_writebuffer_size(ipc_socket_context_t* sock);
+
+/**
+ * \brief Write data from the write buffer to the non-blocking socket, returning
+ * either the number of bytes written, or a value indicating error.
+ *
+ * \note This method can only be called after a socket has been added to the
+ * event loop.  Otherwise, the result is undefined.
+ *
+ * \param sock          The non-blocking socket for the write.
+ *
+ * \returns the number of bytes written, -1 on error, or 0.  If 0 is returned
+ * AND the socket is available for writing via a write callback, then this
+ * indicates that the socket has been closed by the peer.  If -1 is returned,
+ * then errno should be checked to see if this is a real error or if the write
+ * failed because it would block (EAGAIN / EWOULDBLOCK).
+ */
+ssize_t ipc_socket_write_from_buffer(ipc_socket_context_t* sock);
+
+/**
+ * \brief Get the number of bytes available in the read buffer.
+ *
+ * \note This method can only be called after a socket has been added to the
+ * event loop.  Otherwise, the result is undefined.
+ *
+ * \param sock          The non-blocking socket to query.
+ *
+ * \returns a number greater than or equal to zero, indicating the number of
+ * bytes in the read buffer.
+ */
+size_t ipc_socket_readbuffer_size(ipc_socket_context_t* sock);
+
+/**
+ * \brief Read data from the socket and place this into the readbuffer.
+ *
+ * \note This method can only be called after a socket has been added to the
+ * event loop.  Otherwise, the result is undefined.
+ *
+ * \param sock          The non-blocking socket for the read.
+ *
+ * \returns the number of bytes read, -1 on error, or 0.  If 0 is returned
+ * AND the socket is available for reading via a read callback, then this
+ * indicates that the socket has been closed by the peer.  If -1 is returned,
+ * then errno should be checked to see if this is a real error or if the read
+ * failed because it would block (EAGAIN / EWOULDBLOCK).
+ */
+ssize_t ipc_socket_read_to_buffer(ipc_socket_context_t* sock);
+
+/**
+ * \brief Set the read event callback for a non-blocking socket.
+ *
+ * \note This method can only be called BEFORE a socket has been added to the
+ * event loop.  Otherwise, the callback will not be properly set.
+ *
+ * \param sock          The socket to set.
+ * \param cb            The callback to set.
+ */
+void ipc_set_readcb_noblock(
+    ipc_socket_context_t* sock, ipc_socket_event_cb_t cb);
+
+/**
+ * \brief Set the write event callback for a non-blocking socket.
+ *
+ * \note This method can only be called BEFORE a socket has been added to the
+ * event loop.  Otherwise, the callback will not be properly set.
+ *
+ * \param sock          The socket to set.
+ * \param cb            The callback to set.
+ */
+void ipc_set_writecb_noblock(
+    ipc_socket_context_t* sock, ipc_socket_event_cb_t cb);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

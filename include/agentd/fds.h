@@ -31,6 +31,18 @@ extern "C" {
  */
 #define AGENTD_FD_CONFIG_OUT ((int)1)
 
+/**
+ * \brief File descriptor for the data service socket.
+ * Used by the data service private command.
+ */
+#define AGENTD_FD_DATASERVICE_SOCK ((int)0)
+
+/**
+ * \brief File descriptor for the data service log socket.
+ * Used by the data service private command.
+ */
+#define AGENTD_FD_DATASERVICE_LOG ((int)1)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
