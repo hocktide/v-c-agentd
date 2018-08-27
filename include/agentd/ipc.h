@@ -27,6 +27,7 @@ extern "C" {
 #define IPC_DATA_TYPE_INT32 0x0A
 #define IPC_DATA_TYPE_INT64 0x0B
 #define IPC_DATA_TYPE_STRING 0x10
+#define IPC_DATA_TYPE_DATA_PACKET 0x20
 #define IPC_DATA_TYPE_EOM 0xFF
 
 /* forward decl for ipc_socket_context. */
@@ -143,6 +144,20 @@ ssize_t ipc_make_noblock(
     int sock, ipc_socket_context_t* ctx, void* user_context);
 
 /**
+ * \brief Write a raw data packet.
+ *
+ * On success, the raw data packet value will be written, along with type
+ * information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           The raw data to write.
+ * \param size          The size of the raw data to write.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+ssize_t ipc_write_data_block(int sock, const void* val, uint32_t size);
+
+/**
  * \brief Write a character string to the blocking socket.
  *
  * On success, the character string value is written, along with type
@@ -202,6 +217,22 @@ ssize_t ipc_write_uint8_block(int sock, uint8_t val);
  * \returns 0 on success and non-zero on failure.
  */
 ssize_t ipc_write_int8_block(int sock, int8_t val);
+
+/**
+ * \brief Read a raw data packet from the blocking socket.
+ *
+ * On success, a raw data buffer is allocated and read, along with type
+ * information and size.  The caller owns this buffer and is responsible for
+ * freeing it when it is no longer in use.
+ *
+ * \param sd            The socket descriptor from which the value is read.
+ * \param val           Pointer to the pointer of the raw data buffer.
+ * \param size          Pointer to the variable to receive the size of this
+ *                      packet.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+ssize_t ipc_read_data_block(int sock, void** val, uint32_t* size);
 
 /**
  * \brief Read a character string from the blocking socket.
