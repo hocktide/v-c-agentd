@@ -28,9 +28,9 @@ static void ipc_event_loop_dispose(void* disposable);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_event_loop_init(ipc_event_loop_context_t* loop)
+ssize_t ipc_event_loop_init(ipc_event_loop_context_t* loop)
 {
-    int retval = 0;
+    ssize_t retval = 0;
     /* parameter sanity checking. */
     MODEL_ASSERT(NULL != loop);
 

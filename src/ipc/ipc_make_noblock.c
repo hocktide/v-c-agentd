@@ -17,7 +17,7 @@
 #include "ipc_internal.h"
 
 /* forward decls */
-static int ipc_fcntl_nonblock(int sock);
+static ssize_t ipc_fcntl_nonblock(int sock);
 static void ipc_socket_context_dispose(void* disposable);
 
 /**
@@ -35,7 +35,8 @@ static void ipc_socket_context_dispose(void* disposable);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_make_noblock(int sock, ipc_socket_context_t* ctx, void* user_context)
+ssize_t ipc_make_noblock(
+    int sock, ipc_socket_context_t* ctx, void* user_context)
 {
     /* parameter sanity checks. */
     MODEL_ASSERT(0 <= sock);
@@ -53,7 +54,7 @@ int ipc_make_noblock(int sock, ipc_socket_context_t* ctx, void* user_context)
     memset(impl, 0, sizeof(ipc_socket_impl_t));
 
     /* set the socket to non-blocking. */
-    int retval = ipc_fcntl_nonblock(sock);
+    ssize_t retval = ipc_fcntl_nonblock(sock);
     if (0 != retval)
     {
         free(impl);
@@ -77,7 +78,7 @@ int ipc_make_noblock(int sock, ipc_socket_context_t* ctx, void* user_context)
  *
  * \returns 0 on success and non-zero on failure.
  */
-static int ipc_fcntl_nonblock(int sock)
+static ssize_t ipc_fcntl_nonblock(int sock)
 {
     /* get the flags for this socket. */
     int flags = fcntl(sock, F_GETFL);

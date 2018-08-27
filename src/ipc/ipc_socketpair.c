@@ -26,9 +26,9 @@
  * \param rhs           Pointer to the integer variable updated to the
  *                      right-hand-side descriptor for the socket pair.
  */
-int ipc_socketpair(int domain, int type, int protocol, int* lhs, int* rhs)
+ssize_t ipc_socketpair(int domain, int type, int protocol, int* lhs, int* rhs)
 {
-    int retval;
+    ssize_t retval;
     int sd[2];
 
     MODEL_ASSERT(NULL != lhs);

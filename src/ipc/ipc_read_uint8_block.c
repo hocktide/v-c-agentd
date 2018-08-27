@@ -23,7 +23,7 @@
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_read_uint8_block(int sock, uint8_t* val)
+ssize_t ipc_read_uint8_block(int sock, uint8_t* val)
 {
     uint8_t type = 0U;
     uint32_t nsize = 0U;

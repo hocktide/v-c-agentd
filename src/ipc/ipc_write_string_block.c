@@ -24,7 +24,7 @@
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_write_string_block(int sock, const char* val)
+ssize_t ipc_write_string_block(int sock, const char* val)
 {
     uint8_t typeval = IPC_DATA_TYPE_STRING;
 

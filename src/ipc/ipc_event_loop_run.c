@@ -22,7 +22,7 @@
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_event_loop_run(ipc_event_loop_context_t* loop)
+ssize_t ipc_event_loop_run(ipc_event_loop_context_t* loop)
 {
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != loop);

@@ -28,7 +28,7 @@
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_event_loop_remove(
+ssize_t ipc_event_loop_remove(
     ipc_event_loop_context_t* UNUSED(loop), ipc_socket_context_t* sock)
 {
     /* parameter sanity checking. */

@@ -24,7 +24,7 @@
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_write_int8_block(int sock, int8_t val)
+ssize_t ipc_write_int8_block(int sock, int8_t val)
 {
     uint8_t typeval = IPC_DATA_TYPE_INT8;
 

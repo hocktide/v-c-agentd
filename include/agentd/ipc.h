@@ -110,7 +110,7 @@ typedef struct ipc_event_loop_context
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_socketpair(int domain, int type, int protocol, int* lhs, int* rhs);
+ssize_t ipc_socketpair(int domain, int type, int protocol, int* lhs, int* rhs);
 
 /**
  * \brief Set a socket for synchronous (blocking) I/O.  Afterward, the
@@ -122,7 +122,7 @@ int ipc_socketpair(int domain, int type, int protocol, int* lhs, int* rhs);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_make_block(int sock);
+ssize_t ipc_make_block(int sock);
 
 /**
  * \brief Set a socket for asynchronous (non-blocking) I/O.  Afterward, the
@@ -139,7 +139,8 @@ int ipc_make_block(int sock);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_make_noblock(int sock, ipc_socket_context_t* ctx, void* user_context);
+ssize_t ipc_make_noblock(
+    int sock, ipc_socket_context_t* ctx, void* user_context);
 
 /**
  * \brief Write a character string to the blocking socket.
@@ -152,7 +153,7 @@ int ipc_make_noblock(int sock, ipc_socket_context_t* ctx, void* user_context);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_write_string_block(int sock, const char* val);
+ssize_t ipc_write_string_block(int sock, const char* val);
 
 /**
  * \brief Write a uint64_t value to the blocking socket.
@@ -164,7 +165,7 @@ int ipc_write_string_block(int sock, const char* val);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_write_uint64_block(int sock, uint64_t val);
+ssize_t ipc_write_uint64_block(int sock, uint64_t val);
 
 /**
  * \brief Write an int64_t value to the blocking socket.
@@ -176,7 +177,7 @@ int ipc_write_uint64_block(int sock, uint64_t val);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_write_int64_block(int sock, int64_t val);
+ssize_t ipc_write_int64_block(int sock, int64_t val);
 
 /**
  * \brief Write a uint8_t value to the blocking socket.
@@ -188,7 +189,7 @@ int ipc_write_int64_block(int sock, int64_t val);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_write_uint8_block(int sock, uint8_t val);
+ssize_t ipc_write_uint8_block(int sock, uint8_t val);
 
 /**
  * \brief Write an int8_t value to the blocking socket.
@@ -200,7 +201,7 @@ int ipc_write_uint8_block(int sock, uint8_t val);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_write_int8_block(int sock, int8_t val);
+ssize_t ipc_write_int8_block(int sock, int8_t val);
 
 /**
  * \brief Read a character string from the blocking socket.
@@ -215,7 +216,7 @@ int ipc_write_int8_block(int sock, int8_t val);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_read_string_block(int sock, char** val);
+ssize_t ipc_read_string_block(int sock, char** val);
 
 /**
  * \brief Read a uint64_t value from the blocking socket.
@@ -227,7 +228,7 @@ int ipc_read_string_block(int sock, char** val);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_read_uint64_block(int sock, uint64_t* val);
+ssize_t ipc_read_uint64_block(int sock, uint64_t* val);
 
 /**
  * \brief Read an int64_t value from the blocking socket.
@@ -239,7 +240,7 @@ int ipc_read_uint64_block(int sock, uint64_t* val);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_read_int64_block(int sock, int64_t* val);
+ssize_t ipc_read_int64_block(int sock, int64_t* val);
 
 /**
  * \brief Read a uint8_t value from the blocking socket.
@@ -251,7 +252,7 @@ int ipc_read_int64_block(int sock, int64_t* val);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_read_uint8_block(int sock, uint8_t* val);
+ssize_t ipc_read_uint8_block(int sock, uint8_t* val);
 
 /**
  * \brief Read an int8_t value from the blocking socket.
@@ -263,7 +264,7 @@ int ipc_read_uint8_block(int sock, uint8_t* val);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_read_int8_block(int sock, int8_t* val);
+ssize_t ipc_read_int8_block(int sock, int8_t* val);
 
 /**
  * \brief Initialize the event loop for handling IPC non-blocking I/O.
@@ -275,7 +276,7 @@ int ipc_read_int8_block(int sock, int8_t* val);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_event_loop_init(ipc_event_loop_context_t* loop);
+ssize_t ipc_event_loop_init(ipc_event_loop_context_t* loop);
 
 /**
  * \brief Add a non-blocking socket to the event loop.
@@ -290,7 +291,7 @@ int ipc_event_loop_init(ipc_event_loop_context_t* loop);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_event_loop_add(
+ssize_t ipc_event_loop_add(
     ipc_event_loop_context_t* loop, ipc_socket_context_t* sock);
 
 /**
@@ -306,7 +307,7 @@ int ipc_event_loop_add(
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_event_loop_remove(
+ssize_t ipc_event_loop_remove(
     ipc_event_loop_context_t* loop, ipc_socket_context_t* sock);
 
 /**
@@ -316,7 +317,7 @@ int ipc_event_loop_remove(
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_event_loop_run(ipc_event_loop_context_t* loop);
+ssize_t ipc_event_loop_run(ipc_event_loop_context_t* loop);
 
 /**
  * \brief Get the number of bytes available in the write buffer.

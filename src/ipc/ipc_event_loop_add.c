@@ -31,10 +31,10 @@ static void ipc_event_loop_cb(evutil_socket_t, short, void*);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_event_loop_add(
+ssize_t ipc_event_loop_add(
     ipc_event_loop_context_t* loop, ipc_socket_context_t* sock)
 {
-    int retval = 0;
+    ssize_t retval = 0;
 
     /* parameter sanity checking. */
     MODEL_ASSERT(NULL != loop);
