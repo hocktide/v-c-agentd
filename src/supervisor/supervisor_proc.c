@@ -7,18 +7,20 @@
  */
 
 #include <vpr/parameters.h>
+#include <vpr/parameters.h>
+
 #include <agentd/config.h>
 #include <agentd/fds.h>
 #include <agentd/ipc.h>
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <vpr/parameters.h>
 #include <agentd/privsep.h>
 #include <agentd/bootstrap_config.h>
+
 #include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/wait.h>
 #include <sys/file.h>
 
 static void private_signal_handler_forwarder(int signal);
@@ -83,7 +85,6 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
         fprintf(fp, "%d", child_pid);
         fclose(fp);
 
-
         /* If successful does _not_ return! */
         retval = privsep_exec_private("supervisor");
         if (0 != retval)
@@ -99,6 +100,8 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
 
             signal(SIGHUP, private_signal_handler_forwarder);
             signal(SIGKILL, private_signal_handler_forwarder);
+            signal(SIGTERM, private_signal_handler_forwarder);
+            signal(SIGCHLD, private_signal_handler_forwarder);
 
             int pid_status;
             waitpid(pid, &pid_status, 0);
@@ -121,5 +124,12 @@ done:
 
 static void private_signal_handler_forwarder(int signal)
 {
-    kill(pid, signal);
+    if (signal == SIGCHLD)
+    {
+        wait(NULL);
+    }
+    else
+    {
+        kill(pid, signal);
+    }
 }
