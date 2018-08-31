@@ -30,6 +30,12 @@ extern "C" {
 #define IPC_DATA_TYPE_DATA_PACKET 0x20
 #define IPC_DATA_TYPE_EOM 0xFF
 
+/* error codes for ipc. */
+typedef enum ipc_error_code
+{
+    IPC_ERROR_CODE_WOULD_BLOCK = 0x1005
+} ipc_error_code_t;
+
 /* forward decl for ipc_socket_context. */
 struct ipc_socket_context;
 
@@ -432,6 +438,162 @@ void ipc_set_readcb_noblock(
  */
 void ipc_set_writecb_noblock(
     ipc_socket_context_t* sock, ipc_socket_event_cb_t cb);
+
+/**
+ * \brief Write a raw data packet to a non-blocking socket.
+ *
+ * On success, the raw data packet value will be written, along with type
+ * information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           The raw data to write.
+ * \param size          The size of the raw data to write.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+ssize_t ipc_write_data_noblock(
+    ipc_socket_context_t* sock, const void* val, uint32_t size);
+
+/**
+ * \brief Write a character string to a non-blocking socket.
+ *
+ * On success, the character string value is written, along with type
+ * information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           The string to write.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+ssize_t ipc_write_string_noblock(ipc_socket_context_t* sock, const char* val);
+
+/**
+ * \brief Write a uint64_t value to a non-blocking socket.
+ *
+ * On success, the value is written, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           The value to write.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+ssize_t ipc_write_uint64_noblock(ipc_socket_context_t* sock, uint64_t val);
+
+/**
+ * \brief Write an int64_t value to a non-blocking socket.
+ *
+ * On success, the value is written, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           The value to write.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+ssize_t ipc_write_int64_noblock(ipc_socket_context_t* sock, int64_t val);
+
+/**
+ * \brief Write a uint8_t value to a non-blocking socket.
+ *
+ * On success, the value is written, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           The value to write.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+ssize_t ipc_write_uint8_noblock(ipc_socket_context_t* sock, uint8_t val);
+
+/**
+ * \brief Write an int8_t value to a non-blocking socket.
+ *
+ * On success, the value is written, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           The value to write.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+ssize_t ipc_write_int8_noblock(ipc_socket_context_t* sock, int8_t val);
+
+/**
+ * \brief Read a raw data packet from a non-blocking socket.
+ *
+ * On success, a raw data buffer is allocated and read, along with type
+ * information and size.  The caller owns this buffer and is responsible for
+ * freeing it when it is no longer in use.
+ *
+ * \param sd            The socket descriptor from which the value is read.
+ * \param val           Pointer to the pointer of the raw data buffer.
+ * \param size          Pointer to the variable to receive the size of this
+ *                      packet.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+ssize_t ipc_read_data_noblock(
+    ipc_socket_context_t* sock, void** val, uint32_t* size);
+
+/**
+ * \brief Read a character string from a non-blocking socket.
+ *
+ * On success, a character string value is allocated and read, along with type
+ * information and size.  The caller owns this character string and is
+ * responsible for freeing it when it is no longer in use.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           Pointer to the string pointer to hold the string value
+ *                      on success.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+ssize_t ipc_read_string_noblock(ipc_socket_context_t* sock, char** val);
+
+/**
+ * \brief Read a uint64_t value from a non-blocking socket.
+ *
+ * On success, the value is read, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           Pointer to hold the value.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+ssize_t ipc_read_uint64_noblock(ipc_socket_context_t* sock, uint64_t* val);
+
+/**
+ * \brief Read an int64_t value from a non-blocking socket.
+ *
+ * On success, the value is read, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           Pointer to hold the value.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+ssize_t ipc_read_int64_noblock(ipc_socket_context_t* sock, int64_t* val);
+
+/**
+ * \brief Read a uint8_t value from a non-blocking socket.
+ *
+ * On success, the value is read, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           Pointer to hold the value.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+ssize_t ipc_read_uint8_noblock(ipc_socket_context_t* sock, uint8_t* val);
+
+/**
+ * \brief Read an int8_t value from a non-blocking socket.
+ *
+ * On success, the value is read, along with type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param val           Pointer to hold the value.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+ssize_t ipc_read_int8_noblock(ipc_socket_context_t* sock, int8_t* val);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
