@@ -15,6 +15,10 @@ static void private_signal_handler_supervisor(int signal);
 
 void private_command_supervisor()
 {
+    /*
+     * This one is special as the application is terminated at the exit of this handler.
+     * We'll want to make some sort of a notification here.
+     */
 
     signal(SIGHUP, private_signal_handler_supervisor);
     signal(SIGKILL, private_signal_handler_supervisor);
@@ -23,12 +27,16 @@ void private_command_supervisor()
 
     for (;;)
     {
-        sleep(10);
+        wait(NULL);
     }
 }
 
 static void private_signal_handler_supervisor(int signal)
 {
+    /*
+     * We'll want to wait on the next child pid here,
+     * or bubble this up to the loop above to wait on the proc.
+     */
     switch (signal)
     {
         case SIGKILL:
