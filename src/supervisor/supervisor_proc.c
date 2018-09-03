@@ -85,6 +85,15 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
         fprintf(fp, "%d", child_pid);
         fclose(fp);
 
+        retval = privsep_setfds(
+            pid_fd, /* ==> */ AGENTD_FD_PID,
+            -1);
+        if (0 != retval)
+        {
+            perror("privsep_setfds");
+            goto done;
+        }
+
         /* If successful does _not_ return! */
         retval = privsep_exec_private("supervisor");
         if (0 != retval)

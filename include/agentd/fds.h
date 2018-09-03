@@ -31,6 +31,12 @@ extern "C" {
  */
 #define AGENTD_FD_CONFIG_OUT ((int)1)
 
+/**
+ * \brief File descriptor for the pid flocked file.
+ * Used by the supervisor private command.
+ */
+#define AGENTD_FD_PID ((int)2)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
