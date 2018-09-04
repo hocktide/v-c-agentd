@@ -1,7 +1,7 @@
 /**
- * \file dataservice/dataservice_decode_and_dispatch.c
+ * \file dataservice/dataservice_decode_and_dispatch_root_context_reduce_caps.c
  *
- * \brief Decode requests and dispatch them using the data service instance.
+ * \brief Decode and dispatch a root context reduce capabilities call.
  *
  * \copyright 2018 Velo Payments, Inc.  All rights reserved.
  */
@@ -15,7 +15,7 @@
 #include "dataservice_internal.h"
 
 /**
- * \brief Decode and dispatch requests received by the data service.
+ * \brief Decode and dispatch a root capabilities reduction request.
  *
  * Returns 0 on success or non-fatal error.  If a non-zero error message is
  * returned, then a fatal error has occurred that should not be recovered from.
@@ -29,7 +29,7 @@
  *
  * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
  */
-int dataservice_decode_and_dispatch(
+int dataservice_decode_and_dispatch_root_context_reduce_caps(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
     size_t size)
 {
@@ -38,39 +38,30 @@ int dataservice_decode_and_dispatch(
     MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != req);
 
+    /* storage for the capabilities. */
+    BITCAP(caps, DATASERVICE_API_CAP_BITS_MAX);
+
     /* make working with the request more convenient. */
     uint8_t* breq = (uint8_t*)req;
 
-    /* the payload size should be at least large enough for the method. */
-    if (size < sizeof(uint32_t))
+    /* the payload size should be equal to the size of the capabilities. */
+    if (size != sizeof(caps))
     {
         return 1;
     }
 
-    /* derive the payload size. */
-    size_t payload_size = size - sizeof(uint32_t);
-    MODEL_ASSERT(payload_size >= 0);
+    /* copy the caps. */
+    memcpy(caps, breq, size);
 
-    /* get the method. */
-    uint32_t nmethod = 0U;
-    memcpy(&nmethod, breq, sizeof(uint32_t));
-    uint32_t method = htonl(nmethod);
+    /* call the root context reduce capabilites method. */
+    int retval =
+        dataservice_root_context_reduce_capabilities(&inst->ctx, caps);
 
-    /* decode the method. */
-    switch (method)
-    {
-        /* handle root context create method. */
-        case DATASERVICE_API_METHOD_LL_ROOT_CONTEXT_CREATE:
-            return dataservice_decode_and_dispatch_root_context_create(
-                inst, sock, breq, payload_size);
+    /* cleanup. */
+    memset(caps, 0, sizeof(caps));
 
-        /* handle root context reduce capabilites. */
-        case DATASERVICE_API_METHOD_LL_ROOT_CONTEXT_REDUCE_CAPS:
-            return dataservice_decode_and_dispatch_root_context_reduce_caps(
-                inst, sock, breq, payload_size);
-
-        /* unknown method.  Return an error. */
-        default:
-            return 2;
-    }
+    /* write the status to output. */
+    return dataservice_decode_and_dispatch_write_status(
+        sock, DATASERVICE_API_METHOD_LL_ROOT_CONTEXT_REDUCE_CAPS, 0,
+        (uint32_t)retval);
 }

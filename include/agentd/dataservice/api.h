@@ -48,6 +48,38 @@ int dataservice_api_sendreq_root_context_init(
 int dataservice_api_recvresp_root_context_init(
     ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status);
 
+/**
+ * \brief Request that the capabilities of the root context be reduced.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param caps          The capabilities to use for the reduction.
+ * \param size          The size of the capabilities in bytes.
+ *
+ * \returns 0 if the request was successfully written to the socket, and
+ * non-zero otherwise.
+ */
+int dataservice_api_sendreq_root_context_reduce_caps(
+    ipc_socket_context_t* sock, uint32_t* caps, size_t size);
+
+/**
+ * \brief Receive a response from the root context reduce capabilities call.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates success, and a non-zero status indicates failure.
+ *
+ * \returns 0 if the response was read successfully, IPC_ERROR_CODE_WOULD_BLOCK
+ * if the response cannot yet be read, and non-zero if the response could not be
+ * successfully read.
+ */
+int dataservice_api_recvresp_root_context_reduce_caps(
+    ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
