@@ -1,0 +1,56 @@
+/**
+ * \file agentd/dataservice/private/dataservice.h
+ *
+ * \brief Internal API for the data service.
+ *
+ * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ */
+
+#ifndef AGENTD_DATASERVICE_API_HEADER_GUARD
+#define AGENTD_DATASERVICE_API_HEADER_GUARD
+
+#include <agentd/dataservice.h>
+#include <agentd/ipc.h>
+
+/* make this header C++ friendly. */
+#ifdef __cplusplus
+extern "C" {
+#endif  //__cplusplus
+
+/**
+ * \brief Request the creation of a root data service context.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param datadir       The data directory to open.
+ *
+ * \returns 0 if the request was successfully written to the socket, and
+ * non-zero otherwise.
+ */
+int dataservice_api_sendreq_root_context_init(
+    ipc_socket_context_t* sock, const char* datadir);
+
+/**
+ * \brief Receive a response from the root context init api method call.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates success, and a non-zero status indicates failure.
+ *
+ * \returns 0 if the response was read successfully, IPC_ERROR_CODE_WOULD_BLOCK
+ * if the response cannot yet be read, and non-zero if the response could not be
+ * successfully read.
+ */
+int dataservice_api_recvresp_root_context_init(
+    ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status);
+
+/* make this header C++ friendly. */
+#ifdef __cplusplus
+}
+#endif  //__cplusplus
+
+#endif /*AGENTD_DATASERVICE_API_HEADER_GUARD*/

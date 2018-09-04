@@ -10,6 +10,7 @@
 #define AGENTD_DATASERVICE_INTERNAL_HEADER_GUARD
 
 #include <agentd/dataservice/private/dataservice.h>
+#include <agentd/ipc.h>
 #include <event.h>
 #include <lmdb.h>
 
@@ -102,6 +103,62 @@ int dataservice_child_details_create(dataservice_instance_t* inst, int* offset);
  * \param offset        The offset to reclaim.
  */
 void dataservice_child_details_delete(dataservice_instance_t* inst, int offset);
+
+/**
+ * \brief Decode and dispatch requests received by the data service.
+ *
+ * Returns 0 on success or non-fatal error.  If a non-zero error message is
+ * returned, then a fatal error has occurred that should not be recovered from.
+ * Any additional information on the socket is suspect.
+ *
+ * \param inst          The instance on which the dispatch occurs.
+ * \param sock          The socket on which the request was received and the
+ *                      response is to be written.
+ * \param req           The request to be decoded and dispatched.
+ * \param size          The size of the request.
+ *
+ * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ */
+int dataservice_decode_and_dispatch(
+    dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
+    size_t size);
+
+/**
+ * \brief Write a status response to the socket.
+ *
+ * Returns 0 on success or non-fatal error.  If a non-zero error message is
+ * returned, then a fatal error has occurred that should not be recovered from.
+ *
+ * \param sock          The socket on which the request was received and the
+ *                      response is to be written.
+ * \param method        The API method of this request.
+ * \param offset        The offset for the child context.
+ * \param status        The status returned from this API method.
+ *
+ * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ */
+int dataservice_decode_and_dispatch_write_status(
+    ipc_socket_context_t* sock, uint32_t method, uint32_t offset,
+    uint32_t status);
+
+/**
+ * \brief Decode and dispatch a root context create request.
+ *
+ * Returns 0 on success or non-fatal error.  If a non-zero error message is
+ * returned, then a fatal error has occurred that should not be recovered from.
+ * Any additional information on the socket is suspect.
+ *
+ * \param inst          The instance on which the dispatch occurs.
+ * \param sock          The socket on which the request was received and the
+ *                      response is to be written.
+ * \param req           The request to be decoded and dispatched.
+ * \param size          The size of the request.
+ *
+ * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ */
+int dataservice_decode_and_dispatch_root_context_create(
+    dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
+    size_t size);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

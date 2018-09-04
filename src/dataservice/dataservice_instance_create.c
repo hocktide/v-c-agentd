@@ -32,8 +32,13 @@ dataservice_instance_t* dataservice_instance_create()
     /* clear the instance. */
     memset(instance, 0, sizeof(dataservice_instance_t));
 
+    /* explicitly allow the root context to be created. */
+    BITCAP_SET_TRUE(
+        instance->ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
     /* set the dispose method. */
     instance->hdr.dispose = &dataservice_instance_dispose;
+
     /* for each child, add the child to the child_head. */
     for (size_t i = 0; i < DATASERVICE_MAX_CHILD_CONTEXTS; ++i)
     {

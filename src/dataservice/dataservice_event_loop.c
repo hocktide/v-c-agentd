@@ -113,17 +113,52 @@ done:
  * \param user_context  The user context for this data socket.
  */
 static void dataservice_ipc_read(
-    ipc_socket_context_t* UNUSED(ctx), int UNUSED(event_flags),
-    void* UNUSED(user_context))
+    ipc_socket_context_t* ctx, int UNUSED(event_flags),
+    void* user_context)
 {
-    /* TODO */
-    /* read a request packet from the data socket. */
-    /* read the size of the request packet. */
-    /* read all of the bytes for this packet. */
-    /* decode the request. */
-    /* dispatch this request. */
-    /* write the response packet to the response buffer. */
-    /* kick off the write operation. */
+    ssize_t retval = 0;
+    void* req;
+    uint32_t size = 0;
+    dataservice_instance_t* instance = (dataservice_instance_t*)user_context;
+
+    /* parameter sanity check. */
+    MODEL_ASSERT(NULL != ctx);
+    MODEL_ASSERT(event_flags & IPC_SOCKET_EVENT_READ);
+    MODEL_ASSERT(NULL != instance);
+
+    /* attempt to read a request. */
+    retval = ipc_read_data_noblock(ctx, &req, &size);
+    switch (retval)
+    {
+        /* on success, decode and dispatch. */
+        case 0:
+            if (0 != dataservice_decode_and_dispatch(instance, ctx, req, size))
+            {
+                /* TODO - handle errors from decode and dispatch. */
+                /* these will be errors of a fatal nature that can't just be
+                 * responded to on the socket, such as a malformed request
+                 * packet.
+                 */
+                /* TODO - set a flag; don't read anything from this socket. */
+            }
+
+            /* clear and free the request data. */
+            memset(req, 0, size);
+            free(req);
+            break;
+
+        /* Wait for more data on the socket. */
+        case IPC_ERROR_CODE_WOULD_BLOCK:
+            return;
+
+        default:
+            /* TODO - handle fatal errors here. */
+            /* TODO - set a flag; don't read anything from this socket. */
+            break;
+    }
+
+    /* kick the write callback to ensure that it runs at least once. */
+    dataservice_ipc_write(ctx, IPC_SOCKET_EVENT_WRITE, user_context);
 }
 
 /**
@@ -137,6 +172,11 @@ static void dataservice_ipc_write(
     ipc_socket_context_t* ctx, int UNUSED(event_flags),
     void* UNUSED(user_context))
 {
+    /* parameter sanity check. */
+    MODEL_ASSERT(NULL != ctx);
+    MODEL_ASSERT(event_flags & IPC_SOCKET_EVENT_READ);
+    MODEL_ASSERT(NULL != user_context);
+
     if (ipc_socket_writebuffer_size(ctx) > 0)
     {
         /* attempt to write data. */
