@@ -198,6 +198,7 @@ TEST(parse_commandline_options_test, readconfig_command)
     dispose((disposable_t*)&bconf);
 }
 
+
 /**
  * \brief The readconfig private command is a valid private command.
  */
@@ -252,6 +253,60 @@ TEST(parse_commandline_options_test, readconfig_invalid_private_command)
     ASSERT_EQ(&command_error_usage, bconf.command);
     /* postcondition: private command is NULL. */
     ASSERT_EQ(nullptr, bconf.private_command);
+
+    dispose((disposable_t*)&bconf);
+}
+
+
+/**
+ * \brief The start command is a valid command.
+ */
+TEST(parse_commandline_options_test, start_command)
+{
+    bootstrap_config_t bconf;
+    char exename[] = { 'a', 'g', 'e', 'n', 't', 'd', 0 };
+    char cmd[] = { 's', 't', 'a', 'r', 't', 0 };
+    char* args[] = { exename, cmd };
+
+    bootstrap_config_init(&bconf);
+
+    /* precondition: command should be NULL. */
+    ASSERT_EQ(nullptr, bconf.command);
+
+    parse_commandline_options(
+        &bconf, sizeof(args) / sizeof(char*), args);
+
+    /* postcondition: command is set to command_readconfig. */
+    ASSERT_EQ(&command_start, bconf.command);
+
+    dispose((disposable_t*)&bconf);
+}
+
+/**
+ * \brief The supervisor private command is a valid private command.
+ */
+TEST(parse_commandline_options_test, supervisor_private_command)
+{
+    bootstrap_config_t bconf;
+    char exename[] = { 'a', 'g', 'e', 'n', 't', 'd', 0 };
+    char flags[] = { '-', 'P', 0 };
+    char cmd[] = { 's', 'u', 'p', 'e', 'r', 'v', 'i', 's', 'o', 'r', 0 };
+    char* args[] = { exename, flags, cmd };
+
+    bootstrap_config_init(&bconf);
+
+    /* precondition: command should be NULL. */
+    ASSERT_EQ(nullptr, bconf.command);
+    /* precondition: private_command should be NULL. */
+    ASSERT_EQ(nullptr, bconf.private_command);
+
+    parse_commandline_options(
+        &bconf, sizeof(args) / sizeof(char*), args);
+
+    /* postcondition: command is set to NULL. */
+    ASSERT_EQ(nullptr, bconf.command);
+    /* postcondition: private command is set to private_command_readconfig. */
+    ASSERT_EQ(&private_command_supervisor, bconf.private_command);
 
     dispose((disposable_t*)&bconf);
 }
