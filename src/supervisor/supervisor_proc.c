@@ -14,6 +14,7 @@
 #include <agentd/ipc.h>
 #include <agentd/privsep.h>
 #include <agentd/bootstrap_config.h>
+#include <agentd/supervisor.h>
 
 #include <stdio.h>
 #include <fcntl.h>
