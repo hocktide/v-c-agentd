@@ -17,12 +17,19 @@
 #include <sys/file.h>
 #include <fcntl.h>
 
+/**
+ * \brief Start the blockchain agent.
+ *
+ * \param bconf         The bootstrap configuration for this command.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
 int command_start(struct bootstrap_config* bconf)
 {
     int retval = 0;
     char* pid_path = strcatv(bconf->prefix_dir, "/var/pid/agentd.pid", NULL);
 
-    // Create this file if it doesn't exist.
+    /* Create this file if it doesn't exist. */
     int pid_fd = open(
         pid_path,
         O_CREAT | O_RDWR,
@@ -34,7 +41,7 @@ int command_start(struct bootstrap_config* bconf)
         goto done;
     }
 
-    // Try and lock it exclusive.
+    /* Try and lock it exclusive. */
     if (flock(pid_fd, LOCK_EX | LOCK_NB) < 0)
     {
         if (flock(pid_fd, LOCK_UN | LOCK_NB) < 0)
@@ -59,5 +66,6 @@ int command_start(struct bootstrap_config* bconf)
 done:
     free(pid_path);
     close(pid_fd);
+
     return retval;
 }

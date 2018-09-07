@@ -10,9 +10,11 @@
 #include <stdlib.h>
 #include <sys/wait.h>
 
-
 static void private_signal_handler_supervisor(int signal);
 
+/**
+ * \brief Run the the supervisor.
+ */
 void private_command_supervisor()
 {
     /*

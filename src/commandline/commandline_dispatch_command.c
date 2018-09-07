@@ -42,6 +42,11 @@ void commandline_dispatch_command(
     {
         bootstrap_config_set_command(bconf, &command_readconfig);
     }
+    /* start command. */
+    else if (!strcmp(argv[0], "start"))
+    {
+        bootstrap_config_set_command(bconf, &command_start);
+    }
     else
     {
         fprintf(stderr, "Unknown command '%s'.\n\n", argv[0]);

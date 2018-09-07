@@ -38,6 +38,20 @@ int command_readconfig(struct bootstrap_config* bconf);
 void private_command_readconfig();
 
 /**
+ * \brief Run the the supervisor.
+ */
+void private_command_supervisor();
+
+/**
+ * \brief Start the blockchain agent.
+ *
+ * \param bconf         The bootstrap configuration for this command.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int command_start(struct bootstrap_config* bconf);
+
+/**
  * \brief Print help information to standard output.
  *
  * \param bconf         The bootstrap configuration for this command.
