@@ -10,6 +10,9 @@
 #define AGENTD_DATASERVICE_HEADER_GUARD
 
 #include <agentd/bitcap.h>
+#include <agentd/bootstrap_config.h>
+#include <agentd/config.h>
+#include <stdbool.h>
 #include <vpr/disposable.h>
 
 /* make this header C++ friendly. */
@@ -288,6 +291,31 @@ enum dataservice_api_method_enum
  *          - non-zero on abnormal exit.
  */
 int dataservice_event_loop(int datasock, int logsock);
+
+/**
+ * \brief Spawn a data service process using the provided config structure and
+ * logger socket.
+ *
+ * On success, this method sets the file descriptor pointer to the file
+ * descriptor for the data service socket.  This can be used by the caller to
+ * send requests to the data service and to receive responses from this service.
+ * Also, the pointer to the pid for this process is set.  This can be used to
+ * signal and wait when this process should be terminated.
+ *
+ * \param bconf         The bootstrap configuration for this service.
+ * \param conf          The configuration for this service.
+ * \param logsock       Socket used to communicate with the logger.
+ * \param datasock      Pointer to the data service socket, to be updated on
+ *                      successful completion of this function.
+ * \param datapid       Pointer to the data service pid, to be updated on the
+ *                      successful completion of this function.
+ * \param runsecure     Set to false if we are not being run in secure mode.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int dataservice_proc(
+    const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,
+    int* datasock, pid_t* datapid, bool runsecure);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
