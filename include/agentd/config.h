@@ -10,6 +10,7 @@
 #define AGENTD_CONFIG_HEADER_GUARD
 
 #include <arpa/inet.h>
+#include <agentd/bootstrap_config.h>
 #include <netinet/in.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -173,6 +174,16 @@ int config_write_block(int s, agent_config_t* conf);
  * \returns 0 on success and non-zero on failure.
  */
 int config_read_block(int s, agent_config_t* conf);
+
+/**
+ * \brief Set default values for any config setting that has not been set.
+ *
+ * \param conf          The config structure to populate.
+ * \param bconf         The bootstrap config structure to use for overrides.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int config_set_defaults(agent_config_t* conf, bootstrap_config_t* bconf);
 
 /**
  * \brief Spawn a process to read config data, populating the provided config

@@ -148,12 +148,26 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
 
         /* Use the return value of the child process as our return value. */
         if (WIFEXITED(pidstatus))
+        {
             retval = WEXITSTATUS(pidstatus);
+        }
         else
+        {
             retval = 1;
+        }
+
+        /* provide defaults for any config value not set. */
+        if (0 == retval && 0 != config_set_defaults(conf, bconf))
+        {
+            retval = 2;
+            goto cleanup_config;
+        }
 
         goto done;
     }
+
+cleanup_config:
+    dispose((disposable_t*)conf);
 
 done:
     /* clean up clientsock. */
