@@ -66,6 +66,7 @@ ssize_t ipc_make_noblock(
     ctx->hdr.dispose = &ipc_socket_context_dispose;
     ctx->fd = sock;
     ctx->user_context = user_context;
+    ctx->impl = impl;
 
     /* success. */
     return 0;
