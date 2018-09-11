@@ -347,6 +347,13 @@ ssize_t ipc_exit_loop_on_signal(
     ipc_event_loop_context_t* loop, int sig);
 
 /**
+ * \brief Instruct the loop to exit as soon as all events are processed.
+ *
+ * \param loop          The event loop context to exit.
+ */
+void ipc_exit_loop(ipc_event_loop_context_t* loop);
+
+/**
  * \brief Remove a non-blocking socket from the event loop.
  *
  * On success, the event loop will no longer manage events on this non-blocking
