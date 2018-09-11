@@ -278,6 +278,7 @@ $(HRBD)/%.tab.o: $(HRBD)/%.tab.c
 $(TESTAGENTD): vcblockchain-build $(HOST_CHECKED_OBJECTS) $(TEST_OBJECTS) $(GTEST_OBJ)
 	find $(TEST_BUILD_DIR) -name "*.gcda" -exec rm {} \; -print
 	rm -f gtest-all.gcda
+	rm -rf $(BUILD_DIR)/test/isolation/databases
 	$(HOST_RELEASE_CXX) $(TEST_CXXFLAGS) -fprofile-arcs \
 	    -o $@ $(TEST_OBJECTS) \
 	    $(HOST_CHECKED_OBJECTS) $(GTEST_OBJ) -lpthread \

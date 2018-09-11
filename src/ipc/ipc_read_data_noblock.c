@@ -48,6 +48,14 @@ ssize_t ipc_read_data_noblock(
     /* compute the header size. */
     ssize_t header_sz = sizeof(uint8_t) + sizeof(uint32_t);
 
+    /* read data from the socket into our buffer. */
+    retval = evbuffer_read(sock_impl->readbuf, sock->fd, -1);
+    if (retval < 0)
+    {
+        retval = 1;
+        goto done;
+    }
+
     /* we need the header data. */
     uint8_t* mem = (uint8_t*)evbuffer_pullup(sock_impl->readbuf, header_sz);
     if (NULL == mem)
@@ -59,7 +67,7 @@ ssize_t ipc_read_data_noblock(
     /* if the type does not match our expected type, return an error. */
     if (IPC_DATA_TYPE_DATA_PACKET != mem[0])
     {
-        retval = 1;
+        retval = 2;
         goto done;
     }
 
@@ -71,7 +79,7 @@ ssize_t ipc_read_data_noblock(
     *size = ntohl(nsize);
     if (*size <= 0 || *size >= 1024 * 1024 * 1024)
     {
-        retval = 2;
+        retval = 3;
         goto done;
     }
 
@@ -87,21 +95,21 @@ ssize_t ipc_read_data_noblock(
     *val = malloc(*size);
     if (NULL == *val)
     {
-        retval = 3;
+        retval = 4;
         goto done;
     }
 
     /* drain the header from the buffer. */
-    if (header_sz != evbuffer_drain(sock_impl->readbuf, header_sz))
+    if (0 != evbuffer_drain(sock_impl->readbuf, header_sz))
     {
-        retval = 4;
+        retval = 5;
         goto cleanup_val;
     }
 
     /* read the data from the buffer. */
     if (*size != (size_t)evbuffer_remove(sock_impl->readbuf, *val, *size))
     {
-        retval = 5;
+        retval = 6;
         goto cleanup_val;
     }
 

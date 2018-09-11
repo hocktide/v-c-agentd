@@ -48,6 +48,9 @@ ssize_t ipc_event_loop_init(ipc_event_loop_context_t* loop)
         goto done;
     }
 
+    /* zero the internal structure. */
+    memset(internal, 0, sizeof(ipc_event_loop_impl_t));
+
     /* create the event base. */
     internal->evb = event_base_new();
     if (NULL == internal->evb)
@@ -86,6 +89,22 @@ static void ipc_event_loop_dispose(void* disposable)
     /* get the internal context. */
     ipc_event_loop_impl_t* internal =
         (ipc_event_loop_impl_t*)ctx->impl;
+
+    /* delete all signal events */
+    while (NULL != internal->sig_head)
+    {
+        /* cache the next signal handler. */
+        ipc_signal_event_impl_t* next = internal->sig_head->next;
+
+        /* delete this signal handler. */
+        evsignal_del(internal->sig_head->ev);
+
+        /* free the underlying memory. */
+        free(internal->sig_head);
+
+        /* collapse this list down by one. */
+        internal->sig_head = next;
+    }
 
     /* clean up the event. */
     event_base_free(internal->evb);

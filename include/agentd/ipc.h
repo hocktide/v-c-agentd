@@ -332,6 +332,21 @@ ssize_t ipc_event_loop_add(
     ipc_event_loop_context_t* loop, ipc_socket_context_t* sock);
 
 /**
+ * \brief Exit the event loop when the given signal is caught.
+ *
+ * On success, the event loop will exit when this signal is caught by the signal
+ * handler.
+ *
+ * \param loop          The event loop context to exit when the signal is
+ *                      caught.
+ * \param sig           The signal that triggers this exit.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+ssize_t ipc_exit_loop_on_signal(
+    ipc_event_loop_context_t* loop, int sig);
+
+/**
  * \brief Remove a non-blocking socket from the event loop.
  *
  * On success, the event loop will no longer manage events on this non-blocking

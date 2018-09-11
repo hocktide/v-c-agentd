@@ -62,12 +62,12 @@ int dataservice_decode_and_dispatch(
         /* handle root context create method. */
         case DATASERVICE_API_METHOD_LL_ROOT_CONTEXT_CREATE:
             return dataservice_decode_and_dispatch_root_context_create(
-                inst, sock, breq, payload_size);
+                inst, sock, breq + sizeof(uint32_t), payload_size);
 
         /* handle root context reduce capabilites. */
         case DATASERVICE_API_METHOD_LL_ROOT_CONTEXT_REDUCE_CAPS:
             return dataservice_decode_and_dispatch_root_context_reduce_caps(
-                inst, sock, breq, payload_size);
+                inst, sock, breq + sizeof(uint32_t), payload_size);
 
         /* unknown method.  Return an error. */
         default:

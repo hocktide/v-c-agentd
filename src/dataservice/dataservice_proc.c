@@ -46,6 +46,7 @@ int dataservice_proc(
 {
     int retval = 1;
     int serversock = -1;
+    bool keep_datasock = false;
     uid_t uid;
     gid_t gid;
 
@@ -133,7 +134,18 @@ int dataservice_proc(
         }
 
         /* spawn the child process (this does not return if successful). */
-        retval = privsep_exec_private("dataservice");
+        if (runsecure)
+        {
+            retval = privsep_exec_private("dataservice");
+        }
+        else
+        {
+            /* if running in non-secure mode, then we expect the caller to have
+             * already set the path and library path accordingly. */
+            retval = execlp("agentd", "agentd", "-P", "dataservice", NULL);
+        }
+
+        /* check the exec status. */
         if (0 != retval)
         {
             perror("privsep_exec_private");
@@ -151,6 +163,9 @@ int dataservice_proc(
         close(serversock);
         serversock = -1;
 
+        /* let the cleanup logic know that we want to preserve datasock. */
+        keep_datasock = true;
+
         /* success. */
         retval = 0;
         goto done;
@@ -164,7 +179,7 @@ done:
     }
 
     /* clean up data socket. */
-    if (*datasock >= 0)
+    if (!keep_datasock && *datasock >= 0)
     {
         close(*datasock);
     }

@@ -54,10 +54,17 @@ ssize_t ipc_write_data_noblock(
         return 2;
     }
 
-    /* attempt to write the data. */
+    /* add the data to the buffer. */
     if (0 != evbuffer_add(sock_impl->writebuf, val, size))
     {
         return 3;
+    }
+
+    /* attempt to write the data. */
+    int retval = ipc_socket_write_from_buffer(sock);
+    if (retval < 0)
+    {
+        return 4;
     }
 
     /* success. */

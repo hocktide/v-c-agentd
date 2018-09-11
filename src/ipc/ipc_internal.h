@@ -30,11 +30,21 @@ typedef struct ipc_socket_impl
 } ipc_socket_impl_t;
 
 /**
+ * \brief Internal context for signal handling events.
+ */
+typedef struct ipc_signal_event_impl
+{
+    struct ipc_signal_event_impl* next;
+    struct event* ev;
+} ipc_signal_event_impl_t;
+
+/**
  * \brief Internal context for event loops.
  */
 typedef struct ipc_event_loop_impl
 {
     struct event_base* evb;
+    ipc_signal_event_impl_t* sig_head;
 } ipc_event_loop_impl_t;
 
 /* make this header C++ friendly. */

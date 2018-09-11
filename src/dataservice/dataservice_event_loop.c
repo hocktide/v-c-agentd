@@ -9,6 +9,7 @@
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/ipc.h>
 #include <cbmc/model_assert.h>
+#include <signal.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
 
@@ -70,6 +71,11 @@ int dataservice_event_loop(int datasock, int UNUSED(logsock))
     /* set the read, write, and error callbacks for the data socket. */
     ipc_set_readcb_noblock(&data, &dataservice_ipc_read);
     ipc_set_writecb_noblock(&data, &dataservice_ipc_write);
+
+    /* on these signals, leave the event loop and shut down gracefully. */
+    ipc_exit_loop_on_signal(&loop, SIGHUP);
+    ipc_exit_loop_on_signal(&loop, SIGTERM);
+    ipc_exit_loop_on_signal(&loop, SIGQUIT);
 
     /* add the data socket to the event loop. */
     if (0 != ipc_event_loop_add(&loop, &data))
