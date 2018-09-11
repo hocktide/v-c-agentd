@@ -166,6 +166,7 @@ agentd-install: ALL
 
 test.agentd: vcblockchain-build $(TEST_DIRS) host.exe.checked $(TESTAGENTD)
 	rm -rf $(HOST_CHECKED_BUILD_DIR)/databases
+	rm -rf $(BUILD_DIR)/test/isolation/databases
 	TEST_BIN=$(realpath $(shell which cat)) \
 	LD_LIBRARY_PATH=$(TOOLCHAIN_DIR)/host/lib:$(TOOLCHAIN_DIR)/host/lib64:$(LD_LIBRARY_PATH) \
 	$(TESTAGENTD)
@@ -278,7 +279,6 @@ $(HRBD)/%.tab.o: $(HRBD)/%.tab.c
 $(TESTAGENTD): vcblockchain-build $(HOST_CHECKED_OBJECTS) $(TEST_OBJECTS) $(GTEST_OBJ)
 	find $(TEST_BUILD_DIR) -name "*.gcda" -exec rm {} \; -print
 	rm -f gtest-all.gcda
-	rm -rf $(BUILD_DIR)/test/isolation/databases
 	$(HOST_RELEASE_CXX) $(TEST_CXXFLAGS) -fprofile-arcs \
 	    -o $@ $(TEST_OBJECTS) \
 	    $(HOST_CHECKED_OBJECTS) $(GTEST_OBJ) -lpthread \
