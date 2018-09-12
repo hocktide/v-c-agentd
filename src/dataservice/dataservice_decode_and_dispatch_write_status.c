@@ -26,12 +26,15 @@
  * \param method        The API method of this request.
  * \param offset        The offset for the child context.
  * \param status        The status returned from this API method.
+ * \param data          Additional payload data for this call.  May be NULL.
+ * \param data_size     The size of this additional payload data.  Must be 0 if
+ *                      data is NULL.
  *
  * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
  */
 int dataservice_decode_and_dispatch_write_status(
     ipc_socket_context_t* sock, uint32_t method, uint32_t offset,
-    uint32_t status)
+    uint32_t status, void* data, size_t data_size)
 {
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != sock);
@@ -43,6 +46,7 @@ int dataservice_decode_and_dispatch_write_status(
     /* | method_id                                     | 4 bytes      | */
     /* | offset                                        | 4 bytes      | */
     /* | status                                        | 4 bytes      | */
+    /* | data                                          | n - 12 bytes | */
     /* | --------------------------------------------- | ------------ | */
 
     /* compute the size of the response. */
@@ -53,6 +57,12 @@ int dataservice_decode_and_dispatch_write_status(
         sizeof(uint32_t) +
         /* the size of the status */
         sizeof(uint32_t);
+
+    /* add the data size to this buffer. */
+    if (data != NULL)
+    {
+        respsize += data_size;
+    }
 
     /* allocate memory for the response. */
     uint32_t* resp = (uint32_t*)malloc(sizeof(respsize));
@@ -65,6 +75,12 @@ int dataservice_decode_and_dispatch_write_status(
     resp[0] = htonl(method);
     resp[1] = htonl(offset);
     resp[2] = htonl(status);
+
+    /* copy the data. */
+    if (data != NULL)
+    {
+        memcpy(resp + 3, data, data_size);
+    }
 
     /* write the data packet. */
     int retval = ipc_write_data_noblock(sock, resp, respsize);

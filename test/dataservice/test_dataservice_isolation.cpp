@@ -537,3 +537,128 @@ TEST_F(dataservice_isolation_test, reduce_root_caps)
     ASSERT_EQ(0U, offset);
     ASSERT_NE(0U, status);
 }
+
+/**
+ * Test that we can create a child context.
+ */
+TEST_F(dataservice_isolation_test, child_context_create_close)
+{
+    const char* DATADIR = "664c437a-423b-4fc7-b425-24031134d3e5";
+    string datadir_complete = make_data_dir_string(DATADIR);
+    uint32_t offset;
+    uint32_t status;
+    uint32_t child_context;
+    int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+
+    mkdir(DATADIR);
+
+    /* Run the send / receive on creating the root context. */
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_root_context_init(
+                        &nonblockdatasock, &offset, &status);
+
+                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_root_context_init(
+                        &nonblockdatasock, datadir_complete.c_str());
+            }
+        });
+
+    /* verify that everything ran correctly. */
+    EXPECT_EQ(0, sendreq_status);
+    EXPECT_EQ(0, recvresp_status);
+    EXPECT_EQ(0U, offset);
+    EXPECT_EQ(0U, status);
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    BITCAP_INIT_FALSE(reducedcaps);
+
+    /* explicitly grant closing the child context. */
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
+
+    /* create child context. */
+    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_child_context_create(
+                        &nonblockdatasock, &offset, &status, &child_context);
+
+                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_child_context_create(
+                        &nonblockdatasock, reducedcaps, sizeof(reducedcaps));
+            }
+        });
+
+    /* verify that everything ran correctly. */
+    EXPECT_EQ(0, sendreq_status);
+    EXPECT_EQ(0, recvresp_status);
+    ASSERT_EQ(0U, offset);
+    ASSERT_EQ(0U, status);
+    ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, child_context);
+
+    /* close child context. */
+    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_child_context_close(
+                        &nonblockdatasock, &offset, &status);
+
+                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_child_context_close(
+                        &nonblockdatasock, child_context);
+            }
+        });
+
+    /* verify that everything ran correctly. */
+    EXPECT_EQ(0, sendreq_status);
+    EXPECT_EQ(0, recvresp_status);
+    ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
+    ASSERT_EQ(0U, status);
+}

@@ -143,6 +143,73 @@ int dataservice_api_sendreq_root_context_reduce_caps(
 int dataservice_api_recvresp_root_context_reduce_caps(
     ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status);
 
+/**
+ * \brief Create a child context with further reduced capabilities.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param caps          The capabilities to use for this child context.
+ * \param size          The size of the capabilities in bytes.
+ *
+ * \returns 0 if the request was successfully written to the socket, and
+ * non-zero otherwise.
+ */
+int dataservice_api_sendreq_child_context_create(
+    ipc_socket_context_t* sock, uint32_t* caps, size_t size);
+
+/**
+ * \brief Receive a response from the child context create API call.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ * \param child         The integer index of the created child context,
+ *                      populated if status is 0.
+ *
+ * On a successful return from this function, the status and child index are
+ * updated with the status code from the API request.  This status should be
+ * checked.  A zero status indicates success, and a non-zero status indicates
+ * failure.  The child index is only good if status is 0.
+ *
+ * \returns 0 if the response was read successfully, IPC_ERROR_CODE_WOULD_BLOCK
+ * if the response cannot yet be read, and non-zero if the response could not be
+ * successfully read.
+ */
+int dataservice_api_recvresp_child_context_create(
+    ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status,
+    uint32_t* child);
+
+/**
+ * \brief Close the specified child context.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param child         The child index to be closed.
+ *
+ * \returns 0 if the request was successfully written to the socket, and
+ * non-zero otherwise.
+ */
+int dataservice_api_sendreq_child_context_close(
+    ipc_socket_context_t* sock, uint32_t child);
+
+/**
+ * \brief Receive a response from the child context close API call.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates success, and a non-zero status indicates failure.
+ *
+ * \returns 0 if the response was read successfully, IPC_ERROR_CODE_WOULD_BLOCK
+ * if the response cannot yet be read, and non-zero if the response could not be
+ * successfully read.
+ */
+int dataservice_api_recvresp_child_context_close(
+    ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

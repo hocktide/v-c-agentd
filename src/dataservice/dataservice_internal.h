@@ -134,12 +134,15 @@ int dataservice_decode_and_dispatch(
  * \param method        The API method of this request.
  * \param offset        The offset for the child context.
  * \param status        The status returned from this API method.
+ * \param data          Additional payload data for this call.  May be NULL.
+ * \param data_size     The size of this additional payload data.  Must be 0 if
+ *                      data is NULL.
  *
  * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
  */
 int dataservice_decode_and_dispatch_write_status(
     ipc_socket_context_t* sock, uint32_t method, uint32_t offset,
-    uint32_t status);
+    uint32_t status, void* data, size_t data_size);
 
 /**
  * \brief Decode and dispatch a root context create request.
@@ -176,6 +179,44 @@ int dataservice_decode_and_dispatch_root_context_create(
  * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
  */
 int dataservice_decode_and_dispatch_root_context_reduce_caps(
+    dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
+    size_t size);
+
+/**
+ * \brief Decode and dispatch a child context create request.
+ *
+ * Returns 0 on success or non-fatal error.  If a non-zero error message is
+ * returned, then a fatal error has occurred that should not be recovered from.
+ * Any additional information on the socket is suspect.
+ *
+ * \param inst          The instance on which the dispatch occurs.
+ * \param sock          The socket on which the request was received and the
+ *                      response is to be written.
+ * \param req           The request to be decoded and dispatched.
+ * \param size          The size of the request.
+ *
+ * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ */
+int dataservice_decode_and_dispatch_child_context_create(
+    dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
+    size_t size);
+
+/**
+ * \brief Decode and dispatch a child context close request.
+ *
+ * Returns 0 on success or non-fatal error.  If a non-zero error message is
+ * returned, then a fatal error has occurred that should not be recovered from.
+ * Any additional information on the socket is suspect.
+ *
+ * \param inst          The instance on which the dispatch occurs.
+ * \param sock          The socket on which the request was received and the
+ *                      response is to be written.
+ * \param req           The request to be decoded and dispatched.
+ * \param size          The size of the request.
+ *
+ * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ */
+int dataservice_decode_and_dispatch_child_context_close(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
     size_t size);
 
