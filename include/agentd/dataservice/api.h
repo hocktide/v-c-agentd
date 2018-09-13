@@ -210,6 +210,49 @@ int dataservice_api_sendreq_child_context_close(
 int dataservice_api_recvresp_child_context_close(
     ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status);
 
+/**
+ * \brief Query a global setting using the given child context.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param child         The child index used for the query.
+ * \param key           The global key to query.
+ *
+ * \returns 0 if the request was successfully written to the socket, and
+ * non-zero otherwise.
+ */
+int dataservice_api_sendreq_global_settings_get(
+    ipc_socket_context_t* sock, uint32_t child, uint64_t key);
+
+/**
+ * \brief Receive a response from the global settings query.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ * \param data          Pointer to a data buffer to write the data value to.
+ * \param data_size     Pointer to the size of the data buffer.  On entry, the
+ *                      value this is pointed to is set to the size of the data
+ *                      buffer.  On exit, if successful, this size is updated to
+ *                      the size written to this buffer.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates success, and a non-zero status indicates failure.  On
+ * success, the data value and size are both updated to reflect the data read
+ * from the query.
+ *
+ * A status code of 2 represents a "not found" error code.  In future versions
+ * of this API, this will be updated to a enumerated value.
+ *
+ * \returns 0 if the response was read successfully, IPC_ERROR_CODE_WOULD_BLOCK
+ * if the response cannot yet be read, and non-zero if the response could not be
+ * successfully read.
+ */
+int dataservice_api_recvresp_global_settings_get(
+    ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status, void* data,
+    size_t* data_size);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

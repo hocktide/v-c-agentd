@@ -82,6 +82,11 @@ int dataservice_decode_and_dispatch(
             return dataservice_decode_and_dispatch_child_context_close(
                 inst, sock, breq, payload_size);
 
+        /* handle global settings get call. */
+        case DATASERVICE_API_METHOD_APP_GLOBAL_SETTING_READ:
+            return dataservice_decode_and_dispatch_global_setting_get(
+                inst, sock, breq, payload_size);
+
         /* unknown method.  Return an error. */
         default:
             return 2;

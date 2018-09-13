@@ -662,3 +662,133 @@ TEST_F(dataservice_isolation_test, child_context_create_close)
     ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
     ASSERT_EQ(0U, status);
 }
+
+/**
+ * Test that we can't find a global setting in an empty database.
+ */
+TEST_F(dataservice_isolation_test, global_setting_not_found)
+{
+    const char* DATADIR = "ae9148a4-ff93-4b8b-a8d6-eab8c960b694";
+    string datadir_complete = make_data_dir_string(DATADIR);
+    uint32_t offset;
+    uint32_t status;
+    uint32_t child_context;
+    int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+
+    mkdir(DATADIR);
+
+    /* Run the send / receive on creating the root context. */
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_root_context_init(
+                        &nonblockdatasock, &offset, &status);
+
+                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_root_context_init(
+                        &nonblockdatasock, datadir_complete.c_str());
+            }
+        });
+
+    /* verify that everything ran correctly. */
+    EXPECT_EQ(0, sendreq_status);
+    EXPECT_EQ(0, recvresp_status);
+    EXPECT_EQ(0U, offset);
+    EXPECT_EQ(0U, status);
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    BITCAP_INIT_FALSE(reducedcaps);
+
+    /* explicitly grant querying global settings. */
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_GLOBAL_SETTING_READ);
+
+    /* create child context. */
+    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_child_context_create(
+                        &nonblockdatasock, &offset, &status, &child_context);
+
+                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_child_context_create(
+                        &nonblockdatasock, reducedcaps, sizeof(reducedcaps));
+            }
+        });
+
+    /* verify that everything ran correctly. */
+    EXPECT_EQ(0, sendreq_status);
+    EXPECT_EQ(0, recvresp_status);
+    ASSERT_EQ(0U, offset);
+    ASSERT_EQ(0U, status);
+    ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, child_context);
+
+    char data[16];
+    size_t data_size = sizeof(data);
+
+    /* query global settings. */
+    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_global_settings_get(
+                        &nonblockdatasock, &offset, &status, data, &data_size);
+
+                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_global_settings_get(
+                        &nonblockdatasock, child_context,
+                        DATASERVICE_GLOBAL_SETTING_SCHEMA_VERSION);
+            }
+        });
+
+    /* verify that everything ran correctly. */
+    EXPECT_EQ(0, sendreq_status);
+    EXPECT_EQ(0, recvresp_status);
+    ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
+    /* this will fail with not found. */
+    ASSERT_EQ(1U, status);
+}
