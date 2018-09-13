@@ -68,6 +68,9 @@ int dataservice_event_loop(int datasock, int UNUSED(logsock))
         goto cleanup_datasock;
     }
 
+    /* set a reference to the event loop in the instance. */
+    instance->loop_context = &loop;
+
     /* set the read, write, and error callbacks for the data socket. */
     ipc_set_readcb_noblock(&data, &dataservice_ipc_read);
     ipc_set_writecb_noblock(&data, &dataservice_ipc_write);
@@ -132,6 +135,10 @@ static void dataservice_ipc_read(
     MODEL_ASSERT(event_flags & IPC_SOCKET_EVENT_READ);
     MODEL_ASSERT(NULL != instance);
 
+    /* don't process data from this socket if we have been forced to exit. */
+    if (instance->dataservice_force_exit)
+        return;
+
     /* attempt to read a request. */
     retval = ipc_read_data_noblock(ctx, &req, &size);
     switch (retval)
@@ -140,12 +147,8 @@ static void dataservice_ipc_read(
         case 0:
             if (0 != dataservice_decode_and_dispatch(instance, ctx, req, size))
             {
-                /* TODO - handle errors from decode and dispatch. */
-                /* these will be errors of a fatal nature that can't just be
-                 * responded to on the socket, such as a malformed request
-                 * packet.
-                 */
-                /* TODO - set a flag; don't read anything from this socket. */
+                instance->dataservice_force_exit = true;
+                ipc_exit_loop(instance->loop_context);
             }
 
             /* clear and free the request data. */
@@ -157,9 +160,11 @@ static void dataservice_ipc_read(
         case IPC_ERROR_CODE_WOULD_BLOCK:
             return;
 
+        /* any other error code indicates that we should no longer trust the
+         * socket. */
         default:
-            /* TODO - handle fatal errors here. */
-            /* TODO - set a flag; don't read anything from this socket. */
+            instance->dataservice_force_exit = true;
+            ipc_exit_loop(instance->loop_context);
             break;
     }
 
@@ -175,14 +180,16 @@ static void dataservice_ipc_read(
  * \param user_context  The user context for this data socket.
  */
 static void dataservice_ipc_write(
-    ipc_socket_context_t* ctx, int UNUSED(event_flags),
-    void* UNUSED(user_context))
+    ipc_socket_context_t* ctx, int UNUSED(event_flags), void* user_context)
 {
+    dataservice_instance_t* instance = (dataservice_instance_t*)user_context;
+
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != ctx);
     MODEL_ASSERT(event_flags & IPC_SOCKET_EVENT_READ);
-    MODEL_ASSERT(NULL != user_context);
+    MODEL_ASSERT(NULL != instance);
 
+    /* write data if there is data to write. */
     if (ipc_socket_writebuffer_size(ctx) > 0)
     {
         /* attempt to write data. */
@@ -191,12 +198,23 @@ static void dataservice_ipc_write(
         /* has the socket been closed? */
         if (0 == bytes_written)
         {
-            /* TODO - handle shutdown of the data socket. */
+            goto exit_failure;
         }
         /* has there been a socket error? */
         else if (bytes_written < 0)
         {
-            /* TODO - handle socket errors, including EAGAIN / EWOULDBLOCK. */
+            /* for any error except retrying, exit the loop. */
+            if (errno != EAGAIN && errno != EWOULDBLOCK)
+            {
+                goto exit_failure;
+            }
         }
     }
+
+    /* success. */
+    return;
+
+exit_failure:
+    instance->dataservice_force_exit = true;
+    ipc_exit_loop(instance->loop_context);
 }

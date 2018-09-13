@@ -55,6 +55,8 @@ typedef struct dataservice_instance
     dataservice_root_context_t ctx;
     dataservice_child_details_t children[DATASERVICE_MAX_CHILD_CONTEXTS];
     dataservice_child_details_t* child_head;
+    bool dataservice_force_exit;
+    ipc_event_loop_context_t* loop_context;
 } dataservice_instance_t;
 
 /**
