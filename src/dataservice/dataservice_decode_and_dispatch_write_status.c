@@ -84,6 +84,14 @@ int dataservice_decode_and_dispatch_write_status(
 
     /* write the data packet. */
     int retval = ipc_write_data_noblock(sock, resp, respsize);
+    if (retval < 0)
+    {
+        retval = 2;
+    }
+    else
+    {
+        retval = 0;
+    }
 
     /* clean up memory. */
     memset(resp, 0, respsize);
