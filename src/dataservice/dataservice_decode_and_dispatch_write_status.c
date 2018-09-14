@@ -65,7 +65,7 @@ int dataservice_decode_and_dispatch_write_status(
     }
 
     /* allocate memory for the response. */
-    uint32_t* resp = (uint32_t*)malloc(sizeof(respsize));
+    uint32_t* resp = (uint32_t*)malloc(respsize);
     if (NULL == resp)
     {
         return 1;
