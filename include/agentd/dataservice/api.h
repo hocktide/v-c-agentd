@@ -253,6 +253,43 @@ int dataservice_api_recvresp_global_settings_get(
     ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status, void* data,
     size_t* data_size);
 
+/**
+ * \brief Set a global setting using a 64-bit key.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param child         The child index used for this operation.
+ * \param key           The global key to set.
+ * \param val           Buffer holding the value to set for this key.
+ * \param val_size      The size of this key.
+ *
+ * \returns 0 if the request was successfully written to the socket, and
+ * non-zero otherwise.
+ */
+int dataservice_api_sendreq_global_settings_set(
+    ipc_socket_context_t* sock, uint32_t child, uint64_t key, const void* val,
+    uint32_t val_size);
+
+/**
+ * \brief Receive a response from the global settings set operation.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates success, and a non-zero status indicates failure.  On
+ * success, the data value and size are both updated to reflect the data read
+ * from the query.
+ *
+ * \returns 0 if the response was read successfully, IPC_ERROR_CODE_WOULD_BLOCK
+ * if the response cannot yet be read, and non-zero if the response could not be
+ * successfully read.
+ */
+int dataservice_api_recvresp_global_settings_set(
+    ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
