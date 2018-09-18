@@ -38,6 +38,11 @@ int command_readconfig(struct bootstrap_config* bconf);
 void private_command_readconfig();
 
 /**
+ * \brief Run a data service instance.
+ */
+void private_command_dataservice();
+
+/**
  * \brief Run the the supervisor.
  */
 void private_command_supervisor();

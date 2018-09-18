@@ -21,19 +21,24 @@ VCBLOCKCHAIN_CFLAGS= \
 VCBLOCKCHAIN_HOST_CHECKED_LIB_DIR?=$(VCBLOCKCHAIN_DIR)/build/host/checked
 VCBLOCKCHAIN_HOST_RELEASE_LIB_DIR?=$(VCBLOCKCHAIN_DIR)/build/host/release
 VCBLOCKCHAIN_HOST_CHECKED_LINK?= \
-    -L $(VCBLOCKCHAIN_HOST_CHECKED_LIB_DIR) -lvcblockchain
+    -L $(VCBLOCKCHAIN_HOST_CHECKED_LIB_DIR) -lvcblockchain -lpthread
 VCBLOCKCHAIN_HOST_RELEASE_LINK?= \
-    -L $(VCBLOCKCHAIN_HOST_RELEASE_LIB_DIR) -lvcblockchain
+    -L $(VCBLOCKCHAIN_HOST_RELEASE_LIB_DIR) -lvcblockchain -lpthread
 
 #Google Test options
 GTEST_DIR?=$(CURDIR)/lib/vcblockchain/lib/googletest/googletest
 GTEST_OBJ=$(TEST_BUILD_DIR)/gtest-all.o
 
+#Libevent options
+LIBEVENT_DIR?=$(CURDIR)/lib/vcblockchain/lib/libevent
+LIBEVENT_CFLAGS=-I $(LIBEVENT_DIR)/include
+
 #agentd source files
 SRCDIR=$(CURDIR)/src
 DIRS=$(SRCDIR) $(SRCDIR)/agentd $(SRCDIR)/bootstrap_config \
-    $(SRCDIR)/command $(SRCDIR)/commandline $(SRCDIR)/config $(SRCDIR)/inet \
-    $(SRCDIR)/ipc $(SRCDIR)/path $(SRCDIR)/privsep $(SRCDIR)/string $(SRCDIR)/supervisor
+    $(SRCDIR)/command $(SRCDIR)/commandline $(SRCDIR)/config \
+    $(SRCDIR)/dataservice $(SRCDIR)/inet $(SRCDIR)/ipc $(SRCDIR)/path \
+    $(SRCDIR)/privsep $(SRCDIR)/string $(SRCDIR)/supervisor
 SOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.c))
 YACCSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.y))
 LEXSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.l))
@@ -43,8 +48,9 @@ STRIPPED_LEXSOURCES=$(patsubst $(SRCDIR)/%,%,$(LEXSOURCES))
 
 #agentd test files
 TESTDIR=$(CURDIR)/test
-TESTDIRS=$(TESTDIR) $(TESTDIR)/bootstrap_config $(TESTDIR)/commandline \
-    $(TESTDIR)/config $(TESTDIR)/ipc $(TESTDIR)/path $(TESTDIR)/string
+TESTDIRS=$(TESTDIR) $(TESTDIR)/bitcap $(TESTDIR)/bootstrap_config \
+    $(TESTDIR)/commandline $(TESTDIR)/config $(TESTDIR)/dataservice \
+    $(TESTDIR)/ipc $(TESTDIR)/path $(TESTDIR)/string
 TEST_BUILD_DIR=$(HOST_CHECKED_BUILD_DIR)/test
 TEST_DIRS=$(filter-out $(TESTDIR), \
     $(patsubst $(TESTDIR)/%,$(TEST_BUILD_DIR)/%,$(TESTDIRS)))
@@ -105,7 +111,7 @@ HOST_CHECKED_YACC=$(TOOLCHAIN_DIR)/host/bin/bison
 
 #platform compiler flags
 COMMON_INCLUDES=$(MODEL_CHECK_INCLUDES) $(VCBLOCKCHAIN_CFLAGS) \
-                -I $(CURDIR)/include
+                $(LIBEVENT_CFLAGS) -I $(CURDIR)/include
 COMMON_CFLAGS=$(COMMON_INCLUDES) -Wall -Werror -Wextra \
     -I $(TOOLCHAIN_DIR)/host/include
 HOST_CHECKED_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_CHECKED_BUILD_DIR) \
@@ -159,6 +165,8 @@ agentd-install: ALL
 	fi
 
 test.agentd: vcblockchain-build $(TEST_DIRS) host.exe.checked $(TESTAGENTD)
+	rm -rf $(HOST_CHECKED_BUILD_DIR)/databases
+	rm -rf $(BUILD_DIR)/test/isolation/databases
 	TEST_BIN=$(realpath $(shell which cat)) \
 	LD_LIBRARY_PATH=$(TOOLCHAIN_DIR)/host/lib:$(TOOLCHAIN_DIR)/host/lib64:$(LD_LIBRARY_PATH) \
 	$(TESTAGENTD)

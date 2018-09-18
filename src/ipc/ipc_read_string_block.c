@@ -27,7 +27,7 @@
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_read_string_block(int sock, char** val)
+ssize_t ipc_read_string_block(int sock, char** val)
 {
     uint8_t type = 0U;
     uint32_t nsize = 0U;

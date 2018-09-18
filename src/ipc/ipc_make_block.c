@@ -21,7 +21,7 @@
  *
  * \returns 0 on success and non-zero on failure.
  */
-int ipc_make_block(int sock)
+ssize_t ipc_make_block(int sock)
 {
     /* get the flags for this socket. */
     int flags = fcntl(sock, F_GETFL);
