@@ -181,7 +181,7 @@ int dataservice_global_settings_set(
 int dataservice_transaction_get_first(
     dataservice_child_context_t* child,
     dataservice_transaction_context_t* dtxn_ctx,
-    transaction_node_t* node,
+    data_transaction_node_t* node,
     uint8_t** txn_bytes, size_t* txn_size);
 
 /* make this header C++ friendly. */

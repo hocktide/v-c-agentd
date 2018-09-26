@@ -12,6 +12,7 @@
 #include <agentd/bitcap.h>
 #include <agentd/bootstrap_config.h>
 #include <agentd/config.h>
+#include <agentd/dataservice/data.h>
 #include <stdbool.h>
 #include <vpr/disposable.h>
 
@@ -275,37 +276,6 @@ enum dataservice_api_method_enum
      */
     DATASERVICE_API_METHOD_UPPER_BOUND
 };
-
-/**
- * \brief A transaction node is a linked list node backed by the database, which
- * is used to describe a transaction in the transaction queue.
- */
-typedef struct transaction_node
-{
-    /**
-     * \brief The key for this transaction, i.e. its transaction UUID.
-     */
-    uint8_t key[16];
-
-    /**
-     * \brief The previous transaction ID in the queue.
-     */
-    uint8_t prev[16];
-
-    /**
-     * \brief The next transaction ID in the queue. */
-    uint8_t next[16];
-
-    /**
-     * \brief The artifact UUID that this transaction describes.
-     */
-    uint8_t artifact_id[16];
-
-    /**
-     * \brief The transaction certificate size, in bytes, and in network order.
-     */
-    uint64_t net_txn_cert_size;
-} transaction_node_t;
 
 /* forward decl for dataservice_transaction_context. */
 struct dataservice_transaction_context;

@@ -1070,7 +1070,7 @@ TEST(dataservice_test, transaction_get_first_empty_with_start_end)
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
 
     /* create the start and end transactions. */
-    transaction_node_t start, end;
+    data_transaction_node_t start, end;
     memset(&start, 0, sizeof(start));
     memset(&end, 0, sizeof(end));
     memset(start.key, 0, sizeof(start.key));
@@ -1221,7 +1221,7 @@ TEST(dataservice_test, transaction_get_first_happy_path)
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
 
     /* create the start and end transactions. */
-    transaction_node_t start, end;
+    data_transaction_node_t start, end;
     memset(&start, 0, sizeof(start));
     memset(&end, 0, sizeof(end));
     memset(start.key, 0, sizeof(start.key));
@@ -1257,36 +1257,36 @@ TEST(dataservice_test, transaction_get_first_happy_path)
     /* create foo and bar transactions. */
     uint8_t foo_data[5] = { 0xFA, 0x12, 0x22, 0x13, 0x99 };
     uint8_t bar_data[1] = { 0x00 };
-    transaction_node_t* foo = (transaction_node_t*)
-        malloc(sizeof(transaction_node_t) + sizeof(foo_data));
-    transaction_node_t* bar = (transaction_node_t*)
-        malloc(sizeof(transaction_node_t) + sizeof(bar_data));
-    memset(foo, 0, sizeof(transaction_node_t));
-    memset(bar, 0, sizeof(transaction_node_t));
+    data_transaction_node_t* foo = (data_transaction_node_t*)
+        malloc(sizeof(data_transaction_node_t) + sizeof(foo_data));
+    data_transaction_node_t* bar = (data_transaction_node_t*)
+        malloc(sizeof(data_transaction_node_t) + sizeof(bar_data));
+    memset(foo, 0, sizeof(data_transaction_node_t));
+    memset(bar, 0, sizeof(data_transaction_node_t));
     memcpy(foo->key, foo_key, sizeof(foo->key));
     memset(foo->prev, 0, sizeof(foo->prev));
     memcpy(foo->next, bar_key, sizeof(foo->next));
-    memcpy(((uint8_t*)foo) + sizeof(transaction_node_t), foo_data,
+    memcpy(((uint8_t*)foo) + sizeof(data_transaction_node_t), foo_data,
         sizeof(foo_data));
     foo->net_txn_cert_size = htonll(sizeof(foo_data));
     memcpy(bar->key, bar_key, sizeof(bar->key));
     memcpy(bar->prev, foo_key, sizeof(bar->prev));
     memset(bar->next, 0xFF, sizeof(bar->next));
-    memcpy(((uint8_t*)bar) + sizeof(transaction_node_t), bar_data,
+    memcpy(((uint8_t*)bar) + sizeof(data_transaction_node_t), bar_data,
         sizeof(bar_data));
     bar->net_txn_cert_size = htonll(sizeof(bar_data));
 
     /* insert foo. */
     lkey.mv_size = sizeof(foo->key);
     lkey.mv_data = foo->key;
-    lval.mv_size = sizeof(transaction_node_t) + sizeof(foo_data);
+    lval.mv_size = sizeof(data_transaction_node_t) + sizeof(foo_data);
     lval.mv_data = foo;
     ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
 
     /* insert bar. */
     lkey.mv_size = sizeof(bar->key);
     lkey.mv_data = bar->key;
-    lval.mv_size = sizeof(transaction_node_t) + sizeof(bar_data);
+    lval.mv_size = sizeof(data_transaction_node_t) + sizeof(bar_data);
     lval.mv_data = bar;
     ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
 
@@ -1362,7 +1362,7 @@ TEST(dataservice_test, transaction_get_first_txn_happy_path)
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
 
     /* create the start and end transactions. */
-    transaction_node_t start, end;
+    data_transaction_node_t start, end;
     memset(&start, 0, sizeof(start));
     memset(&end, 0, sizeof(end));
     memset(start.key, 0, sizeof(start.key));
@@ -1398,36 +1398,36 @@ TEST(dataservice_test, transaction_get_first_txn_happy_path)
     /* create foo and bar transactions. */
     uint8_t foo_data[5] = { 0xFA, 0x12, 0x22, 0x13, 0x99 };
     uint8_t bar_data[1] = { 0x00 };
-    transaction_node_t* foo = (transaction_node_t*)
-        malloc(sizeof(transaction_node_t) + sizeof(foo_data));
-    transaction_node_t* bar = (transaction_node_t*)
-        malloc(sizeof(transaction_node_t) + sizeof(bar_data));
-    memset(foo, 0, sizeof(transaction_node_t));
-    memset(bar, 0, sizeof(transaction_node_t));
+    data_transaction_node_t* foo = (data_transaction_node_t*)
+        malloc(sizeof(data_transaction_node_t) + sizeof(foo_data));
+    data_transaction_node_t* bar = (data_transaction_node_t*)
+        malloc(sizeof(data_transaction_node_t) + sizeof(bar_data));
+    memset(foo, 0, sizeof(data_transaction_node_t));
+    memset(bar, 0, sizeof(data_transaction_node_t));
     memcpy(foo->key, foo_key, sizeof(foo->key));
     memset(foo->prev, 0, sizeof(foo->prev));
     memcpy(foo->next, bar_key, sizeof(foo->next));
-    memcpy(((uint8_t*)foo) + sizeof(transaction_node_t), foo_data,
+    memcpy(((uint8_t*)foo) + sizeof(data_transaction_node_t), foo_data,
         sizeof(foo_data));
     foo->net_txn_cert_size = htonll(sizeof(foo_data));
     memcpy(bar->key, bar_key, sizeof(bar->key));
     memcpy(bar->prev, foo_key, sizeof(bar->prev));
     memset(bar->next, 0xFF, sizeof(bar->next));
-    memcpy(((uint8_t*)bar) + sizeof(transaction_node_t), bar_data,
+    memcpy(((uint8_t*)bar) + sizeof(data_transaction_node_t), bar_data,
         sizeof(bar_data));
     bar->net_txn_cert_size = htonll(sizeof(bar_data));
 
     /* insert foo. */
     lkey.mv_size = sizeof(foo->key);
     lkey.mv_data = foo->key;
-    lval.mv_size = sizeof(transaction_node_t) + sizeof(foo_data);
+    lval.mv_size = sizeof(data_transaction_node_t) + sizeof(foo_data);
     lval.mv_data = foo;
     ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
 
     /* insert bar. */
     lkey.mv_size = sizeof(bar->key);
     lkey.mv_data = bar->key;
-    lval.mv_size = sizeof(transaction_node_t) + sizeof(bar_data);
+    lval.mv_size = sizeof(data_transaction_node_t) + sizeof(bar_data);
     lval.mv_data = bar;
     ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
 
@@ -1472,7 +1472,7 @@ TEST(dataservice_test, transaction_get_first_with_node_happy_path)
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     MDB_txn* txn;
-    transaction_node_t node;
+    data_transaction_node_t node;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
     BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
@@ -1507,7 +1507,7 @@ TEST(dataservice_test, transaction_get_first_with_node_happy_path)
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
 
     /* create the start and end transactions. */
-    transaction_node_t start, end;
+    data_transaction_node_t start, end;
     memset(&start, 0, sizeof(start));
     memset(&end, 0, sizeof(end));
     memset(start.key, 0, sizeof(start.key));
@@ -1543,36 +1543,36 @@ TEST(dataservice_test, transaction_get_first_with_node_happy_path)
     /* create foo and bar transactions. */
     uint8_t foo_data[5] = { 0xFA, 0x12, 0x22, 0x13, 0x99 };
     uint8_t bar_data[1] = { 0x00 };
-    transaction_node_t* foo = (transaction_node_t*)
-        malloc(sizeof(transaction_node_t) + sizeof(foo_data));
-    transaction_node_t* bar = (transaction_node_t*)
-        malloc(sizeof(transaction_node_t) + sizeof(bar_data));
-    memset(foo, 0, sizeof(transaction_node_t));
-    memset(bar, 0, sizeof(transaction_node_t));
+    data_transaction_node_t* foo = (data_transaction_node_t*)
+        malloc(sizeof(data_transaction_node_t) + sizeof(foo_data));
+    data_transaction_node_t* bar = (data_transaction_node_t*)
+        malloc(sizeof(data_transaction_node_t) + sizeof(bar_data));
+    memset(foo, 0, sizeof(data_transaction_node_t));
+    memset(bar, 0, sizeof(data_transaction_node_t));
     memcpy(foo->key, foo_key, sizeof(foo->key));
     memset(foo->prev, 0, sizeof(foo->prev));
     memcpy(foo->next, bar_key, sizeof(foo->next));
-    memcpy(((uint8_t*)foo) + sizeof(transaction_node_t), foo_data,
+    memcpy(((uint8_t*)foo) + sizeof(data_transaction_node_t), foo_data,
         sizeof(foo_data));
     foo->net_txn_cert_size = htonll(sizeof(foo_data));
     memcpy(bar->key, bar_key, sizeof(bar->key));
     memcpy(bar->prev, foo_key, sizeof(bar->prev));
     memset(bar->next, 0xFF, sizeof(bar->next));
-    memcpy(((uint8_t*)bar) + sizeof(transaction_node_t), bar_data,
+    memcpy(((uint8_t*)bar) + sizeof(data_transaction_node_t), bar_data,
         sizeof(bar_data));
     bar->net_txn_cert_size = htonll(sizeof(bar_data));
 
     /* insert foo. */
     lkey.mv_size = sizeof(foo->key);
     lkey.mv_data = foo->key;
-    lval.mv_size = sizeof(transaction_node_t) + sizeof(foo_data);
+    lval.mv_size = sizeof(data_transaction_node_t) + sizeof(foo_data);
     lval.mv_data = foo;
     ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
 
     /* insert bar. */
     lkey.mv_size = sizeof(bar->key);
     lkey.mv_data = bar->key;
-    lval.mv_size = sizeof(transaction_node_t) + sizeof(bar_data);
+    lval.mv_size = sizeof(data_transaction_node_t) + sizeof(bar_data);
     lval.mv_data = bar;
     ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
 

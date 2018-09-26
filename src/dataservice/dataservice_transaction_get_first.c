@@ -40,7 +40,7 @@
 int dataservice_transaction_get_first(
     dataservice_child_context_t* child,
     dataservice_transaction_context_t* dtxn_ctx,
-    transaction_node_t* node,
+    data_transaction_node_t* node,
     uint8_t** txn_bytes, size_t* txn_size)
 {
     int retval = 0;
@@ -100,14 +100,15 @@ int dataservice_transaction_get_first(
     }
 
     /* verify that this transaction is valid. */
-    if (lval.mv_size < sizeof(transaction_node_t))
+    if (lval.mv_size < sizeof(data_transaction_node_t))
     {
         retval = 2;
         goto maybe_transaction_abort;
     }
 
     /* get the node value. */
-    transaction_node_t* first_node = (transaction_node_t*)lval.mv_data;
+    data_transaction_node_t* first_node =
+        (data_transaction_node_t*)lval.mv_data;
 
     /* verify that this node's next points to a valid entry. */
     uint8_t last[16];
@@ -161,7 +162,7 @@ int dataservice_transaction_get_first(
     }
 
     /* verify that this value is large enough to be a node value. */
-    if (lval.mv_size <= sizeof(transaction_node_t))
+    if (lval.mv_size <= sizeof(data_transaction_node_t))
     {
         retval = 2;
         goto maybe_transaction_abort;
@@ -169,8 +170,9 @@ int dataservice_transaction_get_first(
 
     /* compute the data size. */
     uint8_t* bdata = (uint8_t*)lval.mv_data;
-    size_t data_size = ntohll(((transaction_node_t*)bdata)->net_txn_cert_size);
-    *txn_size = lval.mv_size - sizeof(transaction_node_t);
+    size_t data_size =
+        ntohll(((data_transaction_node_t*)bdata)->net_txn_cert_size);
+    *txn_size = lval.mv_size - sizeof(data_transaction_node_t);
 
     /* the transaction size should match exactly the data size. */
     if (*txn_size != data_size)
@@ -191,18 +193,19 @@ int dataservice_transaction_get_first(
         }
 
         /* copy the bytes. */
-        memcpy(*txn_bytes, bdata + sizeof(transaction_node_t), *txn_size);
+        memcpy(
+            *txn_bytes, bdata + sizeof(data_transaction_node_t), *txn_size);
     }
     /* pass the data back directly with no copy. */
     else
     {
-        *txn_bytes = bdata + sizeof(transaction_node_t);
+        *txn_bytes = bdata + sizeof(data_transaction_node_t);
     }
 
     /* should we populate the node structure? */
     if (NULL != node)
     {
-        memcpy(node, bdata, sizeof(transaction_node_t));
+        memcpy(node, bdata, sizeof(data_transaction_node_t));
     }
 
     /* success on copy. */
