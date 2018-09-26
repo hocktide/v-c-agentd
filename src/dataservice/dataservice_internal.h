@@ -9,6 +9,7 @@
 #ifndef AGENTD_DATASERVICE_INTERNAL_HEADER_GUARD
 #define AGENTD_DATASERVICE_INTERNAL_HEADER_GUARD
 
+#include <agentd/dataservice.h>
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/ipc.h>
 #include <event.h>
@@ -58,6 +59,15 @@ typedef struct dataservice_instance
     bool dataservice_force_exit;
     ipc_event_loop_context_t* loop_context;
 } dataservice_instance_t;
+
+/**
+ * \brief The data service transaction context.
+ */
+struct dataservice_transaction_context
+{
+    disposable_t hdr;
+    MDB_txn* txn;
+};
 
 /**
  * \brief Open the database using the given data directory.

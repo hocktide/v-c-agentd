@@ -154,6 +154,31 @@ int dataservice_global_settings_set(
     dataservice_child_context_t* child, uint64_t key, const char* buffer,
     size_t size);
 
+/**
+ * \brief Get the first transaction in the queue.
+ *
+ * \param ctx           The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation.
+ * \param txn_bytes     Pointer to be updated to the transaction.
+ * \param txn_size      Pointer to size to be updated by the size of txn.
+ *
+ * Note that this transaction will be a COPY if dtxn_ctx is NULL, and a raw
+ * pointer to the database data if dtxn_ctx is not NULL which will be valid
+ * until the transaction pointed to by dtxn_ctx is committed or released.  If
+ * this is a COPY, then the caller is responsible for freeing the memory
+ * associated with this copy by calling free().  If this is NOT a COPY, then
+ * this memory will be released when dtxn_ctx is committed or released.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success
+ *          - 1 if the transaction queue is empty.
+ *          - non-zero on failure.
+ */
+int dataservice_transaction_get_first(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx, uint8_t** txn_bytes,
+    size_t* txn_size);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

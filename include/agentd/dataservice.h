@@ -277,6 +277,48 @@ enum dataservice_api_method_enum
 };
 
 /**
+ * \brief A transaction node is a linked list node backed by the database, which
+ * is used to describe a transaction in the transaction queue.
+ */
+typedef struct transaction_node
+{
+    /**
+     * \brief The key for this transaction, i.e. its transaction UUID.
+     */
+    uint8_t key[16];
+
+    /**
+     * \brief The previous transaction ID in the queue.
+     */
+    uint8_t prev[16];
+
+    /**
+     * \brief The next transaction ID in the queue. */
+    uint8_t next[16];
+
+    /**
+     * \brief The artifact UUID that this transaction describes.
+     */
+    uint8_t artifact_id[16];
+
+    /**
+     * \brief The transaction certificate size, in bytes, and in network order.
+     */
+    uint64_t net_txn_cert_size;
+} transaction_node_t;
+
+/* forward decl for dataservice_transaction_context. */
+struct dataservice_transaction_context;
+
+/**
+ * \brief This transaction context structure is used to allow for child database
+ * transactions to be created, committed, or aborted.
+ */
+typedef struct
+    dataservice_transaction_context
+        dataservice_transaction_context_t;
+
+/**
  * \brief Event loop for the data service.  This is the entry point for the data
  * service.  It handles the details of reacting to events sent over the data
  * service socket.
