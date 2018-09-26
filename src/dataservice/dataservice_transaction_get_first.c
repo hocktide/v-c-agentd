@@ -19,6 +19,9 @@
  *
  * \param ctx           The child context for this operation.
  * \param dtxn_ctx      The dataservice transaction context for this operation.
+ * \param node          Optional transaction node details.  If NULL, this is
+ *                      ignored.  If not NULL, this structure is provided by the
+ *                      caller and is populated by the transaction node data on
  * \param txn_bytes     Pointer to be updated to the transaction.
  * \param txn_size      Pointer to size to be updated by the size of txn.
  *
@@ -36,8 +39,9 @@
  */
 int dataservice_transaction_get_first(
     dataservice_child_context_t* child,
-    dataservice_transaction_context_t* dtxn_ctx, uint8_t** txn_bytes,
-    size_t* txn_size)
+    dataservice_transaction_context_t* dtxn_ctx,
+    transaction_node_t* node,
+    uint8_t** txn_bytes, size_t* txn_size)
 {
     int retval = 0;
     MDB_txn* txn = NULL;
@@ -193,6 +197,12 @@ int dataservice_transaction_get_first(
     else
     {
         *txn_bytes = bdata + sizeof(transaction_node_t);
+    }
+
+    /* should we populate the node structure? */
+    if (NULL != node)
+    {
+        memcpy(node, bdata, sizeof(transaction_node_t));
     }
 
     /* success on copy. */
