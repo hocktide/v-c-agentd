@@ -112,9 +112,9 @@ enum dataservice_api_cap_enum
     DATASERVICE_API_CAP_APP_PQ_TRANSACTION_FIRST_READ,
 
     /**
-     * \brief Capability to read the next transaction from the process queue.
+     * \brief Capability to drop a transaction from the queue.
      */
-    DATASERVICE_API_CAP_APP_PQ_TRANSACTION_NEXT_READ,
+    DATASERVICE_API_CAP_APP_PQ_TRANSACTION_DROP,
 
     /**
      * \brief Capability to write a block to the block table.
