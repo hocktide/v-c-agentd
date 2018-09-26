@@ -65,7 +65,6 @@ typedef struct dataservice_instance
  */
 struct dataservice_transaction_context
 {
-    disposable_t hdr;
     MDB_txn* txn;
 };
 
