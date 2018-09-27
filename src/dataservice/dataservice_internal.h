@@ -65,6 +65,7 @@ typedef struct dataservice_instance
  */
 struct dataservice_transaction_context
 {
+    dataservice_child_context_t* child;
     MDB_txn* txn;
 };
 

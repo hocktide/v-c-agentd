@@ -115,6 +115,48 @@ int dataservice_child_context_close(
     dataservice_child_context_t* child);
 
 /**
+ * \brief Begin a transaction.
+ *
+ * On success, this function creates a transaction which must either be
+ * committed by calling dataservice_data_txn_commit() or aborted by calling
+ * dataservice_data_txn_abort().  The caller is responsible for ensuring that
+ * this transaction is committed or aborted either before the parent transaction
+ * is committed or aborted or before the data service is destroyed.
+ *
+ * \param child         The child context under which this transaction should be
+ *                      begun.
+ * \param txn           The transaction to begin.
+ * \param parent        An optional parameter for the parent transaction.  This
+ *                      parameter is set to NULL when not used.
+ * \param read_only     A flag to indicate whether this transaction is read-only
+ *                      (true) or read/write (false).  Note: this flag is
+ *                      ignored when creating a child transaction; the parent
+ *                      transaction's state overrides this one.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int dataservice_data_txn_begin(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* txn,
+    dataservice_transaction_context_t* parent, bool read_only);
+
+/**
+ * \brief Abort a transaction.
+ *
+ * \param txn           The transaction to abort.
+ */
+void dataservice_data_txn_abort(
+    dataservice_transaction_context_t* txn);
+
+/**
+ * \brief Commit a transaction.
+ *
+ * \param txn           The transaction to abort.
+ */
+void dataservice_data_txn_commit(
+    dataservice_transaction_context_t* txn);
+
+/**
  * \brief Query a global setting via the dataservice_global_setting_enum
  * enumeration.
  *

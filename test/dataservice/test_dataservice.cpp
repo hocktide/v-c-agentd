@@ -1431,9 +1431,12 @@ TEST(dataservice_test, transaction_get_first_txn_happy_path)
     lval.mv_data = bar;
     ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
 
-    /* create a fake transaction for use with this call. */
+    /* commit the transaction. */
+    mdb_txn_commit(txn);
+
+    /* create a transaction for use with this call. */
     dataservice_transaction_context_t txn_ctx;
-    txn_ctx.txn = txn;
+    ASSERT_EQ(0, dataservice_data_txn_begin(&child, &txn_ctx, nullptr, false));
 
     /* getting the first transaction should return success. */
     ASSERT_EQ(0,
@@ -1446,7 +1449,7 @@ TEST(dataservice_test, transaction_get_first_txn_happy_path)
     ASSERT_EQ(0, memcmp(txn_bytes, foo_data, sizeof(foo_data)));
 
     /* abort the transaction. */
-    mdb_txn_abort(txn);
+    dataservice_data_txn_abort(&txn_ctx);
 
     /* dispose of the context. */
     dispose((disposable_t*)&ctx);
