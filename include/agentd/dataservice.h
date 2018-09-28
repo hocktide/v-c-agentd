@@ -113,6 +113,12 @@ enum dataservice_api_cap_enum
     DATASERVICE_API_CAP_APP_PQ_TRANSACTION_FIRST_READ,
 
     /**
+     * \brief Capability to read an arbitrary transaction from the transaction
+     * queue.
+     */
+    DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ,
+
+    /**
      * \brief Capability to drop a transaction from the queue.
      */
     DATASERVICE_API_CAP_APP_PQ_TRANSACTION_DROP,
