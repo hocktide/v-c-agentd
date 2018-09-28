@@ -197,6 +197,26 @@ int dataservice_global_settings_set(
     size_t size);
 
 /**
+ * \brief Submit a transaction to the queue.
+ *
+ * \param ctx           The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation.
+ * \param txn_id        The transaction ID for this transaction.
+ * \param artifact_id   The artifact ID for this transaction.
+ * \param txn_bytes     The raw bytes of the transaction certificate.
+ * \param txn_size      The size of the transaction certificate.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success
+ *          - 1 if the transaction already exists.
+ *          - non-zero on failure.
+ */
+int dataservice_transaction_submit(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id,
+    const uint8_t* artifact_id, const uint8_t* txn_bytes, size_t txn_size);
+
+/**
  * \brief Get the first transaction in the queue.
  *
  * \param ctx           The child context for this operation.
