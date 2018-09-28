@@ -66,9 +66,10 @@ int dataservice_transaction_get_first(
 
     /* set the parent transaction. */
     MDB_txn* parent = (NULL != dtxn_ctx) ? dtxn_ctx->txn : NULL;
+    int parent_flags = (NULL != parent) ? 0 : MDB_RDONLY;
 
     /* create the read transaction for the root transaction node. */
-    if (0 != mdb_txn_begin(details->env, parent, 0, &txn))
+    if (0 != mdb_txn_begin(details->env, parent, parent_flags, &txn))
     {
         retval = 4;
         txn = NULL;
