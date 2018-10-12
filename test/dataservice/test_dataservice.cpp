@@ -1877,3 +1877,54 @@ TEST(dataservice_test, transaction_submit_bitcap)
     /* dispose of the context. */
     dispose((disposable_t*)&ctx);
 }
+
+/**
+ * Test that dataservice_transaction_get_first respects the bitcap for this
+ * action.
+ */
+TEST(dataservice_test, transaction_get_first_bitcap)
+{
+    const char* DB_PATH =
+        "build/host/checked/databases/98f645fb-33e3-4eb1-9a8a-8b88945379e6";
+    char command[1024];
+    uint8_t* txn_bytes = NULL;
+    size_t txn_size = 0;
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* create the database directory. */
+    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
+    system(command);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+
+    /* explicitly grant the capability to create child contexts in the child
+     * context. */
+    BITCAP_SET_TRUE(child.childcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* getting the first transaction fails due no capabilities. */
+    data_transaction_node_t node;
+    ASSERT_EQ(3,
+        dataservice_transaction_get_first(
+            &child, nullptr, &node, &txn_bytes, &txn_size));
+
+    /* dispose of the context. */
+    dispose((disposable_t*)&ctx);
+}
