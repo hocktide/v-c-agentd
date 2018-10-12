@@ -19,6 +19,9 @@ static int dataservice_transaction_submit_create_queue(
     MDB_dbi txn_db, MDB_txn* txn, const uint8_t* txn_id);
 static int dataservice_transaction_submit_update_prev(
     MDB_dbi txn_db, MDB_txn* txn, const uint8_t* txn_id, const uint8_t* prev);
+static int dataservice_transaction_submit_update_end(
+    MDB_dbi txn_db, MDB_txn* txn, const uint8_t* txn_id,
+    const data_transaction_node_t* curr_end);
 
 /**
  * \brief Submit a transaction to the queue.
@@ -166,8 +169,11 @@ int dataservice_transaction_submit(
         }
 
         /* update end_node prev. */
-        /* this can be done directly because we are under a write txn. */
-        memcpy(end_node->prev, txn_id, sizeof(end_node->prev));
+        if (0 != dataservice_transaction_submit_update_end(details->txn_db, txn, txn_id, end_node))
+        {
+            retval = 9;
+            goto cleanup_newnode;
+        }
     }
 
     /* commit the transaction. */
@@ -273,10 +279,63 @@ static int dataservice_transaction_submit_update_prev(
     /* get the node header. */
     data_transaction_node_t* prev_node =
         (data_transaction_node_t*)lval.mv_data;
+    size_t prev_size =
+        sizeof(data_transaction_node_t) + ntohll(prev_node->net_txn_cert_size);
+
+    /* copy this header into a local value so we can update it. */
+    data_transaction_node_t* node = (data_transaction_node_t*)malloc(prev_size);
+    memcpy(node, prev_node, prev_size);
 
     /* update this node header's next to point to the transaction. */
-    memcpy(prev_node->next, txn_id, sizeof(prev_node->next));
+    memcpy(node->next, txn_id, sizeof(node->next));
 
-    /* success. */
+    /* place this value in the database. */
+    lval.mv_size = prev_size;
+    lval.mv_data = node;
+    int retval = mdb_put(txn, txn_db, &lkey, &lval, 0);
+
+    /* clean up node. */
+    memset(node, 0, prev_size);
+    free(node);
+
+    /* decode success or failure. */
+    if (0 != retval)
+        return 2;
+    else
+        return 0;
+}
+
+/**
+ * \brief Update the end transaction node with the new transaction id.
+ *
+ * \param txn_db        The transaction database handle.
+ * \param txn           The transaction under which this node is updated.
+ * \param txn_id        The new transaction id to set as end->next.
+ * \param curr_end      The current end node, a copy of which is updated.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+static int dataservice_transaction_submit_update_end(
+    MDB_dbi txn_db, MDB_txn* txn, const uint8_t* txn_id,
+    const data_transaction_node_t* curr_end)
+{
+    /* create a copy of the end node and update it with the current txn id. */
+    data_transaction_node_t end;
+    memcpy(&end, curr_end, sizeof(end));
+    memcpy(end.prev, txn_id, sizeof(end.prev));
+
+    /* update this node. */
+    MDB_val lkey;
+    lkey.mv_size = sizeof(end.key);
+    lkey.mv_data = end.key;
+    MDB_val lval;
+    lval.mv_size = sizeof(end);
+    lval.mv_data = &end;
+    if (0 != mdb_put(txn, txn_db, &lkey, &lval, 0))
+    {
+        return 1;
+    }
+
+    /* success */
     return 0;
 }
