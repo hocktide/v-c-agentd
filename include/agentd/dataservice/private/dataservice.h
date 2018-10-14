@@ -277,6 +277,22 @@ int dataservice_transaction_get(
     data_transaction_node_t* node,
     uint8_t** txn_bytes, size_t* txn_size);
 
+/**
+ * \brief Drop a given transaction by ID from the queue.
+ *
+ * \param ctx           The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation.
+ * \param txn_id        The transaction ID for this transaction.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success
+ *          - 1 if the transaction could not be found.
+ *          - non-zero on failure.
+ */
+int dataservice_transaction_drop(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

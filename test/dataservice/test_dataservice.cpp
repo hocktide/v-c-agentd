@@ -2010,6 +2010,607 @@ TEST(dataservice_test, transaction_submit_txn_get_with_node_happy_path)
 }
 
 /**
+ * Test that an ettempt to drop the all zeroes or all FFs transactions results
+ * in a "not found" error, even after a transaction has been submitted.
+ */
+TEST(dataservice_test, transaction_drop_00_ff)
+{
+    uint8_t begin_key[16] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    uint8_t end_key[16] = {
+        0Xff, 0Xff, 0Xff, 0Xff, 0Xff, 0Xff, 0Xff, 0Xff,
+        0Xff, 0Xff, 0Xff, 0Xff, 0Xff, 0Xff, 0Xff, 0Xff
+    };
+    uint8_t foo_key[16] = {
+        0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
+        0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f
+    };
+    uint8_t foo_artifact[16] = {
+        0xcf, 0xa1, 0x51, 0xc4, 0x7c, 0x0f, 0x4d, 0xbd,
+        0xa0, 0xd6, 0x22, 0x51, 0x34, 0xd1, 0x61, 0xdc
+    };
+    uint8_t foo_data[5] = {
+        0Xfa, 0X12, 0X22, 0X13, 0X99
+    };
+
+    const char* DB_PATH =
+        "build/host/checked/databases/0b0d497c-2090-4ca5-a8df-d2c6cc8a27a5";
+    char command[1024];
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* create the database directory. */
+    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
+    system(command);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    /* only allow transaction submit, read, and drop. */
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_DROP);
+
+    /* explicitly grant the capability to create child contexts in the child
+     * context. */
+    BITCAP_SET_TRUE(child.childcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* attempt to drop the begin transaction. */
+    ASSERT_EQ(1,
+        dataservice_transaction_drop(
+            &child, nullptr, begin_key));
+
+    /* attempt to drop the end transaction. */
+    ASSERT_EQ(1,
+        dataservice_transaction_drop(
+            &child, nullptr, end_key));
+
+    /* submit foo transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo_key, foo_artifact, foo_data,
+            sizeof(foo_data)));
+
+    /* attempt to drop the begin transaction. */
+    ASSERT_EQ(1,
+        dataservice_transaction_drop(
+            &child, nullptr, begin_key));
+
+    /* attempt to drop the end transaction. */
+    ASSERT_EQ(1,
+        dataservice_transaction_drop(
+            &child, nullptr, end_key));
+
+    /* dispose of the context. */
+    dispose((disposable_t*)&ctx);
+}
+
+/**
+ * Test that we can drop an entry in the transaction queue after submitting
+ * it.
+ */
+TEST(dataservice_test, transaction_drop)
+{
+    uint8_t foo_key[16] = {
+        0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
+        0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f
+    };
+    uint8_t foo_artifact[16] = {
+        0xcf, 0xa1, 0x51, 0xc4, 0x7c, 0x0f, 0x4d, 0xbd,
+        0xa0, 0xd6, 0x22, 0x51, 0x34, 0xd1, 0x61, 0xdc
+    };
+    uint8_t foo_data[5] = {
+        0Xfa, 0X12, 0X22, 0X13, 0X99
+    };
+
+    const char* DB_PATH =
+        "build/host/checked/databases/f08eb0fb-0a4c-4578-9525-3005c234834f";
+    char command[1024];
+    uint8_t* txn_bytes = NULL;
+    size_t txn_size = 0;
+    data_transaction_node_t node;
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* create the database directory. */
+    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
+    system(command);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    /* only allow transaction submit, read/first, and drop. */
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_FIRST_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_DROP);
+
+    /* explicitly grant the capability to create child contexts in the child
+     * context. */
+    BITCAP_SET_TRUE(child.childcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* submit foo transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo_key, foo_artifact, foo_data,
+            sizeof(foo_data)));
+
+    /* getting the first transaction should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get_first(
+            &child, nullptr, &node, &txn_bytes, &txn_size));
+
+    /* this transaction id should be ours. */
+    ASSERT_EQ(0, memcmp(node.key, foo_key, 16));
+
+    /* getting the transaction by id should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get(
+            &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
+
+    /* attempt to drop foo transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_drop(
+            &child, nullptr, foo_key));
+
+    /* getting the first transaction should fail. */
+    ASSERT_EQ(1,
+        dataservice_transaction_get_first(
+            &child, nullptr, &node, &txn_bytes, &txn_size));
+
+    /* now if we try to get the transaction by id, this fails. */
+    ASSERT_EQ(1,
+        dataservice_transaction_get(
+            &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
+
+    /* dispose of the context. */
+    dispose((disposable_t*)&ctx);
+}
+
+/**
+ * Test that other entries are preserved and updated when we drop an entry from
+ * the queue.
+ */
+TEST(dataservice_test, transaction_drop_ordering)
+{
+    uint8_t foo1_key[16] = {
+        0x2a, 0x3d, 0xe3, 0x6f, 0x4f, 0x5f, 0x43, 0x75,
+        0x8d, 0xaf, 0xb0, 0x74, 0x97, 0x8b, 0x51, 0x67
+    };
+    uint8_t foo1_artifact[16] = {
+        0xef, 0x44, 0xe7, 0xb4, 0xbf, 0x39, 0x45, 0xe4,
+        0xb3, 0x4b, 0x6e, 0x82, 0xee, 0x41, 0x76, 0x21
+    };
+    uint8_t foo1_data[16] = {
+        0xfa, 0x99, 0xb1, 0x9d, 0x66, 0x7a, 0x4a, 0xe3,
+        0x96, 0xf4, 0x50, 0xd6, 0x65, 0xda, 0x11, 0x5c
+    };
+    uint8_t foo2_key[16] = {
+        0xb2, 0xea, 0x70, 0x5c, 0x42, 0xd4, 0x40, 0x21,
+        0x96, 0xe1, 0x7e, 0x89, 0xfb, 0x04, 0x9a, 0x33
+    };
+    uint8_t foo2_artifact[16] = {
+        0xeb, 0x18, 0xe9, 0x7b, 0x2e, 0x8a, 0x41, 0xf2,
+        0xbf, 0xc5, 0xea, 0x7d, 0x65, 0x2a, 0x71, 0xce
+    };
+    uint8_t foo2_data[16] = {
+        0x83, 0xf3, 0x6a, 0xa4, 0x71, 0xbe, 0x4f, 0xb6,
+        0xa0, 0xcf, 0xe5, 0x69, 0x29, 0x23, 0x2b, 0xe0
+    };
+    uint8_t foo3_key[16] = {
+        0x33, 0x48, 0xfd, 0x83, 0xa7, 0xc5, 0x4b, 0xf1,
+        0x85, 0x2f, 0x27, 0x99, 0x90, 0x8a, 0xce, 0xbc
+    };
+    uint8_t foo3_artifact[16] = {
+        0xf2, 0x90, 0xce, 0xe0, 0x44, 0x29, 0x49, 0x97,
+        0xad, 0x8b, 0xb0, 0x77, 0x06, 0xe2, 0xc1, 0x97
+    };
+    uint8_t foo3_data[16] = {
+        0x4f, 0x61, 0x98, 0x8e, 0x23, 0x84, 0x49, 0x29,
+        0x92, 0x76, 0x84, 0x06, 0x42, 0x36, 0x3a, 0x6b
+    };
+
+    const char* DB_PATH =
+        "build/host/checked/databases/a0cf8090-46d9-42d9-a2b2-953833e38ed8";
+    char command[1024];
+    uint8_t* txn_bytes = NULL;
+    size_t txn_size = 0;
+    data_transaction_node_t node;
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* create the database directory. */
+    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
+    system(command);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    /* only allow transaction submit, read/first, and drop. */
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_FIRST_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_DROP);
+
+    /* explicitly grant the capability to create child contexts in the child
+     * context. */
+    BITCAP_SET_TRUE(child.childcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* submit foo1 transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo1_key, foo1_artifact, foo1_data,
+            sizeof(foo1_data)));
+
+    /* submit foo2 transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo2_key, foo2_artifact, foo2_data,
+            sizeof(foo2_data)));
+
+    /* submit foo3 transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo3_key, foo3_artifact, foo3_data,
+            sizeof(foo3_data)));
+
+    /* getting the first transaction should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get_first(
+            &child, nullptr, &node, &txn_bytes, &txn_size));
+
+    /* this should match foo1. */
+    uint8_t begin_key[16];
+    memset(begin_key, 0, sizeof(begin_key));
+    uint8_t end_key[16];
+    memset(end_key, 0xff, sizeof(end_key));
+    ASSERT_EQ(0, memcmp(node.key, foo1_key, 16));
+    ASSERT_EQ(0, memcmp(node.artifact_id, foo1_artifact, 16));
+    ASSERT_EQ(0, memcmp(node.prev, begin_key, 16));
+    ASSERT_EQ(0, memcmp(node.next, foo2_key, 16));
+    ASSERT_EQ(sizeof(foo1_data), txn_size);
+    ASSERT_EQ(0, memcmp(txn_bytes, foo1_data, sizeof(foo1_data)));
+
+    /* getting the transaction by id should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get(
+            &child, nullptr, foo1_key, &node, &txn_bytes, &txn_size));
+
+    /* this should match foo1. */
+    ASSERT_EQ(0, memcmp(node.key, foo1_key, 16));
+    ASSERT_EQ(0, memcmp(node.artifact_id, foo1_artifact, 16));
+    ASSERT_EQ(0, memcmp(node.prev, begin_key, 16));
+    ASSERT_EQ(0, memcmp(node.next, foo2_key, 16));
+    ASSERT_EQ(sizeof(foo1_data), txn_size);
+    ASSERT_EQ(0, memcmp(txn_bytes, foo1_data, sizeof(foo1_data)));
+
+    /* getting the next transaction by id should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get(
+            &child, nullptr, node.next, &node, &txn_bytes, &txn_size));
+
+    /* this should match foo2. */
+    ASSERT_EQ(0, memcmp(node.key, foo2_key, 16));
+    ASSERT_EQ(0, memcmp(node.artifact_id, foo2_artifact, 16));
+    ASSERT_EQ(0, memcmp(node.prev, foo1_key, 16));
+    ASSERT_EQ(0, memcmp(node.next, foo3_key, 16));
+    ASSERT_EQ(sizeof(foo2_data), txn_size);
+    ASSERT_EQ(0, memcmp(txn_bytes, foo2_data, sizeof(foo2_data)));
+
+    /* getting the next transaction by id should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get(
+            &child, nullptr, node.next, &node, &txn_bytes, &txn_size));
+
+    /* this should match foo3. */
+    ASSERT_EQ(0, memcmp(node.key, foo3_key, 16));
+    ASSERT_EQ(0, memcmp(node.artifact_id, foo3_artifact, 16));
+    ASSERT_EQ(0, memcmp(node.prev, foo2_key, 16));
+    ASSERT_EQ(0, memcmp(node.next, end_key, 16));
+    ASSERT_EQ(sizeof(foo3_data), txn_size);
+    ASSERT_EQ(0, memcmp(txn_bytes, foo3_data, sizeof(foo3_data)));
+
+    /* attempt to drop foo2 transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_drop(
+            &child, nullptr, foo2_key));
+
+    /* now if we try to get the transaction by id, this fails. */
+    ASSERT_EQ(1,
+        dataservice_transaction_get(
+            &child, nullptr, foo2_key, &node, &txn_bytes, &txn_size));
+
+    /* getting the first transaction should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get_first(
+            &child, nullptr, &node, &txn_bytes, &txn_size));
+
+    /* this should match foo1. */
+    ASSERT_EQ(0, memcmp(node.key, foo1_key, 16));
+    ASSERT_EQ(0, memcmp(node.artifact_id, foo1_artifact, 16));
+    ASSERT_EQ(0, memcmp(node.prev, begin_key, 16));
+    ASSERT_EQ(0, memcmp(node.next, foo3_key, 16));
+    ASSERT_EQ(sizeof(foo1_data), txn_size);
+    ASSERT_EQ(0, memcmp(txn_bytes, foo1_data, sizeof(foo1_data)));
+
+    /* getting the next transaction by id should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get(
+            &child, nullptr, node.next, &node, &txn_bytes, &txn_size));
+
+    /* this should match foo3. */
+    ASSERT_EQ(0, memcmp(node.key, foo3_key, 16));
+    ASSERT_EQ(0, memcmp(node.artifact_id, foo3_artifact, 16));
+    ASSERT_EQ(0, memcmp(node.prev, foo1_key, 16));
+    ASSERT_EQ(0, memcmp(node.next, end_key, 16));
+    ASSERT_EQ(sizeof(foo3_data), txn_size);
+    ASSERT_EQ(0, memcmp(txn_bytes, foo3_data, sizeof(foo3_data)));
+
+    /* dispose of the context. */
+    dispose((disposable_t*)&ctx);
+}
+
+/**
+ * Test that other entries are preserved and updated when we drop the first
+ * entry from the queue.
+ */
+TEST(dataservice_test, transaction_drop_first_ordering)
+{
+    uint8_t foo1_key[16] = {
+        0x2a, 0x3d, 0xe3, 0x6f, 0x4f, 0x5f, 0x43, 0x75,
+        0x8d, 0xaf, 0xb0, 0x74, 0x97, 0x8b, 0x51, 0x67
+    };
+    uint8_t foo1_artifact[16] = {
+        0xef, 0x44, 0xe7, 0xb4, 0xbf, 0x39, 0x45, 0xe4,
+        0xb3, 0x4b, 0x6e, 0x82, 0xee, 0x41, 0x76, 0x21
+    };
+    uint8_t foo1_data[16] = {
+        0xfa, 0x99, 0xb1, 0x9d, 0x66, 0x7a, 0x4a, 0xe3,
+        0x96, 0xf4, 0x50, 0xd6, 0x65, 0xda, 0x11, 0x5c
+    };
+    uint8_t foo2_key[16] = {
+        0xb2, 0xea, 0x70, 0x5c, 0x42, 0xd4, 0x40, 0x21,
+        0x96, 0xe1, 0x7e, 0x89, 0xfb, 0x04, 0x9a, 0x33
+    };
+    uint8_t foo2_artifact[16] = {
+        0xeb, 0x18, 0xe9, 0x7b, 0x2e, 0x8a, 0x41, 0xf2,
+        0xbf, 0xc5, 0xea, 0x7d, 0x65, 0x2a, 0x71, 0xce
+    };
+    uint8_t foo2_data[16] = {
+        0x83, 0xf3, 0x6a, 0xa4, 0x71, 0xbe, 0x4f, 0xb6,
+        0xa0, 0xcf, 0xe5, 0x69, 0x29, 0x23, 0x2b, 0xe0
+    };
+    uint8_t foo3_key[16] = {
+        0x33, 0x48, 0xfd, 0x83, 0xa7, 0xc5, 0x4b, 0xf1,
+        0x85, 0x2f, 0x27, 0x99, 0x90, 0x8a, 0xce, 0xbc
+    };
+    uint8_t foo3_artifact[16] = {
+        0xf2, 0x90, 0xce, 0xe0, 0x44, 0x29, 0x49, 0x97,
+        0xad, 0x8b, 0xb0, 0x77, 0x06, 0xe2, 0xc1, 0x97
+    };
+    uint8_t foo3_data[16] = {
+        0x4f, 0x61, 0x98, 0x8e, 0x23, 0x84, 0x49, 0x29,
+        0x92, 0x76, 0x84, 0x06, 0x42, 0x36, 0x3a, 0x6b
+    };
+
+    const char* DB_PATH =
+        "build/host/checked/databases/a6f38715-5bc8-442b-83ce-8e8f48d6050b";
+    char command[1024];
+    uint8_t* txn_bytes = NULL;
+    size_t txn_size = 0;
+    data_transaction_node_t node;
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* create the database directory. */
+    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
+    system(command);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    /* only allow transaction submit, read/first, and drop. */
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_FIRST_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_DROP);
+
+    /* explicitly grant the capability to create child contexts in the child
+     * context. */
+    BITCAP_SET_TRUE(child.childcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* submit foo1 transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo1_key, foo1_artifact, foo1_data,
+            sizeof(foo1_data)));
+
+    /* submit foo2 transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo2_key, foo2_artifact, foo2_data,
+            sizeof(foo2_data)));
+
+    /* submit foo3 transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo3_key, foo3_artifact, foo3_data,
+            sizeof(foo3_data)));
+
+    /* getting the first transaction should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get_first(
+            &child, nullptr, &node, &txn_bytes, &txn_size));
+
+    /* this should match foo1. */
+    uint8_t begin_key[16];
+    memset(begin_key, 0, sizeof(begin_key));
+    uint8_t end_key[16];
+    memset(end_key, 0xff, sizeof(end_key));
+    ASSERT_EQ(0, memcmp(node.key, foo1_key, 16));
+    ASSERT_EQ(0, memcmp(node.artifact_id, foo1_artifact, 16));
+    ASSERT_EQ(0, memcmp(node.prev, begin_key, 16));
+    ASSERT_EQ(0, memcmp(node.next, foo2_key, 16));
+    ASSERT_EQ(sizeof(foo1_data), txn_size);
+    ASSERT_EQ(0, memcmp(txn_bytes, foo1_data, sizeof(foo1_data)));
+
+    /* getting the transaction by id should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get(
+            &child, nullptr, foo1_key, &node, &txn_bytes, &txn_size));
+
+    /* this should match foo1. */
+    ASSERT_EQ(0, memcmp(node.key, foo1_key, 16));
+    ASSERT_EQ(0, memcmp(node.artifact_id, foo1_artifact, 16));
+    ASSERT_EQ(0, memcmp(node.prev, begin_key, 16));
+    ASSERT_EQ(0, memcmp(node.next, foo2_key, 16));
+    ASSERT_EQ(sizeof(foo1_data), txn_size);
+    ASSERT_EQ(0, memcmp(txn_bytes, foo1_data, sizeof(foo1_data)));
+
+    /* getting the next transaction by id should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get(
+            &child, nullptr, node.next, &node, &txn_bytes, &txn_size));
+
+    /* this should match foo2. */
+    ASSERT_EQ(0, memcmp(node.key, foo2_key, 16));
+    ASSERT_EQ(0, memcmp(node.artifact_id, foo2_artifact, 16));
+    ASSERT_EQ(0, memcmp(node.prev, foo1_key, 16));
+    ASSERT_EQ(0, memcmp(node.next, foo3_key, 16));
+    ASSERT_EQ(sizeof(foo2_data), txn_size);
+    ASSERT_EQ(0, memcmp(txn_bytes, foo2_data, sizeof(foo2_data)));
+
+    /* getting the next transaction by id should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get(
+            &child, nullptr, node.next, &node, &txn_bytes, &txn_size));
+
+    /* this should match foo3. */
+    ASSERT_EQ(0, memcmp(node.key, foo3_key, 16));
+    ASSERT_EQ(0, memcmp(node.artifact_id, foo3_artifact, 16));
+    ASSERT_EQ(0, memcmp(node.prev, foo2_key, 16));
+    ASSERT_EQ(0, memcmp(node.next, end_key, 16));
+    ASSERT_EQ(sizeof(foo3_data), txn_size);
+    ASSERT_EQ(0, memcmp(txn_bytes, foo3_data, sizeof(foo3_data)));
+
+    /* attempt to drop foo1 transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_drop(
+            &child, nullptr, foo1_key));
+
+    /* now if we try to get the transaction by id, this fails. */
+    ASSERT_EQ(1,
+        dataservice_transaction_get(
+            &child, nullptr, foo1_key, &node, &txn_bytes, &txn_size));
+
+    /* getting the first transaction should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get_first(
+            &child, nullptr, &node, &txn_bytes, &txn_size));
+
+    /* this should match foo2. */
+    ASSERT_EQ(0, memcmp(node.key, foo2_key, 16));
+    ASSERT_EQ(0, memcmp(node.artifact_id, foo2_artifact, 16));
+    ASSERT_EQ(0, memcmp(node.prev, begin_key, 16));
+    ASSERT_EQ(0, memcmp(node.next, foo3_key, 16));
+    ASSERT_EQ(sizeof(foo2_data), txn_size);
+    ASSERT_EQ(0, memcmp(txn_bytes, foo2_data, sizeof(foo2_data)));
+
+    /* getting the next transaction by id should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get(
+            &child, nullptr, node.next, &node, &txn_bytes, &txn_size));
+
+    /* this should match foo3. */
+    ASSERT_EQ(0, memcmp(node.key, foo3_key, 16));
+    ASSERT_EQ(0, memcmp(node.artifact_id, foo3_artifact, 16));
+    ASSERT_EQ(0, memcmp(node.prev, foo2_key, 16));
+    ASSERT_EQ(0, memcmp(node.next, end_key, 16));
+    ASSERT_EQ(sizeof(foo3_data), txn_size);
+    ASSERT_EQ(0, memcmp(txn_bytes, foo3_data, sizeof(foo3_data)));
+
+    /* dispose of the context. */
+    dispose((disposable_t*)&ctx);
+}
+
+/**
  * Test that dataservice_transaction_submit respects the bitcap for this action.
  */
 TEST(dataservice_test, transaction_submit_bitcap)
@@ -2172,6 +2773,57 @@ TEST(dataservice_test, transaction_get_bitcap)
     ASSERT_EQ(3,
         dataservice_transaction_get(
             &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
+
+    /* dispose of the context. */
+    dispose((disposable_t*)&ctx);
+}
+
+/**
+ * Test that dataservice_transaction_drop respects the bitcap for this action.
+ */
+TEST(dataservice_test, transaction_drop_bitcap)
+{
+    uint8_t foo_key[16] = {
+        0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
+        0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f
+    };
+    const char* DB_PATH =
+        "build/host/checked/databases/33cf6556-c364-4634-8920-aeb0a7fb64ce";
+    char command[1024];
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* create the database directory. */
+    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
+    system(command);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+
+    /* explicitly grant the capability to create child contexts in the child
+     * context. */
+    BITCAP_SET_TRUE(child.childcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* dropping a transaction fails due to no capability. */
+    ASSERT_EQ(3,
+        dataservice_transaction_drop(
+            &child, nullptr, foo_key));
 
     /* dispose of the context. */
     dispose((disposable_t*)&ctx);
