@@ -92,6 +92,16 @@ int dataservice_decode_and_dispatch(
             return dataservice_decode_and_dispatch_global_setting_set(
                 inst, sock, breq, payload_size);
 
+        /* handle transaction submit. */
+        case DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_SUBMIT:
+            return dataservice_decode_and_dispatch_transaction_submit(
+                inst, sock, breq, payload_size);
+
+        /* handle transaction get first. */
+        case DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_FIRST_READ:
+            return dataservice_decode_and_dispatch_transaction_get_first(
+                inst, sock, breq, payload_size);
+
         /* unknown method.  Return an error. */
         default:
             return 2;
