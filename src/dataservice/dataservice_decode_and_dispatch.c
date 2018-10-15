@@ -104,6 +104,10 @@ int dataservice_decode_and_dispatch(
 
         /* unknown method.  Return an error. */
         default:
+            /* make sure to write an error to the socket as well. */
+            dataservice_decode_and_dispatch_write_status(
+                sock, method, 0U, 0xFFFFFFFF, NULL, 0);
+
             return 2;
     }
 }
