@@ -262,9 +262,9 @@ enum dataservice_api_method_enum
     DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_FIRST_READ,
 
     /**
-     * \brief Read the next transaction from the process queue.
+     * \brief Read a transaction from the process queue by id.
      */
-    DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_NEXT_READ,
+    DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_READ,
 
     /**
      * \brief Write a block to the block table.
