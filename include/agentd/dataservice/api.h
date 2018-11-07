@@ -410,7 +410,7 @@ int dataservice_api_sendreq_transaction_get(
  * from the query.  This is a dynamically allocated buffer that must be freed by
  * the caller.
  *
- * A status code of 2 represents a "not found" error code.  In future versions
+ * A status code of 1 represents a "not found" error code.  In future versions
  * of this API, this will be updated to a enumerated value.
  *
  * \returns 0 if the response was read successfully, IPC_ERROR_CODE_WOULD_BLOCK
@@ -420,6 +420,41 @@ int dataservice_api_sendreq_transaction_get(
 int dataservice_api_recvresp_transaction_get(
     ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status,
     data_transaction_node_t* node, void** data, size_t* data_size);
+
+/**
+ * \brief Drop a transaction from the transaction queue by ID.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param child         The child index used for the query.
+ * \param txn_id        The transaction UUID of the transaction to drop.
+ *
+ * \returns 0 if the request was successfully written to the socket, and
+ * non-zero otherwise.
+ */
+int dataservice_api_sendreq_transaction_drop(
+    ipc_socket_context_t* sock, uint32_t child, const uint8_t* txn_id);
+
+/**
+ * \brief Receive a response from the drop transaction action.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates success, and a non-zero status indicates failure.
+ *
+ * A status code of 1 represents a "not found" error code.  In future versions
+ * of this API, this will be updated to a enumerated value.
+ *
+ * \returns 0 if the response was read successfully, IPC_ERROR_CODE_WOULD_BLOCK
+ * if the response cannot yet be read, and non-zero if the response could not be
+ * successfully read.
+ */
+int dataservice_api_recvresp_transaction_drop(
+    ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

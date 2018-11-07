@@ -37,7 +37,7 @@
  * from the query.  This is a dynamically allocated buffer that must be freed by
  * the caller.
  *
- * A status code of 2 represents a "not found" error code.  In future versions
+ * A status code of 1 represents a "not found" error code.  In future versions
  * of this API, this will be updated to a enumerated value.
  *
  * \returns 0 if the response was read successfully, IPC_ERROR_CODE_WOULD_BLOCK

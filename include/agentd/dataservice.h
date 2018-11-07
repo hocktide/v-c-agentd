@@ -267,6 +267,11 @@ enum dataservice_api_method_enum
     DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_READ,
 
     /**
+     * \brief Drop a transaction from the process queue by id.
+     */
+    DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_DROP,
+
+    /**
      * \brief Write a block to the block table.
      *
      * This transaction automatically populates the transaction table with

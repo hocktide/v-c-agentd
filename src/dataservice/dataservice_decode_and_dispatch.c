@@ -107,6 +107,11 @@ int dataservice_decode_and_dispatch(
             return dataservice_decode_and_dispatch_transaction_get(
                 inst, sock, breq, payload_size);
 
+        /* handle transaction drop. */
+        case DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_DROP:
+            return dataservice_decode_and_dispatch_transaction_drop(
+                inst, sock, breq, payload_size);
+
         /* unknown method.  Return an error. */
         default:
             /* make sure to write an error to the socket as well. */
