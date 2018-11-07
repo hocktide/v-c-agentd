@@ -111,7 +111,14 @@ int dataservice_api_recvresp_transaction_get(
 
     /* get the status code. */
     *status = ntohl(val[2]);
-    if (*status != 0 || dat_size < 4 * 16)
+    if (*status != 0)
+    {
+        retval = 0;
+        goto done;
+    }
+
+    /* if the node size is invalid, return an error code. */
+    if (dat_size < 4 * 16)
     {
         retval = 3;
         goto done;

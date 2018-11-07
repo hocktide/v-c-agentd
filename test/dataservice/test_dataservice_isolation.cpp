@@ -1620,7 +1620,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
 
     /* verify that everything ran correctly. */
     EXPECT_EQ(0, sendreq_status);
-    EXPECT_EQ(3, recvresp_status);
+    EXPECT_EQ(0, recvresp_status);
     ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
     ASSERT_EQ(1U, status);
 
