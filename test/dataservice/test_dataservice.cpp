@@ -16,10 +16,21 @@
 
 using namespace std;
 
+class dataservice_test : public ::testing::Test {
+protected:
+    void SetUp() override
+    {
+    }
+
+    void TearDown() override
+    {
+    }
+};
+
 /**
  * Test that the data service root context can be initialized.
  */
-TEST(dataservice_test, root_context_init)
+TEST_F(dataservice_test, root_context_init)
 {
     const char* DB_PATH =
         "build/host/checked/databases/396c499b-ff73-45c5-901f-2e48e2dce4c7";
@@ -94,7 +105,7 @@ TEST(dataservice_test, root_context_init)
  * Test that without the root create capability, we cannot create a root
  * context.
  */
-TEST(dataservice_test, root_context_init_no_permission)
+TEST_F(dataservice_test, root_context_init_no_permission)
 {
     const char* DB_PATH =
         "build/host/checked/databases/c681eefc-d2e0-4111-8638-a64a6a77f216";
@@ -123,7 +134,7 @@ TEST(dataservice_test, root_context_init_no_permission)
  * eliminate that capability and demonstrate that it is no longer possible to
  * further reduce capabilities.
  */
-TEST(dataservice_test, root_context_reduce_capabilities)
+TEST_F(dataservice_test, root_context_reduce_capabilities)
 {
     const char* DB_PATH =
         "build/host/checked/databases/c681eefc-d2e0-4111-8638-a64a6a77f216";
@@ -298,7 +309,7 @@ TEST(dataservice_test, root_context_reduce_capabilities)
 /**
  * Test that a child context can be created from a root context.
  */
-TEST(dataservice_test, child_context_create)
+TEST_F(dataservice_test, child_context_create)
 {
     const char* DB_PATH =
         "build/host/checked/databases/553f6a65-ed63-466d-93d7-193d7b0b8c49";
@@ -376,7 +387,7 @@ TEST(dataservice_test, child_context_create)
  * Test that a child context cannot be created from a root context if the root
  * context does not have the create child context capability.
  */
-TEST(dataservice_test, child_context_create_denied)
+TEST_F(dataservice_test, child_context_create_denied)
 {
     const char* DB_PATH =
         "build/host/checked/databases/553f6a65-ed63-466d-93d7-193d7b0b8c49";
@@ -434,7 +445,7 @@ TEST(dataservice_test, child_context_create_denied)
 /**
  * Test that a child context can be closed.
  */
-TEST(dataservice_test, child_context_close)
+TEST_F(dataservice_test, child_context_close)
 {
     const char* DB_PATH =
         "build/host/checked/databases/553f6a65-ed63-466d-93d7-193d7b0b8c49";
@@ -491,7 +502,7 @@ TEST(dataservice_test, child_context_close)
 /**
  * Test that closing a child context fails if it lacks the close cap.
  */
-TEST(dataservice_test, child_context_close_denied)
+TEST_F(dataservice_test, child_context_close_denied)
 {
     const char* DB_PATH =
         "build/host/checked/databases/553f6a65-ed63-466d-93d7-193d7b0b8c49";
@@ -552,7 +563,7 @@ TEST(dataservice_test, child_context_close_denied)
  * Test that we can query a global setting that is already saved in the
  * database.
  */
-TEST(dataservice_test, global_settings_get)
+TEST_F(dataservice_test, global_settings_get)
 {
     const char* DB_PATH =
         "build/host/checked/databases/996b0f5d-46b7-4d76-8cfd-fe2433939745";
@@ -636,7 +647,7 @@ TEST(dataservice_test, global_settings_get)
  * Test that if we are not allowed to query a global setting, the API call
  * fails.
  */
-TEST(dataservice_test, global_settings_get_denied)
+TEST_F(dataservice_test, global_settings_get_denied)
 {
     const char* DB_PATH =
         "build/host/checked/databases/cee8e10d-1ac7-41ed-b33d-524ccda2824e";
@@ -712,7 +723,7 @@ TEST(dataservice_test, global_settings_get_denied)
  * Test that we get a truncation error if attempting to query a value with too
  * small of a buffer.
  */
-TEST(dataservice_test, global_settings_get_would_truncate)
+TEST_F(dataservice_test, global_settings_get_would_truncate)
 {
     const char* DB_PATH =
         "build/host/checked/databases/5a920ef8-14b9-455c-b09a-a2b46e28afc6";
@@ -790,7 +801,7 @@ TEST(dataservice_test, global_settings_get_would_truncate)
  * Test that we get a value not found error when querying for a value not in the
  * database.
  */
-TEST(dataservice_test, global_settings_get_not_found)
+TEST_F(dataservice_test, global_settings_get_not_found)
 {
     const char* DB_PATH =
         "build/host/checked/databases/f8ef4552-2124-435f-80e6-746b1ec1ea94";
@@ -849,7 +860,7 @@ TEST(dataservice_test, global_settings_get_not_found)
 /**
  * Test that we can set a global setting and then get it.
  */
-TEST(dataservice_test, global_settings_set_get)
+TEST_F(dataservice_test, global_settings_set_get)
 {
     const char* DB_PATH =
         "build/host/checked/databases/a1e4c959-0279-4e43-a951-24e81d20c51d";
@@ -925,7 +936,7 @@ TEST(dataservice_test, global_settings_set_get)
 /**
  * Test that global settings set respects the global settings write capability.
  */
-TEST(dataservice_test, global_settings_set_denied)
+TEST_F(dataservice_test, global_settings_set_denied)
 {
     const char* DB_PATH =
         "build/host/checked/databases/a1e4c959-0279-4e43-a951-24e81d20c51d";
@@ -980,7 +991,7 @@ TEST(dataservice_test, global_settings_set_denied)
  * Test that we transaction_get_first indicates that no transaction is found
  * when the transaction queue is empty.
  */
-TEST(dataservice_test, transaction_get_first_empty)
+TEST_F(dataservice_test, transaction_get_first_empty)
 {
     const char* DB_PATH =
         "build/host/checked/databases/46423abb-fc06-4dd1-9fe6-42f527b3cddb";
@@ -1036,7 +1047,7 @@ TEST(dataservice_test, transaction_get_first_empty)
  * Test that we transaction_get_first indicates that no transaction is found
  * when the transaction queue exists and is empty.
  */
-TEST(dataservice_test, transaction_get_first_empty_with_start_end)
+TEST_F(dataservice_test, transaction_get_first_empty_with_start_end)
 {
     const char* DB_PATH =
         "build/host/checked/databases/523b4370-8723-4fc6-b5d6-ac6e90331cdd";
@@ -1130,7 +1141,7 @@ TEST(dataservice_test, transaction_get_first_empty_with_start_end)
  * Test that we transaction_get_first fails when called without the appropriate
  * capability being set.
  */
-TEST(dataservice_test, transaction_get_first_no_capability)
+TEST_F(dataservice_test, transaction_get_first_no_capability)
 {
     const char* DB_PATH =
         "build/host/checked/databases/ff3e5166-5c6b-4e13-a816-c841f3d94274";
@@ -1183,7 +1194,7 @@ TEST(dataservice_test, transaction_get_first_no_capability)
 /**
  * Test that we transaction_get_first retrieves the first found transaction.
  */
-TEST(dataservice_test, transaction_get_first_happy_path)
+TEST_F(dataservice_test, transaction_get_first_happy_path)
 {
     uint8_t foo_key[16] = { 0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
         0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f };
@@ -1324,7 +1335,7 @@ TEST(dataservice_test, transaction_get_first_happy_path)
  * Test that we transaction_get_first retrieves the first found transaction
  * while under a transaction.
  */
-TEST(dataservice_test, transaction_get_first_txn_happy_path)
+TEST_F(dataservice_test, transaction_get_first_txn_happy_path)
 {
     uint8_t foo_key[16] = { 0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
         0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f };
@@ -1471,7 +1482,7 @@ TEST(dataservice_test, transaction_get_first_txn_happy_path)
  * Test that we transaction_get_first retrieves the first found transaction and
  * populates the provided transaction node.
  */
-TEST(dataservice_test, transaction_get_first_with_node_happy_path)
+TEST_F(dataservice_test, transaction_get_first_with_node_happy_path)
 {
     uint8_t foo_key[16] = { 0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
         0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f };
@@ -1625,7 +1636,7 @@ TEST(dataservice_test, transaction_get_first_with_node_happy_path)
  * Test that we can submit a transaction to the transaction queue and retrieve
  * it.
  */
-TEST(dataservice_test, transaction_submit_get_first_with_node_happy_path)
+TEST_F(dataservice_test, transaction_submit_get_first_with_node_happy_path)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
@@ -1720,7 +1731,7 @@ TEST(dataservice_test, transaction_submit_get_first_with_node_happy_path)
  * Test that we can submit a transaction to the transaction queue and retrieve
  * it, while under a transaction.
  */
-TEST(dataservice_test, transaction_submit_txn_get_first_with_node_happy_path)
+TEST_F(dataservice_test, transaction_submit_txn_get_first_with_node_happy_path)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
@@ -1819,7 +1830,7 @@ TEST(dataservice_test, transaction_submit_txn_get_first_with_node_happy_path)
  * Test that we can submit a transaction to the transaction queue and retrieve
  * it by id.
  */
-TEST(dataservice_test, transaction_submit_get_with_node_happy_path)
+TEST_F(dataservice_test, transaction_submit_get_with_node_happy_path)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
@@ -1914,7 +1925,7 @@ TEST(dataservice_test, transaction_submit_get_with_node_happy_path)
  * Test that we can submit a transaction to the transaction queue and retrieve
  * it by id, while under a transaction.
  */
-TEST(dataservice_test, transaction_submit_txn_get_with_node_happy_path)
+TEST_F(dataservice_test, transaction_submit_txn_get_with_node_happy_path)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
@@ -2013,7 +2024,7 @@ TEST(dataservice_test, transaction_submit_txn_get_with_node_happy_path)
  * Test that an ettempt to drop the all zeroes or all FFs transactions results
  * in a "not found" error, even after a transaction has been submitted.
  */
-TEST(dataservice_test, transaction_drop_00_ff)
+TEST_F(dataservice_test, transaction_drop_00_ff)
 {
     uint8_t begin_key[16] = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -2109,7 +2120,7 @@ TEST(dataservice_test, transaction_drop_00_ff)
  * Test that we can drop an entry in the transaction queue after submitting
  * it.
  */
-TEST(dataservice_test, transaction_drop)
+TEST_F(dataservice_test, transaction_drop)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
@@ -2210,7 +2221,7 @@ TEST(dataservice_test, transaction_drop)
  * Test that other entries are preserved and updated when we drop an entry from
  * the queue.
  */
-TEST(dataservice_test, transaction_drop_ordering)
+TEST_F(dataservice_test, transaction_drop_ordering)
 {
     uint8_t foo1_key[16] = {
         0x2a, 0x3d, 0xe3, 0x6f, 0x4f, 0x5f, 0x43, 0x75,
@@ -2412,7 +2423,7 @@ TEST(dataservice_test, transaction_drop_ordering)
  * Test that other entries are preserved and updated when we drop the first
  * entry from the queue.
  */
-TEST(dataservice_test, transaction_drop_first_ordering)
+TEST_F(dataservice_test, transaction_drop_first_ordering)
 {
     uint8_t foo1_key[16] = {
         0x2a, 0x3d, 0xe3, 0x6f, 0x4f, 0x5f, 0x43, 0x75,
@@ -2613,7 +2624,7 @@ TEST(dataservice_test, transaction_drop_first_ordering)
 /**
  * Test that dataservice_transaction_submit respects the bitcap for this action.
  */
-TEST(dataservice_test, transaction_submit_bitcap)
+TEST_F(dataservice_test, transaction_submit_bitcap)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
@@ -2677,7 +2688,7 @@ TEST(dataservice_test, transaction_submit_bitcap)
  * Test that dataservice_transaction_get_first respects the bitcap for this
  * action.
  */
-TEST(dataservice_test, transaction_get_first_bitcap)
+TEST_F(dataservice_test, transaction_get_first_bitcap)
 {
     const char* DB_PATH =
         "build/host/checked/databases/98f645fb-33e3-4eb1-9a8a-8b88945379e6";
@@ -2727,7 +2738,7 @@ TEST(dataservice_test, transaction_get_first_bitcap)
 /**
  * Test that dataservice_transaction_get respects the bitcap for this action.
  */
-TEST(dataservice_test, transaction_get_bitcap)
+TEST_F(dataservice_test, transaction_get_bitcap)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
@@ -2781,7 +2792,7 @@ TEST(dataservice_test, transaction_get_bitcap)
 /**
  * Test that dataservice_transaction_drop respects the bitcap for this action.
  */
-TEST(dataservice_test, transaction_drop_bitcap)
+TEST_F(dataservice_test, transaction_drop_bitcap)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
