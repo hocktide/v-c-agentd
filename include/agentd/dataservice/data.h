@@ -48,6 +48,44 @@ typedef struct data_transaction_node
 
 } data_transaction_node_t;
 
+/**
+ * \brief A block node is a linked list node backed by the database, which is
+ * used to describe a block in the blockchain.
+ */
+typedef struct data_block_node
+{
+    /**
+     * \brief The key for this transaction, i.e. its block UUID.
+     */
+    uint8_t key[16];
+
+    /**
+     * \brief The previous block ID in the blockchain.
+     */
+    uint8_t prev[16];
+
+    /**
+     * \brief The next block ID in the blockchain.
+     */
+    uint8_t next[16];
+
+    /**
+     * \brief The first transaction in the block.
+     */
+    uint8_t first_transaction_id[16];
+
+    /**
+     * \brief The height of this block, in network order.
+     */
+    uint64_t net_block_height;
+
+    /**
+     * \brief The block certificate size, in bytes, and in network order.
+     */
+    uint64_t net_block_cert_size;
+
+} data_block_node_t;
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

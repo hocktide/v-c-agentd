@@ -19,6 +19,7 @@
 #include <gtest/gtest.h>
 #include <lmdb.h>
 #include <string>
+#include <vccert/builder.h>
 #include <vccrypt/block_cipher.h>
 #include <vccrypt/suite.h>
 #include <vpr/allocator/malloc_allocator.h>
@@ -32,15 +33,31 @@ protected:
     void TearDown() override;
     int setDirectoryName(uint64_t offset, std::string& dname);
     int createDirectoryName(uint64_t arg, std::string& dname);
+    int create_dummy_transaction(
+        const uint8_t* txn_id, const uint8_t* artifact_id, uint8_t** cert,
+        size_t* cert_length);
 
     const char* dbDirPath;
     int suite_init_result;
     int dircrypt_options_init_result;
+    int builder_opts_init_result;
     allocator_options_t alloc_opts;
+    vccert_builder_options_t builder_opts;
     vccrypt_suite_options_t crypto_suite;
     vccrypt_block_options_t dircrypt_options;
 
     static const uint8_t dir_key[32];
+    static const uint8_t dummy_artifact_type[16];
+    static const uint8_t dummy_transaction_type[16];
+    static const uint8_t zero_uuid[16];
 };
+
+extern "C" {
+int create_dummy_block(
+    vccert_builder_options_t* builder_opts,
+    const uint8_t* block_uuid, const uint8_t* prev_block_uuid,
+    uint64_t block_height,
+    uint8_t** block_cert, size_t* block_cert_length, ...);
+}
 
 #endif /*TEST_DATASERVICE_HEADER_GUARD*/

@@ -120,6 +120,7 @@ int dataservice_transaction_submit(
     size_t newnode_size = sizeof(data_transaction_node_t) + txn_size;
     data_transaction_node_t* newnode =
         (data_transaction_node_t*)malloc(newnode_size);
+    /* TODO - memory allocation could fail. */
     memset(newnode, 0, newnode_size);
     memcpy(((uint8_t*)newnode) + sizeof(data_transaction_node_t),
         txn_bytes, txn_size);
@@ -284,6 +285,7 @@ static int dataservice_transaction_submit_update_prev(
 
     /* copy this header into a local value so we can update it. */
     data_transaction_node_t* node = (data_transaction_node_t*)malloc(prev_size);
+    /* TODO - allocation could fail. */
     memcpy(node, prev_node, prev_size);
 
     /* update this node header's next to point to the transaction. */
