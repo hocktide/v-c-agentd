@@ -86,7 +86,7 @@ int dataservice_transaction_get_first(
     memset(&lval, 0, sizeof(lval));
 
     /* attempt to read the start of the queue from the database. */
-    retval = mdb_get(txn, details->txn_db, &lkey, &lval);
+    retval = mdb_get(txn, details->pq_db, &lkey, &lval);
     if (MDB_NOTFOUND == retval)
     {
         /* the value was not found. */
@@ -148,7 +148,7 @@ int dataservice_transaction_get_first(
     memset(&lval, 0, sizeof(lval));
 
     /* attempt to read this node from the database. */
-    retval = mdb_get(query_txn, details->txn_db, &lkey, &lval);
+    retval = mdb_get(query_txn, details->pq_db, &lkey, &lval);
     if (MDB_NOTFOUND == retval)
     {
         /* the value was not found. */
