@@ -16,11 +16,11 @@
 
 /* forward decls */
 static int dataservice_transaction_submit_create_queue(
-    MDB_dbi txn_db, MDB_txn* txn, const uint8_t* txn_id);
+    MDB_dbi pq_db, MDB_txn* txn, const uint8_t* txn_id);
 static int dataservice_transaction_submit_update_prev(
-    MDB_dbi txn_db, MDB_txn* txn, const uint8_t* txn_id, const uint8_t* prev);
+    MDB_dbi pq_db, MDB_txn* txn, const uint8_t* txn_id, const uint8_t* prev);
 static int dataservice_transaction_submit_update_end(
-    MDB_dbi txn_db, MDB_txn* txn, const uint8_t* txn_id,
+    MDB_dbi pq_db, MDB_txn* txn, const uint8_t* txn_id,
     const data_transaction_node_t* curr_end);
 
 /**
@@ -89,7 +89,7 @@ int dataservice_transaction_submit(
     data_transaction_node_t* end_node = NULL;
 
     /* attempt to read the end of the queue from the database. */
-    retval = mdb_get(txn, details->txn_db, &lkey, &lval);
+    retval = mdb_get(txn, details->pq_db, &lkey, &lval);
     if (MDB_NOTFOUND == retval)
     {
         /* the value was not found; we'll need to create it. */
@@ -144,7 +144,7 @@ int dataservice_transaction_submit(
     lkey.mv_data = newnode->key;
     lval.mv_size = newnode_size;
     lval.mv_data = newnode;
-    if (0 != mdb_put(txn, details->txn_db, &lkey, &lval, MDB_NOOVERWRITE))
+    if (0 != mdb_put(txn, details->pq_db, &lkey, &lval, MDB_NOOVERWRITE))
     {
         retval = 6;
         goto cleanup_newnode;
@@ -153,7 +153,7 @@ int dataservice_transaction_submit(
     /* if the queue does not exist, create start and end. */
     if (!queue_initialized)
     {
-        if (0 != dataservice_transaction_submit_create_queue(details->txn_db, txn, txn_id))
+        if (0 != dataservice_transaction_submit_create_queue(details->pq_db, txn, txn_id))
         {
             retval = 7;
             goto cleanup_newnode;
@@ -162,14 +162,14 @@ int dataservice_transaction_submit(
     /* if the queue DOES exist, update end and end->prev. */
     else
     {
-        if (0 != dataservice_transaction_submit_update_prev(details->txn_db, txn, txn_id, end_node->prev))
+        if (0 != dataservice_transaction_submit_update_prev(details->pq_db, txn, txn_id, end_node->prev))
         {
             retval = 8;
             goto cleanup_newnode;
         }
 
         /* update end_node prev. */
-        if (0 != dataservice_transaction_submit_update_end(details->txn_db, txn, txn_id, end_node))
+        if (0 != dataservice_transaction_submit_update_end(details->pq_db, txn, txn_id, end_node))
         {
             retval = 9;
             goto cleanup_newnode;
@@ -203,14 +203,14 @@ done:
  * \brief Create the submission queue, holding a single element referenced by
  * the given txn_id.
  *
- * \param txn_db        The transaction database handle.
+ * \param pq_db         The transaction database handle.
  * \param txn           The transaction under which this queue is created.
  * \param txn_id        The transaction id to use to populate this queue.
  *
  * \returns 0 on success and non-zero on failure.
  */
 static int dataservice_transaction_submit_create_queue(
-    MDB_dbi txn_db, MDB_txn* txn, const uint8_t* txn_id)
+    MDB_dbi pq_db, MDB_txn* txn, const uint8_t* txn_id)
 {
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != txn);
@@ -232,7 +232,7 @@ static int dataservice_transaction_submit_create_queue(
     MDB_val lval;
     lval.mv_size = sizeof(start);
     lval.mv_data = &start;
-    if (0 != mdb_put(txn, txn_db, &lkey, &lval, 0))
+    if (0 != mdb_put(txn, pq_db, &lkey, &lval, 0))
     {
         return 1;
     }
@@ -242,7 +242,7 @@ static int dataservice_transaction_submit_create_queue(
     lkey.mv_data = end.key;
     lval.mv_size = sizeof(end);
     lval.mv_data = &end;
-    if (0 != mdb_put(txn, txn_db, &lkey, &lval, 0))
+    if (0 != mdb_put(txn, pq_db, &lkey, &lval, 0))
     {
         return 2;
     }
@@ -255,7 +255,7 @@ static int dataservice_transaction_submit_create_queue(
  * \brief Fetch and update the previous transaction node with the new
  * transaction id.
  *
- * \param txn_db        The transaction database handle.
+ * \param pq_db         The transaction database handle.
  * \param txn           The transaction under which this node is updated.
  * \param txn_id        The transaction id to set as prev->next.
  * \param prev          The previous transaction node to update.
@@ -263,7 +263,7 @@ static int dataservice_transaction_submit_create_queue(
  * \returns 0 on success and non-zero on failure.
  */
 static int dataservice_transaction_submit_update_prev(
-    MDB_dbi txn_db, MDB_txn* txn, const uint8_t* txn_id, const uint8_t* prev)
+    MDB_dbi pq_db, MDB_txn* txn, const uint8_t* txn_id, const uint8_t* prev)
 {
     /* attempt to read prev. */
     MDB_val lkey;
@@ -271,7 +271,7 @@ static int dataservice_transaction_submit_update_prev(
     lkey.mv_data = (uint8_t*)prev;
     MDB_val lval;
     memset(&lval, 0, sizeof(lval));
-    if (0 != mdb_get(txn, txn_db, &lkey, &lval))
+    if (0 != mdb_get(txn, pq_db, &lkey, &lval))
     {
         return 1;
     }
@@ -292,7 +292,7 @@ static int dataservice_transaction_submit_update_prev(
     /* place this value in the database. */
     lval.mv_size = prev_size;
     lval.mv_data = node;
-    int retval = mdb_put(txn, txn_db, &lkey, &lval, 0);
+    int retval = mdb_put(txn, pq_db, &lkey, &lval, 0);
 
     /* clean up node. */
     memset(node, 0, prev_size);
@@ -308,7 +308,7 @@ static int dataservice_transaction_submit_update_prev(
 /**
  * \brief Update the end transaction node with the new transaction id.
  *
- * \param txn_db        The transaction database handle.
+ * \param pq_db         The transaction database handle.
  * \param txn           The transaction under which this node is updated.
  * \param txn_id        The new transaction id to set as end->next.
  * \param curr_end      The current end node, a copy of which is updated.
@@ -316,7 +316,7 @@ static int dataservice_transaction_submit_update_prev(
  * \returns 0 on success and non-zero on failure.
  */
 static int dataservice_transaction_submit_update_end(
-    MDB_dbi txn_db, MDB_txn* txn, const uint8_t* txn_id,
+    MDB_dbi pq_db, MDB_txn* txn, const uint8_t* txn_id,
     const data_transaction_node_t* curr_end)
 {
     /* create a copy of the end node and update it with the current txn id. */
@@ -331,7 +331,7 @@ static int dataservice_transaction_submit_update_end(
     MDB_val lval;
     lval.mv_size = sizeof(end);
     lval.mv_data = &end;
-    if (0 != mdb_put(txn, txn_db, &lkey, &lval, 0))
+    if (0 != mdb_put(txn, pq_db, &lkey, &lval, 0))
     {
         return 1;
     }

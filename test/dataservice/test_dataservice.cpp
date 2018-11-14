@@ -1064,14 +1064,14 @@ TEST_F(dataservice_test, transaction_get_first_empty_with_start_end)
     MDB_val lval;
     lval.mv_size = sizeof(start);
     lval.mv_data = &start;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* insert end. */
     lkey.mv_size = sizeof(end.key);
     lkey.mv_data = end.key;
     lval.mv_size = sizeof(end);
     lval.mv_data = &end;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* commit. */
     ASSERT_EQ(0, mdb_txn_commit(txn));
@@ -1211,14 +1211,14 @@ TEST_F(dataservice_test, transaction_get_first_happy_path)
     MDB_val lval;
     lval.mv_size = sizeof(start);
     lval.mv_data = &start;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* insert end. */
     lkey.mv_size = sizeof(end.key);
     lkey.mv_data = end.key;
     lval.mv_size = sizeof(end);
     lval.mv_data = &end;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* create foo and bar transactions. */
     uint8_t foo_data[5] = { 0xFA, 0x12, 0x22, 0x13, 0x99 };
@@ -1247,14 +1247,14 @@ TEST_F(dataservice_test, transaction_get_first_happy_path)
     lkey.mv_data = foo->key;
     lval.mv_size = sizeof(data_transaction_node_t) + sizeof(foo_data);
     lval.mv_data = foo;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* insert bar. */
     lkey.mv_size = sizeof(bar->key);
     lkey.mv_data = bar->key;
     lval.mv_size = sizeof(data_transaction_node_t) + sizeof(bar_data);
     lval.mv_data = bar;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* commit. */
     ASSERT_EQ(0, mdb_txn_commit(txn));
@@ -1350,14 +1350,14 @@ TEST_F(dataservice_test, transaction_get_first_txn_happy_path)
     MDB_val lval;
     lval.mv_size = sizeof(start);
     lval.mv_data = &start;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* insert end. */
     lkey.mv_size = sizeof(end.key);
     lkey.mv_data = end.key;
     lval.mv_size = sizeof(end);
     lval.mv_data = &end;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* create foo and bar transactions. */
     uint8_t foo_data[5] = { 0xFA, 0x12, 0x22, 0x13, 0x99 };
@@ -1386,14 +1386,14 @@ TEST_F(dataservice_test, transaction_get_first_txn_happy_path)
     lkey.mv_data = foo->key;
     lval.mv_size = sizeof(data_transaction_node_t) + sizeof(foo_data);
     lval.mv_data = foo;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* insert bar. */
     lkey.mv_size = sizeof(bar->key);
     lkey.mv_data = bar->key;
     lval.mv_size = sizeof(data_transaction_node_t) + sizeof(bar_data);
     lval.mv_data = bar;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* commit the transaction. */
     mdb_txn_commit(txn);
@@ -1496,14 +1496,14 @@ TEST_F(dataservice_test, transaction_get_first_with_node_happy_path)
     MDB_val lval;
     lval.mv_size = sizeof(start);
     lval.mv_data = &start;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* insert end. */
     lkey.mv_size = sizeof(end.key);
     lkey.mv_data = end.key;
     lval.mv_size = sizeof(end);
     lval.mv_data = &end;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* create foo and bar transactions. */
     uint8_t foo_data[5] = { 0xFA, 0x12, 0x22, 0x13, 0x99 };
@@ -1532,14 +1532,14 @@ TEST_F(dataservice_test, transaction_get_first_with_node_happy_path)
     lkey.mv_data = foo->key;
     lval.mv_size = sizeof(data_transaction_node_t) + sizeof(foo_data);
     lval.mv_data = foo;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* insert bar. */
     lkey.mv_size = sizeof(bar->key);
     lkey.mv_data = bar->key;
     lval.mv_size = sizeof(data_transaction_node_t) + sizeof(bar_data);
     lval.mv_data = bar;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* commit. */
     ASSERT_EQ(0, mdb_txn_commit(txn));

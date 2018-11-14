@@ -16,7 +16,7 @@
 
 /* forward decls */
 static int dataservice_transaction_drop_fixup_prev_next(
-    MDB_txn* del_txn, MDB_dbi txn_db, const data_transaction_node_t* node);
+    MDB_txn* del_txn, MDB_dbi pq_db, const data_transaction_node_t* node);
 
 /**
  * \brief Drop a given transaction by ID from the queue.
@@ -91,7 +91,7 @@ int dataservice_transaction_drop(
     lkey.mv_data = (uint8_t*)txn_id;
     MDB_val lval;
     memset(&lval, 0, sizeof(lval));
-    retval = mdb_get(del_txn, details->txn_db, &lkey, &lval);
+    retval = mdb_get(del_txn, details->pq_db, &lkey, &lval);
     if (MDB_NOTFOUND == retval || lval.mv_size < sizeof(data_transaction_node_t))
     {
         /* the record was not found. */
@@ -112,7 +112,7 @@ int dataservice_transaction_drop(
     /* attempt to delete the entry. */
     lkey.mv_size = 16;
     lkey.mv_data = (uint8_t*)txn_id;
-    retval = mdb_del(del_txn, details->txn_db, &lkey, NULL);
+    retval = mdb_del(del_txn, details->pq_db, &lkey, NULL);
     if (MDB_NOTFOUND == retval)
     {
         /* the value was not found. */
@@ -129,7 +129,7 @@ int dataservice_transaction_drop(
     /* update the previous and next records to eliminate this entry. */
     retval =
         dataservice_transaction_drop_fixup_prev_next(
-            del_txn, details->txn_db, &node);
+            del_txn, details->pq_db, &node);
     if (0 != retval)
     {
         retval = 6;
@@ -163,13 +163,13 @@ done:
  * deleting a transaction.
  *
  * \param del_txn       The transaction used for this delete.
- * \param txn_db        The transaction database.
+ * \param pq_db         The transaction database.
  * \param node          The node used for getting next and prev.
  *
  * \returns 0 on success and non-zero on failure.
  */
 static int dataservice_transaction_drop_fixup_prev_next(
-    MDB_txn* del_txn, MDB_dbi txn_db, const data_transaction_node_t* node)
+    MDB_txn* del_txn, MDB_dbi pq_db, const data_transaction_node_t* node)
 {
     int retval;
     uint8_t* prev_buffer;
@@ -185,7 +185,7 @@ static int dataservice_transaction_drop_fixup_prev_next(
     lkey.mv_data = (uint8_t*)node->prev;
     MDB_val lval;
     memset(&lval, 0, sizeof(lval));
-    retval = mdb_get(del_txn, txn_db, &lkey, &lval);
+    retval = mdb_get(del_txn, pq_db, &lkey, &lval);
     if (0 != retval || lval.mv_size < sizeof(data_transaction_node_t))
     {
         retval = 5;
@@ -211,7 +211,7 @@ static int dataservice_transaction_drop_fixup_prev_next(
     lkey.mv_data = (uint8_t*)node->prev;
     lval.mv_size = prev_buffer_size;
     lval.mv_data = prev_buffer;
-    retval = mdb_put(del_txn, txn_db, &lkey, &lval, 0);
+    retval = mdb_put(del_txn, pq_db, &lkey, &lval, 0);
     if (0 != retval)
     {
         retval = 7;
@@ -222,7 +222,7 @@ static int dataservice_transaction_drop_fixup_prev_next(
     lkey.mv_size = 16;
     lkey.mv_data = (uint8_t*)node->next;
     memset(&lval, 0, sizeof(lval));
-    retval = mdb_get(del_txn, txn_db, &lkey, &lval);
+    retval = mdb_get(del_txn, pq_db, &lkey, &lval);
     if (0 != retval || lval.mv_size < sizeof(data_transaction_node_t))
     {
         retval = 5;
@@ -248,7 +248,7 @@ static int dataservice_transaction_drop_fixup_prev_next(
     lkey.mv_data = (uint8_t*)node->next;
     lval.mv_size = next_buffer_size;
     lval.mv_data = next_buffer;
-    retval = mdb_put(del_txn, txn_db, &lkey, &lval, 0);
+    retval = mdb_put(del_txn, pq_db, &lkey, &lval, 0);
     if (0 != retval)
     {
         retval = 7;
