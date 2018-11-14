@@ -117,6 +117,26 @@ int dataservice_child_details_create(dataservice_instance_t* inst, int* offset);
 void dataservice_child_details_delete(dataservice_instance_t* inst, int offset);
 
 /**
+ * \brief Drop a given transaction by ID from the queue.
+ *
+ * This is the internal version of the function, which does not perform any
+ * capabilities checking.  As such, it SHOULD NOT BE USED OUTSIDE OF THE DATA
+ * SERVICE.
+ *
+ * \param ctx           The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation.
+ * \param txn_id        The transaction ID for this transaction.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success
+ *          - 1 if the transaction could not be found.
+ *          - non-zero on failure.
+ */
+int dataservice_transaction_drop_internal(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id);
+
+/**
  * \brief Decode and dispatch requests received by the data service.
  *
  * Returns 0 on success or non-fatal error.  If a non-zero error message is

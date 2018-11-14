@@ -34,9 +34,6 @@ int dataservice_transaction_drop(
     dataservice_child_context_t* child,
     dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id)
 {
-    int retval = 0;
-    MDB_txn* txn = NULL;
-
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != child);
     MODEL_ASSERT(NULL != child->root);
@@ -47,9 +44,40 @@ int dataservice_transaction_drop(
     if (!BITCAP_ISSET(child->childcaps,
             DATASERVICE_API_CAP_APP_PQ_TRANSACTION_DROP))
     {
-        retval = 3;
-        goto done;
+        return 3;
     }
+
+    return dataservice_transaction_drop_internal(
+        child, dtxn_ctx, txn_id);
+}
+
+/**
+ * \brief Drop a given transaction by ID from the queue.
+ *
+ * This is the internal version of the function, which does not perform any
+ * capabilities checking.  As such, it SHOULD NOT BE USED OUTSIDE OF THE DATA
+ * SERVICE.
+ *
+ * \param ctx           The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation.
+ * \param txn_id        The transaction ID for this transaction.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success
+ *          - 1 if the transaction could not be found.
+ *          - non-zero on failure.
+ */
+int dataservice_transaction_drop_internal(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id)
+{
+    int retval = 0;
+    MDB_txn* txn = NULL;
+
+    /* parameter sanity check. */
+    MODEL_ASSERT(NULL != child);
+    MODEL_ASSERT(NULL != child->root);
+    MODEL_ASSERT(NULL != txn_id);
 
     /* verify that this transaction ID is not the begin or end transaction. */
     uint8_t key[16];
