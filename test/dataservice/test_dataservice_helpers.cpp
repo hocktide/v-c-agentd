@@ -226,8 +226,8 @@ done:
 const size_t CERT_MAX_SIZE = 16384;
 
 int dataservice_test::create_dummy_transaction(
-    const uint8_t* txn_id, const uint8_t* artifact_id, uint8_t** cert,
-    size_t* cert_length)
+    const uint8_t* txn_id, const uint8_t* prev_txn_id,
+    const uint8_t* artifact_id, uint8_t** cert, size_t* cert_length)
 {
     vccert_builder_context_t builder;
     int retval = 0;
@@ -286,12 +286,21 @@ int dataservice_test::create_dummy_transaction(
         goto dispose_builder;
     }
 
+    /* add the previous transaction id for this dummy transaction. */
+    retval = vccert_builder_add_short_UUID(
+        &builder, VCCERT_FIELD_TYPE_PREVIOUS_CERTIFICATE_ID, prev_txn_id);
+    if (VCCERT_STATUS_SUCCESS != retval)
+    {
+        retval = 7;
+        goto dispose_builder;
+    }
+
     /* add the artifact id for this dummy transaction. */
     retval = vccert_builder_add_short_UUID(
         &builder, VCCERT_FIELD_TYPE_ARTIFACT_ID, artifact_id);
     if (VCCERT_STATUS_SUCCESS != retval)
     {
-        retval = 7;
+        retval = 8;
         goto dispose_builder;
     }
 
@@ -304,7 +313,7 @@ int dataservice_test::create_dummy_transaction(
     *cert = (uint8_t*)malloc(certsize);
     if (NULL == *cert)
     {
-        retval = 8;
+        retval = 9;
         goto dispose_builder;
     }
 

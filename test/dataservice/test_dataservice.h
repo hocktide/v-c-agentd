@@ -34,8 +34,8 @@ protected:
     int setDirectoryName(uint64_t offset, std::string& dname);
     int createDirectoryName(uint64_t arg, std::string& dname);
     int create_dummy_transaction(
-        const uint8_t* txn_id, const uint8_t* artifact_id, uint8_t** cert,
-        size_t* cert_length);
+        const uint8_t* txn_id, const uint8_t* prev_txn_id,
+        const uint8_t* artifact_id, uint8_t** cert, size_t* cert_length);
 
     const char* dbDirPath;
     int suite_init_result;

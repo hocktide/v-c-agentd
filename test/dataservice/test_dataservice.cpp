@@ -2763,6 +2763,228 @@ TEST_F(dataservice_test, transaction_make_block_simple)
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
         0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f
     };
+    uint8_t foo_prev[16] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    uint8_t foo_artifact[16] = {
+        0xef, 0x44, 0xe7, 0xb4, 0xbf, 0x39, 0x45, 0xe4,
+        0xb3, 0x4b, 0x6e, 0x82, 0xee, 0x41, 0x76, 0x21
+    };
+    uint8_t foo_block_id[16] = {
+        0x96, 0x1e, 0xdd, 0x16, 0xbd, 0xa6, 0x4b, 0x9d,
+        0x93, 0xac, 0x40, 0xd4, 0x74, 0x85, 0x0d, 0xe5
+    };
+    uint8_t* foo_cert = nullptr;
+    size_t foo_cert_length = 0;
+    uint8_t* foo_block_cert = nullptr;
+    size_t foo_block_cert_length = 0;
+    string DB_PATH;
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+    data_transaction_node_t node;
+    uint8_t* txn_bytes;
+    size_t txn_size;
+
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_BLOCK_WRITE);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_TRANSACTION_READ);
+
+    /* explicitly grant the capability to create child contexts in the child
+     * context. */
+    BITCAP_SET_TRUE(child.childcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* create foo transaction. */
+    ASSERT_EQ(0,
+        create_dummy_transaction(
+            foo_key, foo_prev, foo_artifact, &foo_cert, &foo_cert_length));
+
+    /* submit foo transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo_key, foo_artifact, foo_cert,
+            foo_cert_length));
+
+    /* getting the transaction by id should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get(
+            &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
+    free(txn_bytes);
+
+    /* create foo block. */
+    ASSERT_EQ(0,
+        create_dummy_block(
+            &builder_opts,
+            foo_block_id, vccert_certificate_type_uuid_root_block, 1,
+            &foo_block_cert, &foo_block_cert_length,
+            foo_cert, foo_cert_length,
+            nullptr));
+
+    /* getting the block transaction by id should return not found. */
+    ASSERT_EQ(1,
+        dataservice_block_transaction_get(
+            &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
+
+    /* make block. */
+    ASSERT_EQ(0,
+        dataservice_block_make(
+            &child, nullptr, foo_block_id,
+            foo_block_cert, foo_block_cert_length));
+
+    /* getting the transaction by id should return not found. */
+    ASSERT_EQ(1,
+        dataservice_transaction_get(
+            &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
+
+    /* getting the block transaction by id should return success. */
+    ASSERT_EQ(0,
+        dataservice_block_transaction_get(
+            &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
+    free(txn_bytes);
+
+    /* clean up. */
+    dispose((disposable_t*)&ctx);
+    free(foo_cert);
+    free(foo_block_cert);
+}
+
+/**
+ * Test that the bitset is enforced for making blocks.
+ */
+TEST_F(dataservice_test, transaction_make_block_bitset)
+{
+    uint8_t foo_key[16] = {
+        0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
+        0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f
+    };
+    uint8_t foo_prev[16] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    uint8_t foo_artifact[16] = {
+        0xef, 0x44, 0xe7, 0xb4, 0xbf, 0x39, 0x45, 0xe4,
+        0xb3, 0x4b, 0x6e, 0x82, 0xee, 0x41, 0x76, 0x21
+    };
+    uint8_t foo_block_id[16] = {
+        0x96, 0x1e, 0xdd, 0x16, 0xbd, 0xa6, 0x4b, 0x9d,
+        0x93, 0xac, 0x40, 0xd4, 0x74, 0x85, 0x0d, 0xe5
+    };
+    uint8_t* foo_cert = nullptr;
+    size_t foo_cert_length = 0;
+    uint8_t* foo_block_cert = nullptr;
+    size_t foo_block_cert_length = 0;
+    string DB_PATH;
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    /* DO NOT ALLOW BLOCK_WRITE. */
+    /*BITCAP_SET_TRUE(reducedcaps,
+                    DATASERVICE_API_CAP_APP_BLOCK_WRITE);*/
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_TRANSACTION_READ);
+
+    /* explicitly grant the capability to create child contexts in the child
+     * context. */
+    BITCAP_SET_TRUE(child.childcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* create foo transaction. */
+    ASSERT_EQ(0,
+        create_dummy_transaction(
+            foo_key, foo_prev, foo_artifact, &foo_cert, &foo_cert_length));
+
+    /* submit foo transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo_key, foo_artifact, foo_cert,
+            foo_cert_length));
+
+    /* create foo block. */
+    ASSERT_EQ(0,
+        create_dummy_block(
+            &builder_opts,
+            foo_block_id, vccert_certificate_type_uuid_root_block, 1,
+            &foo_block_cert, &foo_block_cert_length,
+            foo_cert, foo_cert_length,
+            nullptr));
+
+    /* make block should fail because of missing capability. */
+    ASSERT_EQ(3,
+        dataservice_block_make(
+            &child, nullptr, foo_block_id,
+            foo_block_cert, foo_block_cert_length));
+
+    /* clean up. */
+    dispose((disposable_t*)&ctx);
+    free(foo_cert);
+    free(foo_block_cert);
+}
+
+/**
+ * Test that appending a block with an invalid height will fail.
+ */
+TEST_F(dataservice_test, transaction_make_block_bad_height)
+{
+    uint8_t foo_key[16] = {
+        0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
+        0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f
+    };
+    uint8_t foo_prev[16] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
     uint8_t foo_artifact[16] = {
         0xef, 0x44, 0xe7, 0xb4, 0xbf, 0x39, 0x45, 0xe4,
         0xb3, 0x4b, 0x6e, 0x82, 0xee, 0x41, 0x76, 0x21
@@ -2803,6 +3025,8 @@ TEST_F(dataservice_test, transaction_make_block_simple)
         DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
     BITCAP_SET_TRUE(reducedcaps,
         DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_TRANSACTION_READ);
 
     /* explicitly grant the capability to create child contexts in the child
      * context. */
@@ -2815,7 +3039,7 @@ TEST_F(dataservice_test, transaction_make_block_simple)
     /* create foo transaction. */
     ASSERT_EQ(0,
         create_dummy_transaction(
-            foo_key, foo_artifact, &foo_cert, &foo_cert_length));
+            foo_key, foo_prev, foo_artifact, &foo_cert, &foo_cert_length));
 
     /* submit foo transaction. */
     ASSERT_EQ(0,
@@ -2823,17 +3047,210 @@ TEST_F(dataservice_test, transaction_make_block_simple)
             &child, nullptr, foo_key, foo_artifact, foo_cert,
             foo_cert_length));
 
-    /* create foo block. */
+    /* create foo block with invalid 0 block height. */
     ASSERT_EQ(0,
         create_dummy_block(
             &builder_opts,
-            foo_block_id, vccert_certificate_type_uuid_root_block, 1,
+            foo_block_id, vccert_certificate_type_uuid_root_block, 0,
             &foo_block_cert, &foo_block_cert_length,
             foo_cert, foo_cert_length,
             nullptr));
 
-    /* make block. */
+    /* make block fails due to invalid block height. */
+    ASSERT_EQ(9,
+        dataservice_block_make(
+            &child, nullptr, foo_block_id,
+            foo_block_cert, foo_block_cert_length));
+
+    /* clean up. */
+    dispose((disposable_t*)&ctx);
+    free(foo_cert);
+    free(foo_block_cert);
+}
+
+/**
+ * Test that appending a block with an invalid previous block ID will fail.
+ */
+TEST_F(dataservice_test, transaction_make_block_bad_prev_block_id)
+{
+    uint8_t foo_key[16] = {
+        0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
+        0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f
+    };
+    uint8_t foo_prev[16] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    uint8_t foo_artifact[16] = {
+        0xef, 0x44, 0xe7, 0xb4, 0xbf, 0x39, 0x45, 0xe4,
+        0xb3, 0x4b, 0x6e, 0x82, 0xee, 0x41, 0x76, 0x21
+    };
+    uint8_t foo_block_id[16] = {
+        0x96, 0x1e, 0xdd, 0x16, 0xbd, 0xa6, 0x4b, 0x9d,
+        0x93, 0xac, 0x40, 0xd4, 0x74, 0x85, 0x0d, 0xe5
+    };
+    uint8_t* foo_cert = nullptr;
+    size_t foo_cert_length = 0;
+    uint8_t* foo_block_cert = nullptr;
+    size_t foo_block_cert_length = 0;
+    string DB_PATH;
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_BLOCK_WRITE);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_TRANSACTION_READ);
+
+    /* explicitly grant the capability to create child contexts in the child
+     * context. */
+    BITCAP_SET_TRUE(child.childcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* create foo transaction. */
     ASSERT_EQ(0,
+        create_dummy_transaction(
+            foo_key, foo_prev, foo_artifact, &foo_cert, &foo_cert_length));
+
+    /* submit foo transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo_key, foo_artifact, foo_cert,
+            foo_cert_length));
+
+    /* create foo block with invalid previous block ID. */
+    ASSERT_EQ(0,
+        create_dummy_block(
+            &builder_opts,
+            foo_block_id, zero_uuid, 1,
+            &foo_block_cert, &foo_block_cert_length,
+            foo_cert, foo_cert_length,
+            nullptr));
+
+    /* make block fails due to invalid previous block ID. */
+    ASSERT_EQ(10,
+        dataservice_block_make(
+            &child, nullptr, foo_block_id,
+            foo_block_cert, foo_block_cert_length));
+
+    /* clean up. */
+    dispose((disposable_t*)&ctx);
+    free(foo_cert);
+    free(foo_block_cert);
+}
+
+/**
+ * Test that appending a block with an invalid block ID will fail.
+ */
+TEST_F(dataservice_test, transaction_make_block_bad_block_id)
+{
+    uint8_t foo_key[16] = {
+        0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
+        0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f
+    };
+    uint8_t foo_prev[16] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    uint8_t foo_artifact[16] = {
+        0xef, 0x44, 0xe7, 0xb4, 0xbf, 0x39, 0x45, 0xe4,
+        0xb3, 0x4b, 0x6e, 0x82, 0xee, 0x41, 0x76, 0x21
+    };
+    uint8_t foo_block_id[16] = {
+        0x96, 0x1e, 0xdd, 0x16, 0xbd, 0xa6, 0x4b, 0x9d,
+        0x93, 0xac, 0x40, 0xd4, 0x74, 0x85, 0x0d, 0xe5
+    };
+    uint8_t* foo_cert = nullptr;
+    size_t foo_cert_length = 0;
+    uint8_t* foo_block_cert = nullptr;
+    size_t foo_block_cert_length = 0;
+    string DB_PATH;
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_BLOCK_WRITE);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_TRANSACTION_READ);
+
+    /* explicitly grant the capability to create child contexts in the child
+     * context. */
+    BITCAP_SET_TRUE(child.childcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* create foo transaction. */
+    ASSERT_EQ(0,
+        create_dummy_transaction(
+            foo_key, foo_prev, foo_artifact, &foo_cert, &foo_cert_length));
+
+    /* submit foo transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo_key, foo_artifact, foo_cert,
+            foo_cert_length));
+
+    /* create foo block with invalid block ID (root block ID). */
+    ASSERT_EQ(0,
+        create_dummy_block(
+            &builder_opts,
+            vccert_certificate_type_uuid_root_block,
+            vccert_certificate_type_uuid_root_block, 1,
+            &foo_block_cert, &foo_block_cert_length,
+            foo_cert, foo_cert_length,
+            nullptr));
+
+    /* make block fails due to invalid block ID. */
+    ASSERT_EQ(11,
         dataservice_block_make(
             &child, nullptr, foo_block_id,
             foo_block_cert, foo_block_cert_length));

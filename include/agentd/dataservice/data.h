@@ -42,6 +42,12 @@ typedef struct data_transaction_node
     uint8_t artifact_id[16];
 
     /**
+     * \brief The block to which this transaction belongs, or zeroes for
+     * transactions on the queue.
+     */
+    uint8_t block_id[16];
+
+    /**
      * \brief The transaction certificate size, in bytes, and in network order.
      */
     uint64_t net_txn_cert_size;
