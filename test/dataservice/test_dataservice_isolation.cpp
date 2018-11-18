@@ -8,11 +8,6 @@
 
 #include <agentd/dataservice/api.h>
 #include <agentd/dataservice/private/dataservice.h>
-#include <agentd/config.h>
-#include <agentd/string.h>
-#include <agentd/inet.h>
-#include <functional>
-#include <gtest/gtest.h>
 #include <iostream>
 #include <lmdb.h>
 #include <string>
@@ -20,208 +15,9 @@
 #include <vpr/disposable.h>
 
 #include "../../src/dataservice/dataservice_internal.h"
-
-extern "C" {
-#include <config/agentd.tab.h>
-#include <config/agentd.yy.h>
-}
+#include "test_dataservice_isolation.h"
 
 using namespace std;
-
-/**
- * \brief Simple user context structure for testing.
- */
-struct test_context
-{
-    disposable_t hdr;
-    vector<string> errors;
-    agent_config_t* config;
-};
-
-/**
- * \brief Dispose a test context.
- */
-static void test_context_dispose(void* disp)
-{
-    test_context* ctx = (test_context*)disp;
-
-    if (nullptr != ctx->config)
-        dispose((disposable_t*)ctx->config);
-}
-
-/**
- * \brief Initialize a test_context structure.
- */
-static void test_context_init(test_context* ctx)
-{
-    ctx->hdr.dispose = &test_context_dispose;
-    ctx->config = nullptr;
-}
-
-/**
- * \brief Simple error setting override.
- */
-static void set_error(config_context_t* context, const char* msg)
-{
-    test_context* ctx = (test_context*)context->user_context;
-
-    ctx->errors.push_back(msg);
-}
-
-/**
- * \brief Simple value setting override.
- */
-static void config_callback(config_context_t* context, agent_config_t* config)
-{
-    test_context* ctx = (test_context*)context->user_context;
-
-    ctx->config = config;
-}
-
-/**
- * The dataservice isolation test class deals with the drudgery of communicating
- * with the data service.  It provides a registration mechanism so that
- * data can be sent to the data service and received from the data service.
- */
-class dataservice_isolation_test : public ::testing::Test {
-protected:
-    void SetUp() override
-    {
-        /* create bootstrap config. */
-        bootstrap_config_init(&bconf);
-
-        /* set up the parser context. */
-        test_context_init(&user_context);
-        context.set_error = &set_error;
-        context.val_callback = &config_callback;
-        context.user_context = &user_context;
-        yylex_init(&scanner);
-        state = yy_scan_string("", scanner);
-        yyparse(scanner, &context);
-
-        /* set the path for running agentd. */
-        getcwd(wd, sizeof(wd));
-        oldpath = getenv("PATH");
-        if (NULL != oldpath)
-        {
-            path =
-                strcatv(wd, "/build/host/release/bin", ":", oldpath, NULL);
-        }
-        else
-        {
-            path = strcatv(wd, "/build/host/release/bin");
-        }
-
-        setenv("PATH", path, 1);
-
-        logsock = dup(STDERR_FILENO);
-
-        /* spawn the dataservice process. */
-        dataservice_proc_status =
-            dataservice_proc(
-                &bconf, user_context.config, logsock, &datasock, &datapid,
-                false);
-
-        /* by default, we run in blocking mode. */
-        nonblockdatasock_configured = false;
-    }
-
-    void TearDown() override
-    {
-        /* terminate the dataservice process. */
-        if (0 == dataservice_proc_status)
-        {
-            int status = 0;
-            kill(datapid, SIGTERM);
-            waitpid(datapid, &status, 0);
-        }
-
-        /* set the old path. */
-        setenv("PATH", oldpath, 1);
-
-        /* clean up. */
-        yy_delete_buffer(state, scanner);
-        yylex_destroy(scanner);
-        close(logsock);
-        dispose((disposable_t*)&bconf);
-        dispose((disposable_t*)&user_context);
-        free(path);
-    }
-
-    string make_data_dir_string(const char* dir)
-    {
-        string ret(wd);
-        ret += "/build/test/isolation/databases/";
-        ret += dir;
-
-        return ret;
-    }
-
-    void mkdir(const char* dir)
-    {
-        string cmd("mkdir -p ");
-        cmd += make_data_dir_string(dir);
-
-        system(cmd.c_str());
-    }
-
-    void nonblockmode(function<void()> onRead, function<void()> onWrite)
-    {
-        /* set the read/write callbacks. */
-        this->onRead = onRead;
-        this->onWrite = onWrite;
-
-        /* handle a non-blocking event loop. */
-        if (!nonblockdatasock_configured)
-        {
-            ipc_make_noblock(datasock, &nonblockdatasock, this);
-            nonblockdatasock_configured = true;
-            ipc_event_loop_init(&loop);
-        }
-        else
-        {
-            ipc_event_loop_remove(&loop, &nonblockdatasock);
-        }
-
-        ipc_set_readcb_noblock(&nonblockdatasock, &nonblock_read);
-        ipc_set_writecb_noblock(&nonblockdatasock, &nonblock_write);
-        ipc_event_loop_add(&loop, &nonblockdatasock);
-        ipc_event_loop_run(&loop);
-    }
-
-    static void nonblock_read(ipc_socket_context_t*, int, void* ctx)
-    {
-        dataservice_isolation_test* that = (dataservice_isolation_test*)ctx;
-
-        that->onRead();
-    }
-
-    static void nonblock_write(ipc_socket_context_t*, int, void* ctx)
-    {
-        dataservice_isolation_test* that = (dataservice_isolation_test*)ctx;
-
-        that->onWrite();
-    }
-
-    bootstrap_config_t bconf;
-    int datasock;
-    int logsock;
-    pid_t datapid;
-    int dataservice_proc_status;
-    char* path;
-    char wd[16384];
-    const char* oldpath;
-    ipc_socket_context_t nonblockdatasock;
-    bool nonblockdatasock_configured;
-    ipc_event_loop_context_t loop;
-    function<void()> onRead;
-    function<void()> onWrite;
-
-    YY_BUFFER_STATE state;
-    yyscan_t scanner;
-    config_context_t context;
-    test_context user_context;
-};
 
 /**
  * Test that we can spawn the data service.
@@ -236,16 +32,16 @@ TEST_F(dataservice_isolation_test, simple_spawn)
  */
 TEST_F(dataservice_isolation_test, create_root_block_blocking)
 {
-    const char* DATADIR = "0c3fffcc-fc1a-49a2-a44b-823240931ca2";
-    string datadir_complete = make_data_dir_string(DATADIR);
     uint32_t offset;
     uint32_t status;
+    string DB_PATH;
 
-    mkdir(DATADIR);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
 
     ASSERT_EQ(0,
         dataservice_api_sendreq_root_context_init_block(
-            datasock, datadir_complete.c_str()));
+            datasock, DB_PATH.c_str()));
     ASSERT_EQ(0,
         dataservice_api_recvresp_root_context_init_block(
             datasock, &offset, &status));
@@ -259,17 +55,17 @@ TEST_F(dataservice_isolation_test, create_root_block_blocking)
  */
 TEST_F(dataservice_isolation_test, reduce_root_caps_blocking)
 {
-    const char* DATADIR = "0c3fffcc-fc1a-49a2-a44b-823240931ca2";
-    string datadir_complete = make_data_dir_string(DATADIR);
     uint32_t offset;
     uint32_t status;
+    string DB_PATH;
 
-    mkdir(DATADIR);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
 
     /* open the database. */
     ASSERT_EQ(0,
         dataservice_api_sendreq_root_context_init_block(
-            datasock, datadir_complete.c_str()));
+            datasock, DB_PATH.c_str()));
     ASSERT_EQ(0,
         dataservice_api_recvresp_root_context_init_block(
             datasock, &offset, &status));
@@ -332,14 +128,15 @@ TEST_F(dataservice_isolation_test, reduce_root_caps_blocking)
  */
 TEST_F(dataservice_isolation_test, create_root_block)
 {
-    const char* DATADIR = "664c437a-423b-4fc7-b425-24031134d3e5";
-    string datadir_complete = make_data_dir_string(DATADIR);
     uint32_t offset;
     uint32_t status;
+    string DB_PATH;
+
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
     int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
     int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
-
-    mkdir(DATADIR);
 
     /* Run the send / receive on creating the root context. */
     nonblockmode(
@@ -363,7 +160,7 @@ TEST_F(dataservice_isolation_test, create_root_block)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
-                        &nonblockdatasock, datadir_complete.c_str());
+                        &nonblockdatasock, DB_PATH.c_str());
             }
         });
 
@@ -379,14 +176,14 @@ TEST_F(dataservice_isolation_test, create_root_block)
  */
 TEST_F(dataservice_isolation_test, reduce_root_caps)
 {
-    const char* DATADIR = "664c437a-423b-4fc7-b425-24031134d3e5";
-    string datadir_complete = make_data_dir_string(DATADIR);
     uint32_t offset;
     uint32_t status;
     int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
     int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    string DB_PATH;
 
-    mkdir(DATADIR);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
 
     /* Run the send / receive on creating the root context. */
     nonblockmode(
@@ -410,7 +207,7 @@ TEST_F(dataservice_isolation_test, reduce_root_caps)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
-                        &nonblockdatasock, datadir_complete.c_str());
+                        &nonblockdatasock, DB_PATH.c_str());
             }
         });
 
@@ -544,15 +341,15 @@ TEST_F(dataservice_isolation_test, reduce_root_caps)
  */
 TEST_F(dataservice_isolation_test, child_context_create_close)
 {
-    const char* DATADIR = "664c437a-423b-4fc7-b425-24031134d3e5";
-    string datadir_complete = make_data_dir_string(DATADIR);
     uint32_t offset;
     uint32_t status;
     uint32_t child_context;
     int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
     int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    string DB_PATH;
 
-    mkdir(DATADIR);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
 
     /* Run the send / receive on creating the root context. */
     nonblockmode(
@@ -576,7 +373,7 @@ TEST_F(dataservice_isolation_test, child_context_create_close)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
-                        &nonblockdatasock, datadir_complete.c_str());
+                        &nonblockdatasock, DB_PATH.c_str());
             }
         });
 
@@ -669,15 +466,15 @@ TEST_F(dataservice_isolation_test, child_context_create_close)
  */
 TEST_F(dataservice_isolation_test, global_setting_not_found)
 {
-    const char* DATADIR = "ae9148a4-ff93-4b8b-a8d6-eab8c960b694";
-    string datadir_complete = make_data_dir_string(DATADIR);
     uint32_t offset;
     uint32_t status;
     uint32_t child_context;
     int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
     int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    string DB_PATH;
 
-    mkdir(DATADIR);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
 
     /* Run the send / receive on creating the root context. */
     nonblockmode(
@@ -701,7 +498,7 @@ TEST_F(dataservice_isolation_test, global_setting_not_found)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
-                        &nonblockdatasock, datadir_complete.c_str());
+                        &nonblockdatasock, DB_PATH.c_str());
             }
         });
 
@@ -799,15 +596,15 @@ TEST_F(dataservice_isolation_test, global_setting_not_found)
  */
 TEST_F(dataservice_isolation_test, global_setting_set_get)
 {
-    const char* DATADIR = "b43b4c1c-173f-4019-8952-f6bd24f62f44";
-    string datadir_complete = make_data_dir_string(DATADIR);
     uint32_t offset;
     uint32_t status;
     uint32_t child_context;
     int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
     int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    string DB_PATH;
 
-    mkdir(DATADIR);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
 
     /* Run the send / receive on creating the root context. */
     nonblockmode(
@@ -831,7 +628,7 @@ TEST_F(dataservice_isolation_test, global_setting_set_get)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
-                        &nonblockdatasock, datadir_complete.c_str());
+                        &nonblockdatasock, DB_PATH.c_str());
             }
         });
 
@@ -975,15 +772,15 @@ TEST_F(dataservice_isolation_test, global_setting_set_get)
  */
 TEST_F(dataservice_isolation_test, txn_submit_get_first)
 {
-    const char* DATADIR = "108f73a7-5d6e-4886-97e7-b6a579c7994a";
-    string datadir_complete = make_data_dir_string(DATADIR);
     uint32_t offset;
     uint32_t status;
     uint32_t child_context;
     int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
     int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    string DB_PATH;
 
-    mkdir(DATADIR);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
 
     /* Run the send / receive on creating the root context. */
     nonblockmode(
@@ -1007,7 +804,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get_first)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
-                        &nonblockdatasock, datadir_complete.c_str());
+                        &nonblockdatasock, DB_PATH.c_str());
             }
         });
 
@@ -1171,15 +968,15 @@ TEST_F(dataservice_isolation_test, txn_submit_get_first)
  */
 TEST_F(dataservice_isolation_test, txn_submit_get)
 {
-    const char* DATADIR = "287f4446-2ae5-4bd5-8eb1-dbceafe1f291";
-    string datadir_complete = make_data_dir_string(DATADIR);
     uint32_t offset;
     uint32_t status;
     uint32_t child_context;
     int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
     int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    string DB_PATH;
 
-    mkdir(DATADIR);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
 
     /* Run the send / receive on creating the root context. */
     nonblockmode(
@@ -1203,7 +1000,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
-                        &nonblockdatasock, datadir_complete.c_str());
+                        &nonblockdatasock, DB_PATH.c_str());
             }
         });
 
@@ -1367,15 +1164,15 @@ TEST_F(dataservice_isolation_test, txn_submit_get)
  */
 TEST_F(dataservice_isolation_test, txn_submit_get_drop)
 {
-    const char* DATADIR = "ec76426c-06da-4549-9d9d-bf8a6d9a1ae9";
-    string datadir_complete = make_data_dir_string(DATADIR);
     uint32_t offset;
     uint32_t status;
     uint32_t child_context;
     int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
     int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    string DB_PATH;
 
-    mkdir(DATADIR);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
 
     /* Run the send / receive on creating the root context. */
     nonblockmode(
@@ -1399,7 +1196,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
-                        &nonblockdatasock, datadir_complete.c_str());
+                        &nonblockdatasock, DB_PATH.c_str());
             }
         });
 

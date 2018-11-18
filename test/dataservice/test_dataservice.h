@@ -26,30 +26,28 @@
 #include <vpr/disposable.h>
 
 #include "../../src/dataservice/dataservice_internal.h"
+#include "../directory_test_helper.h"
 
-class dataservice_test : public ::testing::Test {
+class dataservice_test : public ::testing::Test, public directory_test_helper {
 protected:
     void SetUp() override;
     void TearDown() override;
-    int setDirectoryName(uint64_t offset, std::string& dname);
-    int createDirectoryName(uint64_t arg, std::string& dname);
     int create_dummy_transaction(
         const uint8_t* txn_id, const uint8_t* prev_txn_id,
         const uint8_t* artifact_id, uint8_t** cert, size_t* cert_length);
 
-    const char* dbDirPath;
     int suite_init_result;
-    int dircrypt_options_init_result;
     int builder_opts_init_result;
     allocator_options_t alloc_opts;
     vccert_builder_options_t builder_opts;
     vccrypt_suite_options_t crypto_suite;
-    vccrypt_block_options_t dircrypt_options;
 
-    static const uint8_t dir_key[32];
     static const uint8_t dummy_artifact_type[16];
     static const uint8_t dummy_transaction_type[16];
     static const uint8_t zero_uuid[16];
+
+private:
+    static const uint8_t dir_key[32];
 };
 
 extern "C" {
