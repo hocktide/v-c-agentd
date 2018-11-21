@@ -12,6 +12,7 @@
 #include <agentd/bitcap.h>
 #include <agentd/bootstrap_config.h>
 #include <agentd/config.h>
+#include <agentd/dataservice/data.h>
 #include <stdbool.h>
 #include <vpr/disposable.h>
 
@@ -112,9 +113,15 @@ enum dataservice_api_cap_enum
     DATASERVICE_API_CAP_APP_PQ_TRANSACTION_FIRST_READ,
 
     /**
-     * \brief Capability to read the next transaction from the process queue.
+     * \brief Capability to read an arbitrary transaction from the transaction
+     * queue.
      */
-    DATASERVICE_API_CAP_APP_PQ_TRANSACTION_NEXT_READ,
+    DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ,
+
+    /**
+     * \brief Capability to drop a transaction from the queue.
+     */
+    DATASERVICE_API_CAP_APP_PQ_TRANSACTION_DROP,
 
     /**
      * \brief Capability to write a block to the block table.
@@ -255,9 +262,14 @@ enum dataservice_api_method_enum
     DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_FIRST_READ,
 
     /**
-     * \brief Read the next transaction from the process queue.
+     * \brief Read a transaction from the process queue by id.
      */
-    DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_NEXT_READ,
+    DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_READ,
+
+    /**
+     * \brief Drop a transaction from the process queue by id.
+     */
+    DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_DROP,
 
     /**
      * \brief Write a block to the block table.
@@ -275,6 +287,17 @@ enum dataservice_api_method_enum
      */
     DATASERVICE_API_METHOD_UPPER_BOUND
 };
+
+/* forward decl for dataservice_transaction_context. */
+struct dataservice_transaction_context;
+
+/**
+ * \brief This transaction context structure is used to allow for child database
+ * transactions to be created, committed, or aborted.
+ */
+typedef struct
+    dataservice_transaction_context
+        dataservice_transaction_context_t;
 
 /**
  * \brief Event loop for the data service.  This is the entry point for the data

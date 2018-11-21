@@ -92,8 +92,32 @@ int dataservice_decode_and_dispatch(
             return dataservice_decode_and_dispatch_global_setting_set(
                 inst, sock, breq, payload_size);
 
+        /* handle transaction submit. */
+        case DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_SUBMIT:
+            return dataservice_decode_and_dispatch_transaction_submit(
+                inst, sock, breq, payload_size);
+
+        /* handle transaction get first. */
+        case DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_FIRST_READ:
+            return dataservice_decode_and_dispatch_transaction_get_first(
+                inst, sock, breq, payload_size);
+
+        /* handle transaction get. */
+        case DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_READ:
+            return dataservice_decode_and_dispatch_transaction_get(
+                inst, sock, breq, payload_size);
+
+        /* handle transaction drop. */
+        case DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_DROP:
+            return dataservice_decode_and_dispatch_transaction_drop(
+                inst, sock, breq, payload_size);
+
         /* unknown method.  Return an error. */
         default:
+            /* make sure to write an error to the socket as well. */
+            dataservice_decode_and_dispatch_write_status(
+                sock, method, 0U, 0xFFFFFFFF, NULL, 0);
+
             return 2;
     }
 }

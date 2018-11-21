@@ -9,6 +9,7 @@
 #ifndef AGENTD_DATASERVICE_INTERNAL_HEADER_GUARD
 #define AGENTD_DATASERVICE_INTERNAL_HEADER_GUARD
 
+#include <agentd/dataservice.h>
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/ipc.h>
 #include <event.h>
@@ -58,6 +59,15 @@ typedef struct dataservice_instance
     bool dataservice_force_exit;
     ipc_event_loop_context_t* loop_context;
 } dataservice_instance_t;
+
+/**
+ * \brief The data service transaction context.
+ */
+struct dataservice_transaction_context
+{
+    dataservice_child_context_t* child;
+    MDB_txn* txn;
+};
 
 /**
  * \brief Open the database using the given data directory.
@@ -257,6 +267,82 @@ int dataservice_decode_and_dispatch_global_setting_get(
  * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
  */
 int dataservice_decode_and_dispatch_global_setting_set(
+    dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
+    size_t size);
+
+/**
+ * \brief Decode and dispatch a transaction submission request.
+ *
+ * Returns 0 on success or non-fatal error.  If a non-zero error message is
+ * returned, then a fatal error has occurred that should not be recovered from.
+ * Any additional information on the socket is suspect.
+ *
+ * \param inst          The instance on which the dispatch occurs.
+ * \param sock          The socket on which the request was received and the
+ *                      response is to be written.
+ * \param req           The request to be decoded and dispatched.
+ * \param size          The size of the request.
+ *
+ * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ */
+int dataservice_decode_and_dispatch_transaction_submit(
+    dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
+    size_t size);
+
+/**
+ * \brief Decode and dispatch a transaction get first data request.
+ *
+ * Returns 0 on success or non-fatal error.  If a non-zero error message is
+ * returned, then a fatal error has occurred that should not be recovered from.
+ * Any additional information on the socket is suspect.
+ *
+ * \param inst          The instance on which the dispatch occurs.
+ * \param sock          The socket on which the request was received and the
+ *                      response is to be written.
+ * \param req           The request to be decoded and dispatched.
+ * \param size          The size of the request.
+ *
+ * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ */
+int dataservice_decode_and_dispatch_transaction_get_first(
+    dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
+    size_t size);
+
+/**
+ * \brief Decode and dispatch a transaction get data request.
+ *
+ * Returns 0 on success or non-fatal error.  If a non-zero error message is
+ * returned, then a fatal error has occurred that should not be recovered from.
+ * Any additional information on the socket is suspect.
+ *
+ * \param inst          The instance on which the dispatch occurs.
+ * \param sock          The socket on which the request was received and the
+ *                      response is to be written.
+ * \param req           The request to be decoded and dispatched.
+ * \param size          The size of the request.
+ *
+ * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ */
+int dataservice_decode_and_dispatch_transaction_get(
+    dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
+    size_t size);
+
+/**
+ * \brief Decode and dispatch a transaction drop request.
+ *
+ * Returns 0 on success or non-fatal error.  If a non-zero error message is
+ * returned, then a fatal error has occurred that should not be recovered from.
+ * Any additional information on the socket is suspect.
+ *
+ * \param inst          The instance on which the dispatch occurs.
+ * \param sock          The socket on which the request was received and the
+ *                      response is to be written.
+ * \param req           The request to be decoded and dispatched.
+ * \param size          The size of the request.
+ *
+ * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ */
+int dataservice_decode_and_dispatch_transaction_drop(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
     size_t size);
 

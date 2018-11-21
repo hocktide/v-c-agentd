@@ -115,6 +115,48 @@ int dataservice_child_context_close(
     dataservice_child_context_t* child);
 
 /**
+ * \brief Begin a transaction.
+ *
+ * On success, this function creates a transaction which must either be
+ * committed by calling dataservice_data_txn_commit() or aborted by calling
+ * dataservice_data_txn_abort().  The caller is responsible for ensuring that
+ * this transaction is committed or aborted either before the parent transaction
+ * is committed or aborted or before the data service is destroyed.
+ *
+ * \param child         The child context under which this transaction should be
+ *                      begun.
+ * \param txn           The transaction to begin.
+ * \param parent        An optional parameter for the parent transaction.  This
+ *                      parameter is set to NULL when not used.
+ * \param read_only     A flag to indicate whether this transaction is read-only
+ *                      (true) or read/write (false).  Note: this flag is
+ *                      ignored when creating a child transaction; the parent
+ *                      transaction's state overrides this one.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+int dataservice_data_txn_begin(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* txn,
+    dataservice_transaction_context_t* parent, bool read_only);
+
+/**
+ * \brief Abort a transaction.
+ *
+ * \param txn           The transaction to abort.
+ */
+void dataservice_data_txn_abort(
+    dataservice_transaction_context_t* txn);
+
+/**
+ * \brief Commit a transaction.
+ *
+ * \param txn           The transaction to abort.
+ */
+void dataservice_data_txn_commit(
+    dataservice_transaction_context_t* txn);
+
+/**
  * \brief Query a global setting via the dataservice_global_setting_enum
  * enumeration.
  *
@@ -153,6 +195,103 @@ int dataservice_global_settings_get(
 int dataservice_global_settings_set(
     dataservice_child_context_t* child, uint64_t key, const char* buffer,
     size_t size);
+
+/**
+ * \brief Submit a transaction to the queue.
+ *
+ * \param ctx           The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation.
+ * \param txn_id        The transaction ID for this transaction.
+ * \param artifact_id   The artifact ID for this transaction.
+ * \param txn_bytes     The raw bytes of the transaction certificate.
+ * \param txn_size      The size of the transaction certificate.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success
+ *          - 1 if the transaction already exists.
+ *          - non-zero on failure.
+ */
+int dataservice_transaction_submit(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id,
+    const uint8_t* artifact_id, const uint8_t* txn_bytes, size_t txn_size);
+
+/**
+ * \brief Get the first transaction in the queue.
+ *
+ * \param ctx           The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation.
+ * \param node          Optional transaction node details.  If NULL, this is
+ *                      ignored.  If not NULL, this structure is provided by the
+ *                      caller and is populated by the transaction node data on
+ *                      success.
+ * \param txn_bytes     Pointer to be updated to the transaction.
+ * \param txn_size      Pointer to size to be updated by the size of txn.
+ *
+ * Note that this transaction will be a COPY if dtxn_ctx is NULL, and a raw
+ * pointer to the database data if dtxn_ctx is not NULL which will be valid
+ * until the transaction pointed to by dtxn_ctx is committed or released.  If
+ * this is a COPY, then the caller is responsible for freeing the memory
+ * associated with this copy by calling free().  If this is NOT a COPY, then
+ * this memory will be released when dtxn_ctx is committed or released.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success
+ *          - 1 if the transaction queue is empty.
+ *          - non-zero on failure.
+ */
+int dataservice_transaction_get_first(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx,
+    data_transaction_node_t* node,
+    uint8_t** txn_bytes, size_t* txn_size);
+
+/**
+ * \brief Query the queue for a given transaction by UUID.
+ *
+ * \param ctx           The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation.
+ * \param txn_id        The transaction ID for this transaction.
+ * \param node          Optional transaction node details.  If NULL, this is
+ *                      ignored.  If not NULL, this structure is provided by the
+ *                      caller and is populated by the transaction node data on
+ *                      success.
+ * \param txn_bytes     Pointer to be updated with the transaction.
+ * \param txn_size      Pointer to size to be updated by the size of txn.
+ *
+ * Note that this transaction will be a COPY if dtxn_ctx is NULL, and a raw
+ * pointer to the database data if dtxn_ctx is not NULL which will be valid
+ * until the transaction pointed to by dtxn_ctx is committed or released.  If
+ * this is a COPY, then the caller is responsible for freeing the memory
+ * associated with this copy by calling free().  If this is NOT a COPY, then
+ * this memory will be released when dtxn_ctx is committed or released.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success
+ *          - 1 if the transaction could not be found.
+ *          - non-zero on failure.
+ */
+int dataservice_transaction_get(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id,
+    data_transaction_node_t* node,
+    uint8_t** txn_bytes, size_t* txn_size);
+
+/**
+ * \brief Drop a given transaction by ID from the queue.
+ *
+ * \param ctx           The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation.
+ * \param txn_id        The transaction ID for this transaction.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success
+ *          - 1 if the transaction could not be found.
+ *          - non-zero on failure.
+ */
+int dataservice_transaction_drop(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
