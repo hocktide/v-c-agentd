@@ -12,6 +12,7 @@
 #include <lmdb.h>
 #include <string>
 #include <unistd.h>
+#include <vccert/certificate_types.h>
 #include <vpr/disposable.h>
 
 #include "../../src/dataservice/dataservice_internal.h"
@@ -1423,4 +1424,250 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
 
     /* clean up. */
     free(txn_data);
+}
+
+/**
+ * Test that we can make a block by first submitting a transaction.
+ */
+TEST_F(dataservice_isolation_test, make_block_simple)
+{
+    uint32_t offset;
+    uint32_t status;
+    uint32_t child_context;
+    int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    string DB_PATH;
+
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    /* Run the send / receive on creating the root context. */
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_root_context_init(
+                        &nonblockdatasock, &offset, &status);
+
+                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_root_context_init(
+                        &nonblockdatasock, DB_PATH.c_str());
+            }
+        });
+
+    /* verify that everything ran correctly. */
+    EXPECT_EQ(0, sendreq_status);
+    EXPECT_EQ(0, recvresp_status);
+    EXPECT_EQ(0U, offset);
+    EXPECT_EQ(0U, status);
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    BITCAP_INIT_FALSE(reducedcaps);
+
+    /* explicitly grant submitting and getting the first transaction, and making
+     * a block. */
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_DROP);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_BLOCK_WRITE);
+
+    /* create child context. */
+    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_child_context_create(
+                        &nonblockdatasock, &offset, &status, &child_context);
+
+                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_child_context_create(
+                        &nonblockdatasock, reducedcaps, sizeof(reducedcaps));
+            }
+        });
+
+    /* verify that everything ran correctly. */
+    ASSERT_EQ(0, sendreq_status);
+    ASSERT_EQ(0, recvresp_status);
+    ASSERT_EQ(0U, offset);
+    ASSERT_EQ(0U, status);
+    ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, child_context);
+
+    const uint8_t foo_key[16] = {
+        0x05, 0x09, 0x43, 0x34, 0x0f, 0xb0, 0x4a, 0xa2,
+        0xa1, 0xf2, 0x26, 0x15, 0x6a, 0x56, 0x45, 0x4d
+    };
+    const uint8_t foo_prev[16] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    const uint8_t foo_artifact[16] = {
+        0xc3, 0x84, 0x33, 0x0b, 0xf5, 0x0d, 0x42, 0xa2,
+        0x9a, 0x52, 0xb5, 0xa4, 0xb3, 0x5b, 0xcf, 0x72
+    };
+    uint8_t* foo_cert = nullptr;
+    size_t foo_cert_length = 0;
+
+    /* create the foo transaction. */
+    ASSERT_EQ(0,
+        create_dummy_transaction(
+            foo_key, foo_prev, foo_artifact, &foo_cert, &foo_cert_length));
+
+    /* submit a transaction. */
+    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_transaction_submit(
+                        &nonblockdatasock, &offset, &status);
+
+                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_transaction_submit(
+                        &nonblockdatasock, child_context, foo_key, foo_artifact,
+                        foo_cert, foo_cert_length);
+            }
+        });
+
+    /* verify that everything ran correctly. */
+    ASSERT_EQ(0, sendreq_status);
+    ASSERT_EQ(0, recvresp_status);
+    ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
+    ASSERT_EQ(0U, status);
+
+    void* txn_data = nullptr;
+    size_t txn_data_size = 0U;
+    uint8_t* foo_block_cert = nullptr;
+    size_t foo_block_cert_length = 0;
+    data_transaction_node_t node;
+    const uint8_t foo_block_id[16] = {
+        0x5f, 0x5f, 0x5b, 0xea, 0xdb, 0xcd, 0x4c, 0xff,
+        0xb3, 0x40, 0x99, 0x2e, 0x07, 0xf9, 0xc1, 0xef
+    };
+
+    /* create the block for below. */
+    ASSERT_EQ(0,
+        create_dummy_block_for_isolation(
+            &builder_opts,
+            foo_block_id, vccert_certificate_type_uuid_root_block, 1,
+            &foo_block_cert, &foo_block_cert_length,
+            foo_cert, foo_cert_length,
+            nullptr));
+
+    /* make a block. */
+    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_block_make(
+                        &nonblockdatasock, &offset, &status);
+
+                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_block_make(
+                        &nonblockdatasock, child_context, foo_block_id,
+                        foo_block_cert, foo_block_cert_length);
+            }
+        });
+    /* verify that everything ran correctly. */
+    ASSERT_EQ(0U, status);
+    EXPECT_EQ(0, sendreq_status);
+    EXPECT_EQ(0, recvresp_status);
+    ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
+
+    /* query the first transaction. */
+    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_transaction_get(
+                        &nonblockdatasock, &offset, &status, &node,
+                        &txn_data, &txn_data_size);
+
+                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_transaction_get(
+                        &nonblockdatasock, child_context, foo_key);
+            }
+        });
+
+    /* verify that everything ran correctly. */
+    EXPECT_EQ(0, sendreq_status);
+    EXPECT_EQ(0, recvresp_status);
+    ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
+    ASSERT_EQ(1U, status);
+
+    /* clean up. */
+    free(txn_data);
+    free(foo_cert);
+    free(foo_block_cert);
 }

@@ -10,12 +10,16 @@
 #include <agentd/dataservice.h>
 #include <agentd/fds.h>
 #include <cbmc/model_assert.h>
+#include <vccrypt/suite.h>
 
 /**
  * \brief Run a data service instance.
  */
 void private_command_dataservice()
 {
+    /* register the Velo V1 crypto suite. */
+    vccrypt_suite_register_velo_v1();
+
     /* run the event loop for the data service. */
     int retval =
         dataservice_event_loop(
