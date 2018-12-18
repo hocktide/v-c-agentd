@@ -6,29 +6,22 @@
  * \copyright 2018 Velo-Payments, Inc.  All rights reserved.
  */
 
-#include <agentd/dataservice/private/dataservice.h>
-#include <agentd/inet.h>
-#include <gtest/gtest.h>
-#include <lmdb.h>
-#include <vpr/disposable.h>
+#include <vccert/certificate_types.h>
 
-#include "../../src/dataservice/dataservice_internal.h"
+#include "test_dataservice.h"
 
 using namespace std;
 
 /**
  * Test that the data service root context can be initialized.
  */
-TEST(dataservice_test, root_context_init)
+TEST_F(dataservice_test, root_context_init)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/396c499b-ff73-45c5-901f-2e48e2dce4c7";
-    char command[1024];
     dataservice_root_context_t ctx;
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -39,7 +32,7 @@ TEST(dataservice_test, root_context_init)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* there should be a disposer set. */
     ASSERT_NE(nullptr, ctx.hdr.dispose);
@@ -94,16 +87,13 @@ TEST(dataservice_test, root_context_init)
  * Test that without the root create capability, we cannot create a root
  * context.
  */
-TEST(dataservice_test, root_context_init_no_permission)
+TEST_F(dataservice_test, root_context_init_no_permission)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/c681eefc-d2e0-4111-8638-a64a6a77f216";
-    char command[1024];
     dataservice_root_context_t ctx;
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -114,7 +104,7 @@ TEST(dataservice_test, root_context_init_no_permission)
     BITCAP_SET_FALSE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialization should fail. */
-    ASSERT_NE(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_NE(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 }
 
 /**
@@ -123,17 +113,15 @@ TEST(dataservice_test, root_context_init_no_permission)
  * eliminate that capability and demonstrate that it is no longer possible to
  * further reduce capabilities.
  */
-TEST(dataservice_test, root_context_reduce_capabilities)
+TEST_F(dataservice_test, root_context_reduce_capabilities)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/c681eefc-d2e0-4111-8638-a64a6a77f216";
-    char command[1024];
     dataservice_root_context_t ctx;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -144,7 +132,7 @@ TEST(dataservice_test, root_context_reduce_capabilities)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialization should succeed. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* We can't create a root context again. */
     EXPECT_FALSE(BITCAP_ISSET(ctx.apicaps,
@@ -298,18 +286,16 @@ TEST(dataservice_test, root_context_reduce_capabilities)
 /**
  * Test that a child context can be created from a root context.
  */
-TEST(dataservice_test, child_context_create)
+TEST_F(dataservice_test, child_context_create)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/553f6a65-ed63-466d-93d7-193d7b0b8c49";
-    char command[1024];
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -320,7 +306,7 @@ TEST(dataservice_test, child_context_create)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* there should be a disposer set. */
     ASSERT_NE(nullptr, ctx.hdr.dispose);
@@ -376,18 +362,16 @@ TEST(dataservice_test, child_context_create)
  * Test that a child context cannot be created from a root context if the root
  * context does not have the create child context capability.
  */
-TEST(dataservice_test, child_context_create_denied)
+TEST_F(dataservice_test, child_context_create_denied)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/553f6a65-ed63-466d-93d7-193d7b0b8c49";
-    char command[1024];
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -398,7 +382,7 @@ TEST(dataservice_test, child_context_create_denied)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* there should be a disposer set. */
     ASSERT_NE(nullptr, ctx.hdr.dispose);
@@ -434,18 +418,16 @@ TEST(dataservice_test, child_context_create_denied)
 /**
  * Test that a child context can be closed.
  */
-TEST(dataservice_test, child_context_close)
+TEST_F(dataservice_test, child_context_close)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/553f6a65-ed63-466d-93d7-193d7b0b8c49";
-    char command[1024];
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -456,7 +438,7 @@ TEST(dataservice_test, child_context_close)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* there should be a disposer set. */
     ASSERT_NE(nullptr, ctx.hdr.dispose);
@@ -491,18 +473,16 @@ TEST(dataservice_test, child_context_close)
 /**
  * Test that closing a child context fails if it lacks the close cap.
  */
-TEST(dataservice_test, child_context_close_denied)
+TEST_F(dataservice_test, child_context_close_denied)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/553f6a65-ed63-466d-93d7-193d7b0b8c49";
-    char command[1024];
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -513,7 +493,7 @@ TEST(dataservice_test, child_context_close_denied)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* there should be a disposer set. */
     ASSERT_NE(nullptr, ctx.hdr.dispose);
@@ -552,11 +532,8 @@ TEST(dataservice_test, child_context_close_denied)
  * Test that we can query a global setting that is already saved in the
  * database.
  */
-TEST(dataservice_test, global_settings_get)
+TEST_F(dataservice_test, global_settings_get)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/996b0f5d-46b7-4d76-8cfd-fe2433939745";
-    char command[1024];
     char SCHEMA_VERSION[16] = {
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
     };
@@ -564,11 +541,12 @@ TEST(dataservice_test, global_settings_get)
     size_t schema_buffer_sz = sizeof(schema_buffer);
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -579,7 +557,7 @@ TEST(dataservice_test, global_settings_get)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* there should be a disposer set. */
     ASSERT_NE(nullptr, ctx.hdr.dispose);
@@ -636,11 +614,8 @@ TEST(dataservice_test, global_settings_get)
  * Test that if we are not allowed to query a global setting, the API call
  * fails.
  */
-TEST(dataservice_test, global_settings_get_denied)
+TEST_F(dataservice_test, global_settings_get_denied)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/cee8e10d-1ac7-41ed-b33d-524ccda2824e";
-    char command[1024];
     char SCHEMA_VERSION[16] = {
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
     };
@@ -648,11 +623,12 @@ TEST(dataservice_test, global_settings_get_denied)
     size_t schema_buffer_sz = sizeof(schema_buffer);
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -663,7 +639,7 @@ TEST(dataservice_test, global_settings_get_denied)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* there should be a disposer set. */
     ASSERT_NE(nullptr, ctx.hdr.dispose);
@@ -712,11 +688,8 @@ TEST(dataservice_test, global_settings_get_denied)
  * Test that we get a truncation error if attempting to query a value with too
  * small of a buffer.
  */
-TEST(dataservice_test, global_settings_get_would_truncate)
+TEST_F(dataservice_test, global_settings_get_would_truncate)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/5a920ef8-14b9-455c-b09a-a2b46e28afc6";
-    char command[1024];
     char SCHEMA_VERSION[16] = {
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
     };
@@ -724,11 +697,12 @@ TEST(dataservice_test, global_settings_get_would_truncate)
     size_t schema_buffer_sz = sizeof(schema_buffer);
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -739,7 +713,7 @@ TEST(dataservice_test, global_settings_get_would_truncate)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* there should be a disposer set. */
     ASSERT_NE(nullptr, ctx.hdr.dispose);
@@ -790,20 +764,18 @@ TEST(dataservice_test, global_settings_get_would_truncate)
  * Test that we get a value not found error when querying for a value not in the
  * database.
  */
-TEST(dataservice_test, global_settings_get_not_found)
+TEST_F(dataservice_test, global_settings_get_not_found)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/f8ef4552-2124-435f-80e6-746b1ec1ea94";
-    char command[1024];
     char schema_buffer[20];
     size_t schema_buffer_sz = sizeof(schema_buffer);
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -814,7 +786,7 @@ TEST(dataservice_test, global_settings_get_not_found)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* there should be a disposer set. */
     ASSERT_NE(nullptr, ctx.hdr.dispose);
@@ -849,11 +821,8 @@ TEST(dataservice_test, global_settings_get_not_found)
 /**
  * Test that we can set a global setting and then get it.
  */
-TEST(dataservice_test, global_settings_set_get)
+TEST_F(dataservice_test, global_settings_set_get)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/a1e4c959-0279-4e43-a951-24e81d20c51d";
-    char command[1024];
     char SCHEMA_VERSION[16] = {
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
     };
@@ -861,11 +830,12 @@ TEST(dataservice_test, global_settings_set_get)
     size_t schema_buffer_sz = sizeof(schema_buffer);
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -876,7 +846,7 @@ TEST(dataservice_test, global_settings_set_get)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* there should be a disposer set. */
     ASSERT_NE(nullptr, ctx.hdr.dispose);
@@ -925,21 +895,19 @@ TEST(dataservice_test, global_settings_set_get)
 /**
  * Test that global settings set respects the global settings write capability.
  */
-TEST(dataservice_test, global_settings_set_denied)
+TEST_F(dataservice_test, global_settings_set_denied)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/a1e4c959-0279-4e43-a951-24e81d20c51d";
-    char command[1024];
     char SCHEMA_VERSION[16] = {
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
     };
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -950,7 +918,7 @@ TEST(dataservice_test, global_settings_set_denied)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* there should be a disposer set. */
     ASSERT_NE(nullptr, ctx.hdr.dispose);
@@ -980,20 +948,18 @@ TEST(dataservice_test, global_settings_set_denied)
  * Test that we transaction_get_first indicates that no transaction is found
  * when the transaction queue is empty.
  */
-TEST(dataservice_test, transaction_get_first_empty)
+TEST_F(dataservice_test, transaction_get_first_empty)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/46423abb-fc06-4dd1-9fe6-42f527b3cddb";
-    char command[1024];
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -1004,7 +970,7 @@ TEST(dataservice_test, transaction_get_first_empty)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -1036,21 +1002,19 @@ TEST(dataservice_test, transaction_get_first_empty)
  * Test that we transaction_get_first indicates that no transaction is found
  * when the transaction queue exists and is empty.
  */
-TEST(dataservice_test, transaction_get_first_empty_with_start_end)
+TEST_F(dataservice_test, transaction_get_first_empty_with_start_end)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/523b4370-8723-4fc6-b5d6-ac6e90331cdd";
-    char command[1024];
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     MDB_txn* txn;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -1061,7 +1025,7 @@ TEST(dataservice_test, transaction_get_first_empty_with_start_end)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -1102,14 +1066,14 @@ TEST(dataservice_test, transaction_get_first_empty_with_start_end)
     MDB_val lval;
     lval.mv_size = sizeof(start);
     lval.mv_data = &start;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* insert end. */
     lkey.mv_size = sizeof(end.key);
     lkey.mv_data = end.key;
     lval.mv_size = sizeof(end);
     lval.mv_data = &end;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* commit. */
     ASSERT_EQ(0, mdb_txn_commit(txn));
@@ -1130,20 +1094,18 @@ TEST(dataservice_test, transaction_get_first_empty_with_start_end)
  * Test that we transaction_get_first fails when called without the appropriate
  * capability being set.
  */
-TEST(dataservice_test, transaction_get_first_no_capability)
+TEST_F(dataservice_test, transaction_get_first_no_capability)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/ff3e5166-5c6b-4e13-a816-c841f3d94274";
-    char command[1024];
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -1154,7 +1116,7 @@ TEST(dataservice_test, transaction_get_first_no_capability)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -1183,25 +1145,23 @@ TEST(dataservice_test, transaction_get_first_no_capability)
 /**
  * Test that we transaction_get_first retrieves the first found transaction.
  */
-TEST(dataservice_test, transaction_get_first_happy_path)
+TEST_F(dataservice_test, transaction_get_first_happy_path)
 {
     uint8_t foo_key[16] = { 0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
         0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f };
     uint8_t bar_key[16] = { 0xb5, 0x3e, 0x42, 0x83, 0xc7, 0x76, 0x43, 0x81,
         0xbf, 0x91, 0xdc, 0x88, 0x78, 0x38, 0x2c, 0xe5 };
-    const char* DB_PATH =
-        "build/host/checked/databases/062ccc38-5205-4e9f-b562-a9530a760a46";
-    char command[1024];
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     MDB_txn* txn;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -1212,7 +1172,7 @@ TEST(dataservice_test, transaction_get_first_happy_path)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -1253,14 +1213,14 @@ TEST(dataservice_test, transaction_get_first_happy_path)
     MDB_val lval;
     lval.mv_size = sizeof(start);
     lval.mv_data = &start;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* insert end. */
     lkey.mv_size = sizeof(end.key);
     lkey.mv_data = end.key;
     lval.mv_size = sizeof(end);
     lval.mv_data = &end;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* create foo and bar transactions. */
     uint8_t foo_data[5] = { 0xFA, 0x12, 0x22, 0x13, 0x99 };
@@ -1289,14 +1249,14 @@ TEST(dataservice_test, transaction_get_first_happy_path)
     lkey.mv_data = foo->key;
     lval.mv_size = sizeof(data_transaction_node_t) + sizeof(foo_data);
     lval.mv_data = foo;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* insert bar. */
     lkey.mv_size = sizeof(bar->key);
     lkey.mv_data = bar->key;
     lval.mv_size = sizeof(data_transaction_node_t) + sizeof(bar_data);
     lval.mv_data = bar;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* commit. */
     ASSERT_EQ(0, mdb_txn_commit(txn));
@@ -1324,25 +1284,23 @@ TEST(dataservice_test, transaction_get_first_happy_path)
  * Test that we transaction_get_first retrieves the first found transaction
  * while under a transaction.
  */
-TEST(dataservice_test, transaction_get_first_txn_happy_path)
+TEST_F(dataservice_test, transaction_get_first_txn_happy_path)
 {
     uint8_t foo_key[16] = { 0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
         0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f };
     uint8_t bar_key[16] = { 0xb5, 0x3e, 0x42, 0x83, 0xc7, 0x76, 0x43, 0x81,
         0xbf, 0x91, 0xdc, 0x88, 0x78, 0x38, 0x2c, 0xe5 };
-    const char* DB_PATH =
-        "build/host/checked/databases/a61e3fd1-8c9e-4408-8135-96fdc1f1c85e";
-    char command[1024];
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     MDB_txn* txn;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -1353,7 +1311,7 @@ TEST(dataservice_test, transaction_get_first_txn_happy_path)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -1394,14 +1352,14 @@ TEST(dataservice_test, transaction_get_first_txn_happy_path)
     MDB_val lval;
     lval.mv_size = sizeof(start);
     lval.mv_data = &start;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* insert end. */
     lkey.mv_size = sizeof(end.key);
     lkey.mv_data = end.key;
     lval.mv_size = sizeof(end);
     lval.mv_data = &end;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* create foo and bar transactions. */
     uint8_t foo_data[5] = { 0xFA, 0x12, 0x22, 0x13, 0x99 };
@@ -1430,14 +1388,14 @@ TEST(dataservice_test, transaction_get_first_txn_happy_path)
     lkey.mv_data = foo->key;
     lval.mv_size = sizeof(data_transaction_node_t) + sizeof(foo_data);
     lval.mv_data = foo;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* insert bar. */
     lkey.mv_size = sizeof(bar->key);
     lkey.mv_data = bar->key;
     lval.mv_size = sizeof(data_transaction_node_t) + sizeof(bar_data);
     lval.mv_data = bar;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* commit the transaction. */
     mdb_txn_commit(txn);
@@ -1471,26 +1429,24 @@ TEST(dataservice_test, transaction_get_first_txn_happy_path)
  * Test that we transaction_get_first retrieves the first found transaction and
  * populates the provided transaction node.
  */
-TEST(dataservice_test, transaction_get_first_with_node_happy_path)
+TEST_F(dataservice_test, transaction_get_first_with_node_happy_path)
 {
     uint8_t foo_key[16] = { 0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
         0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f };
     uint8_t bar_key[16] = { 0xb5, 0x3e, 0x42, 0x83, 0xc7, 0x76, 0x43, 0x81,
         0xbf, 0x91, 0xdc, 0x88, 0x78, 0x38, 0x2c, 0xe5 };
-    const char* DB_PATH =
-        "build/host/checked/databases/062ccc38-5205-4e9f-b562-a9530a760a46";
-    char command[1024];
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     MDB_txn* txn;
     data_transaction_node_t node;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -1501,7 +1457,7 @@ TEST(dataservice_test, transaction_get_first_with_node_happy_path)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -1542,14 +1498,14 @@ TEST(dataservice_test, transaction_get_first_with_node_happy_path)
     MDB_val lval;
     lval.mv_size = sizeof(start);
     lval.mv_data = &start;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* insert end. */
     lkey.mv_size = sizeof(end.key);
     lkey.mv_data = end.key;
     lval.mv_size = sizeof(end);
     lval.mv_data = &end;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* create foo and bar transactions. */
     uint8_t foo_data[5] = { 0xFA, 0x12, 0x22, 0x13, 0x99 };
@@ -1578,14 +1534,14 @@ TEST(dataservice_test, transaction_get_first_with_node_happy_path)
     lkey.mv_data = foo->key;
     lval.mv_size = sizeof(data_transaction_node_t) + sizeof(foo_data);
     lval.mv_data = foo;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* insert bar. */
     lkey.mv_size = sizeof(bar->key);
     lkey.mv_data = bar->key;
     lval.mv_size = sizeof(data_transaction_node_t) + sizeof(bar_data);
     lval.mv_data = bar;
-    ASSERT_EQ(0, mdb_put(txn, details->txn_db, &lkey, &lval, 0));
+    ASSERT_EQ(0, mdb_put(txn, details->pq_db, &lkey, &lval, 0));
 
     /* commit. */
     ASSERT_EQ(0, mdb_txn_commit(txn));
@@ -1625,7 +1581,7 @@ TEST(dataservice_test, transaction_get_first_with_node_happy_path)
  * Test that we can submit a transaction to the transaction queue and retrieve
  * it.
  */
-TEST(dataservice_test, transaction_submit_get_first_with_node_happy_path)
+TEST_F(dataservice_test, transaction_submit_get_first_with_node_happy_path)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
@@ -1638,20 +1594,17 @@ TEST(dataservice_test, transaction_submit_get_first_with_node_happy_path)
     uint8_t foo_data[5] = {
         0Xfa, 0X12, 0X22, 0X13, 0X99
     };
-
-    const char* DB_PATH =
-        "build/host/checked/databases/98f645fb-33e3-4eb1-9a8a-8b88945379e6";
-    char command[1024];
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     data_transaction_node_t node;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -1662,7 +1615,7 @@ TEST(dataservice_test, transaction_submit_get_first_with_node_happy_path)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -1720,7 +1673,7 @@ TEST(dataservice_test, transaction_submit_get_first_with_node_happy_path)
  * Test that we can submit a transaction to the transaction queue and retrieve
  * it, while under a transaction.
  */
-TEST(dataservice_test, transaction_submit_txn_get_first_with_node_happy_path)
+TEST_F(dataservice_test, transaction_submit_txn_get_first_with_node_happy_path)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
@@ -1733,20 +1686,17 @@ TEST(dataservice_test, transaction_submit_txn_get_first_with_node_happy_path)
     uint8_t foo_data[5] = {
         0Xfa, 0X12, 0X22, 0X13, 0X99
     };
-
-    const char* DB_PATH =
-        "build/host/checked/databases/05e1f95e-5a55-4d3c-ac03-3efd756972d2";
-    char command[1024];
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     data_transaction_node_t node;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -1757,7 +1707,7 @@ TEST(dataservice_test, transaction_submit_txn_get_first_with_node_happy_path)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -1819,7 +1769,7 @@ TEST(dataservice_test, transaction_submit_txn_get_first_with_node_happy_path)
  * Test that we can submit a transaction to the transaction queue and retrieve
  * it by id.
  */
-TEST(dataservice_test, transaction_submit_get_with_node_happy_path)
+TEST_F(dataservice_test, transaction_submit_get_with_node_happy_path)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
@@ -1832,20 +1782,17 @@ TEST(dataservice_test, transaction_submit_get_with_node_happy_path)
     uint8_t foo_data[5] = {
         0Xfa, 0X12, 0X22, 0X13, 0X99
     };
-
-    const char* DB_PATH =
-        "build/host/checked/databases/ab174989-da79-4af2-8f3d-da082c074725";
-    char command[1024];
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     data_transaction_node_t node;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -1856,7 +1803,7 @@ TEST(dataservice_test, transaction_submit_get_with_node_happy_path)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -1914,7 +1861,7 @@ TEST(dataservice_test, transaction_submit_get_with_node_happy_path)
  * Test that we can submit a transaction to the transaction queue and retrieve
  * it by id, while under a transaction.
  */
-TEST(dataservice_test, transaction_submit_txn_get_with_node_happy_path)
+TEST_F(dataservice_test, transaction_submit_txn_get_with_node_happy_path)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
@@ -1927,20 +1874,17 @@ TEST(dataservice_test, transaction_submit_txn_get_with_node_happy_path)
     uint8_t foo_data[5] = {
         0Xfa, 0X12, 0X22, 0X13, 0X99
     };
-
-    const char* DB_PATH =
-        "build/host/checked/databases/e2b9b446-9301-453a-88d0-51e3b5269382";
-    char command[1024];
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     data_transaction_node_t node;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -1951,7 +1895,7 @@ TEST(dataservice_test, transaction_submit_txn_get_with_node_happy_path)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -2013,7 +1957,7 @@ TEST(dataservice_test, transaction_submit_txn_get_with_node_happy_path)
  * Test that an ettempt to drop the all zeroes or all FFs transactions results
  * in a "not found" error, even after a transaction has been submitted.
  */
-TEST(dataservice_test, transaction_drop_00_ff)
+TEST_F(dataservice_test, transaction_drop_00_ff)
 {
     uint8_t begin_key[16] = {
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -2034,17 +1978,14 @@ TEST(dataservice_test, transaction_drop_00_ff)
     uint8_t foo_data[5] = {
         0Xfa, 0X12, 0X22, 0X13, 0X99
     };
-
-    const char* DB_PATH =
-        "build/host/checked/databases/0b0d497c-2090-4ca5-a8df-d2c6cc8a27a5";
-    char command[1024];
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -2055,7 +1996,7 @@ TEST(dataservice_test, transaction_drop_00_ff)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -2109,7 +2050,7 @@ TEST(dataservice_test, transaction_drop_00_ff)
  * Test that we can drop an entry in the transaction queue after submitting
  * it.
  */
-TEST(dataservice_test, transaction_drop)
+TEST_F(dataservice_test, transaction_drop)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
@@ -2122,20 +2063,17 @@ TEST(dataservice_test, transaction_drop)
     uint8_t foo_data[5] = {
         0Xfa, 0X12, 0X22, 0X13, 0X99
     };
-
-    const char* DB_PATH =
-        "build/host/checked/databases/f08eb0fb-0a4c-4578-9525-3005c234834f";
-    char command[1024];
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     data_transaction_node_t node;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -2146,7 +2084,7 @@ TEST(dataservice_test, transaction_drop)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -2210,7 +2148,7 @@ TEST(dataservice_test, transaction_drop)
  * Test that other entries are preserved and updated when we drop an entry from
  * the queue.
  */
-TEST(dataservice_test, transaction_drop_ordering)
+TEST_F(dataservice_test, transaction_drop_ordering)
 {
     uint8_t foo1_key[16] = {
         0x2a, 0x3d, 0xe3, 0x6f, 0x4f, 0x5f, 0x43, 0x75,
@@ -2248,20 +2186,17 @@ TEST(dataservice_test, transaction_drop_ordering)
         0x4f, 0x61, 0x98, 0x8e, 0x23, 0x84, 0x49, 0x29,
         0x92, 0x76, 0x84, 0x06, 0x42, 0x36, 0x3a, 0x6b
     };
-
-    const char* DB_PATH =
-        "build/host/checked/databases/a0cf8090-46d9-42d9-a2b2-953833e38ed8";
-    char command[1024];
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     data_transaction_node_t node;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -2272,7 +2207,7 @@ TEST(dataservice_test, transaction_drop_ordering)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -2412,7 +2347,7 @@ TEST(dataservice_test, transaction_drop_ordering)
  * Test that other entries are preserved and updated when we drop the first
  * entry from the queue.
  */
-TEST(dataservice_test, transaction_drop_first_ordering)
+TEST_F(dataservice_test, transaction_drop_first_ordering)
 {
     uint8_t foo1_key[16] = {
         0x2a, 0x3d, 0xe3, 0x6f, 0x4f, 0x5f, 0x43, 0x75,
@@ -2450,20 +2385,17 @@ TEST(dataservice_test, transaction_drop_first_ordering)
         0x4f, 0x61, 0x98, 0x8e, 0x23, 0x84, 0x49, 0x29,
         0x92, 0x76, 0x84, 0x06, 0x42, 0x36, 0x3a, 0x6b
     };
-
-    const char* DB_PATH =
-        "build/host/checked/databases/a6f38715-5bc8-442b-83ce-8e8f48d6050b";
-    char command[1024];
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     data_transaction_node_t node;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -2474,7 +2406,7 @@ TEST(dataservice_test, transaction_drop_first_ordering)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -2613,7 +2545,7 @@ TEST(dataservice_test, transaction_drop_first_ordering)
 /**
  * Test that dataservice_transaction_submit respects the bitcap for this action.
  */
-TEST(dataservice_test, transaction_submit_bitcap)
+TEST_F(dataservice_test, transaction_submit_bitcap)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
@@ -2626,17 +2558,14 @@ TEST(dataservice_test, transaction_submit_bitcap)
     uint8_t foo_data[5] = {
         0Xfa, 0X12, 0X22, 0X13, 0X99
     };
-
-    const char* DB_PATH =
-        "build/host/checked/databases/98f645fb-33e3-4eb1-9a8a-8b88945379e6";
-    char command[1024];
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -2647,7 +2576,7 @@ TEST(dataservice_test, transaction_submit_bitcap)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -2677,20 +2606,18 @@ TEST(dataservice_test, transaction_submit_bitcap)
  * Test that dataservice_transaction_get_first respects the bitcap for this
  * action.
  */
-TEST(dataservice_test, transaction_get_first_bitcap)
+TEST_F(dataservice_test, transaction_get_first_bitcap)
 {
-    const char* DB_PATH =
-        "build/host/checked/databases/98f645fb-33e3-4eb1-9a8a-8b88945379e6";
-    char command[1024];
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -2701,7 +2628,7 @@ TEST(dataservice_test, transaction_get_first_bitcap)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -2727,24 +2654,22 @@ TEST(dataservice_test, transaction_get_first_bitcap)
 /**
  * Test that dataservice_transaction_get respects the bitcap for this action.
  */
-TEST(dataservice_test, transaction_get_bitcap)
+TEST_F(dataservice_test, transaction_get_bitcap)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
         0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f
     };
-    const char* DB_PATH =
-        "build/host/checked/databases/98f645fb-33e3-4eb1-9a8a-8b88945379e6";
-    char command[1024];
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0;
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -2755,7 +2680,7 @@ TEST(dataservice_test, transaction_get_bitcap)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -2781,22 +2706,20 @@ TEST(dataservice_test, transaction_get_bitcap)
 /**
  * Test that dataservice_transaction_drop respects the bitcap for this action.
  */
-TEST(dataservice_test, transaction_drop_bitcap)
+TEST_F(dataservice_test, transaction_drop_bitcap)
 {
     uint8_t foo_key[16] = {
         0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
         0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f
     };
-    const char* DB_PATH =
-        "build/host/checked/databases/33cf6556-c364-4634-8920-aeb0a7fb64ce";
-    char command[1024];
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
-    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+    string DB_PATH;
 
-    /* create the database directory. */
-    snprintf(command, sizeof(command), "mkdir -p %s", DB_PATH);
-    system(command);
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
 
     /* precondition: ctx is invalid. */
     memset(&ctx, 0xFF, sizeof(ctx));
@@ -2807,7 +2730,7 @@ TEST(dataservice_test, transaction_drop_bitcap)
     BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
 
     /* initialize the root context given a test data directory. */
-    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH));
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
 
     /* create a reduced capabilities set for the child context. */
     BITCAP_INIT_FALSE(reducedcaps);
@@ -2827,4 +2750,513 @@ TEST(dataservice_test, transaction_drop_bitcap)
 
     /* dispose of the context. */
     dispose((disposable_t*)&ctx);
+}
+
+/**
+ * Test that we can add a transaction to the transaction queue, create a block
+ * containing this transaction, and the dataservice_block_make API call
+ * automatically drops this transaction.
+ */
+TEST_F(dataservice_test, transaction_make_block_simple)
+{
+    uint8_t foo_key[16] = {
+        0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
+        0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f
+    };
+    uint8_t foo_prev[16] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    uint8_t foo_artifact[16] = {
+        0xef, 0x44, 0xe7, 0xb4, 0xbf, 0x39, 0x45, 0xe4,
+        0xb3, 0x4b, 0x6e, 0x82, 0xee, 0x41, 0x76, 0x21
+    };
+    uint8_t foo_block_id[16] = {
+        0x96, 0x1e, 0xdd, 0x16, 0xbd, 0xa6, 0x4b, 0x9d,
+        0x93, 0xac, 0x40, 0xd4, 0x74, 0x85, 0x0d, 0xe5
+    };
+    uint8_t* foo_cert = nullptr;
+    size_t foo_cert_length = 0;
+    uint8_t* foo_block_cert = nullptr;
+    size_t foo_block_cert_length = 0;
+    string DB_PATH;
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+    data_transaction_node_t node;
+    uint8_t* txn_bytes;
+    size_t txn_size;
+
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_BLOCK_WRITE);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_TRANSACTION_READ);
+
+    /* explicitly grant the capability to create child contexts in the child
+     * context. */
+    BITCAP_SET_TRUE(child.childcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* create foo transaction. */
+    ASSERT_EQ(0,
+        create_dummy_transaction(
+            foo_key, foo_prev, foo_artifact, &foo_cert, &foo_cert_length));
+
+    /* submit foo transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo_key, foo_artifact, foo_cert,
+            foo_cert_length));
+
+    /* getting the transaction by id should return success. */
+    ASSERT_EQ(0,
+        dataservice_transaction_get(
+            &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
+    free(txn_bytes);
+
+    /* create foo block. */
+    ASSERT_EQ(0,
+        create_dummy_block(
+            &builder_opts,
+            foo_block_id, vccert_certificate_type_uuid_root_block, 1,
+            &foo_block_cert, &foo_block_cert_length,
+            foo_cert, foo_cert_length,
+            nullptr));
+
+    /* getting the block transaction by id should return not found. */
+    ASSERT_EQ(1,
+        dataservice_block_transaction_get(
+            &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
+
+    /* make block. */
+    ASSERT_EQ(0,
+        dataservice_block_make(
+            &child, nullptr, foo_block_id,
+            foo_block_cert, foo_block_cert_length));
+
+    /* getting the transaction by id should return not found. */
+    ASSERT_EQ(1,
+        dataservice_transaction_get(
+            &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
+
+    /* getting the block transaction by id should return success. */
+    ASSERT_EQ(0,
+        dataservice_block_transaction_get(
+            &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
+    free(txn_bytes);
+
+    /* clean up. */
+    dispose((disposable_t*)&ctx);
+    free(foo_cert);
+    free(foo_block_cert);
+}
+
+/**
+ * Test that the bitset is enforced for making blocks.
+ */
+TEST_F(dataservice_test, transaction_make_block_bitset)
+{
+    uint8_t foo_key[16] = {
+        0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
+        0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f
+    };
+    uint8_t foo_prev[16] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    uint8_t foo_artifact[16] = {
+        0xef, 0x44, 0xe7, 0xb4, 0xbf, 0x39, 0x45, 0xe4,
+        0xb3, 0x4b, 0x6e, 0x82, 0xee, 0x41, 0x76, 0x21
+    };
+    uint8_t foo_block_id[16] = {
+        0x96, 0x1e, 0xdd, 0x16, 0xbd, 0xa6, 0x4b, 0x9d,
+        0x93, 0xac, 0x40, 0xd4, 0x74, 0x85, 0x0d, 0xe5
+    };
+    uint8_t* foo_cert = nullptr;
+    size_t foo_cert_length = 0;
+    uint8_t* foo_block_cert = nullptr;
+    size_t foo_block_cert_length = 0;
+    string DB_PATH;
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    /* DO NOT ALLOW BLOCK_WRITE. */
+    /*BITCAP_SET_TRUE(reducedcaps,
+                    DATASERVICE_API_CAP_APP_BLOCK_WRITE);*/
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_TRANSACTION_READ);
+
+    /* explicitly grant the capability to create child contexts in the child
+     * context. */
+    BITCAP_SET_TRUE(child.childcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* create foo transaction. */
+    ASSERT_EQ(0,
+        create_dummy_transaction(
+            foo_key, foo_prev, foo_artifact, &foo_cert, &foo_cert_length));
+
+    /* submit foo transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo_key, foo_artifact, foo_cert,
+            foo_cert_length));
+
+    /* create foo block. */
+    ASSERT_EQ(0,
+        create_dummy_block(
+            &builder_opts,
+            foo_block_id, vccert_certificate_type_uuid_root_block, 1,
+            &foo_block_cert, &foo_block_cert_length,
+            foo_cert, foo_cert_length,
+            nullptr));
+
+    /* make block should fail because of missing capability. */
+    ASSERT_EQ(3,
+        dataservice_block_make(
+            &child, nullptr, foo_block_id,
+            foo_block_cert, foo_block_cert_length));
+
+    /* clean up. */
+    dispose((disposable_t*)&ctx);
+    free(foo_cert);
+    free(foo_block_cert);
+}
+
+/**
+ * Test that appending a block with an invalid height will fail.
+ */
+TEST_F(dataservice_test, transaction_make_block_bad_height)
+{
+    uint8_t foo_key[16] = {
+        0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
+        0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f
+    };
+    uint8_t foo_prev[16] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    uint8_t foo_artifact[16] = {
+        0xef, 0x44, 0xe7, 0xb4, 0xbf, 0x39, 0x45, 0xe4,
+        0xb3, 0x4b, 0x6e, 0x82, 0xee, 0x41, 0x76, 0x21
+    };
+    uint8_t foo_block_id[16] = {
+        0x96, 0x1e, 0xdd, 0x16, 0xbd, 0xa6, 0x4b, 0x9d,
+        0x93, 0xac, 0x40, 0xd4, 0x74, 0x85, 0x0d, 0xe5
+    };
+    uint8_t* foo_cert = nullptr;
+    size_t foo_cert_length = 0;
+    uint8_t* foo_block_cert = nullptr;
+    size_t foo_block_cert_length = 0;
+    string DB_PATH;
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_BLOCK_WRITE);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_TRANSACTION_READ);
+
+    /* explicitly grant the capability to create child contexts in the child
+     * context. */
+    BITCAP_SET_TRUE(child.childcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* create foo transaction. */
+    ASSERT_EQ(0,
+        create_dummy_transaction(
+            foo_key, foo_prev, foo_artifact, &foo_cert, &foo_cert_length));
+
+    /* submit foo transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo_key, foo_artifact, foo_cert,
+            foo_cert_length));
+
+    /* create foo block with invalid 0 block height. */
+    ASSERT_EQ(0,
+        create_dummy_block(
+            &builder_opts,
+            foo_block_id, vccert_certificate_type_uuid_root_block, 0,
+            &foo_block_cert, &foo_block_cert_length,
+            foo_cert, foo_cert_length,
+            nullptr));
+
+    /* make block fails due to invalid block height. */
+    ASSERT_EQ(9,
+        dataservice_block_make(
+            &child, nullptr, foo_block_id,
+            foo_block_cert, foo_block_cert_length));
+
+    /* clean up. */
+    dispose((disposable_t*)&ctx);
+    free(foo_cert);
+    free(foo_block_cert);
+}
+
+/**
+ * Test that appending a block with an invalid previous block ID will fail.
+ */
+TEST_F(dataservice_test, transaction_make_block_bad_prev_block_id)
+{
+    uint8_t foo_key[16] = {
+        0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
+        0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f
+    };
+    uint8_t foo_prev[16] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    uint8_t foo_artifact[16] = {
+        0xef, 0x44, 0xe7, 0xb4, 0xbf, 0x39, 0x45, 0xe4,
+        0xb3, 0x4b, 0x6e, 0x82, 0xee, 0x41, 0x76, 0x21
+    };
+    uint8_t foo_block_id[16] = {
+        0x96, 0x1e, 0xdd, 0x16, 0xbd, 0xa6, 0x4b, 0x9d,
+        0x93, 0xac, 0x40, 0xd4, 0x74, 0x85, 0x0d, 0xe5
+    };
+    uint8_t* foo_cert = nullptr;
+    size_t foo_cert_length = 0;
+    uint8_t* foo_block_cert = nullptr;
+    size_t foo_block_cert_length = 0;
+    string DB_PATH;
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_BLOCK_WRITE);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_TRANSACTION_READ);
+
+    /* explicitly grant the capability to create child contexts in the child
+     * context. */
+    BITCAP_SET_TRUE(child.childcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* create foo transaction. */
+    ASSERT_EQ(0,
+        create_dummy_transaction(
+            foo_key, foo_prev, foo_artifact, &foo_cert, &foo_cert_length));
+
+    /* submit foo transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo_key, foo_artifact, foo_cert,
+            foo_cert_length));
+
+    /* create foo block with invalid previous block ID. */
+    ASSERT_EQ(0,
+        create_dummy_block(
+            &builder_opts,
+            foo_block_id, zero_uuid, 1,
+            &foo_block_cert, &foo_block_cert_length,
+            foo_cert, foo_cert_length,
+            nullptr));
+
+    /* make block fails due to invalid previous block ID. */
+    ASSERT_EQ(10,
+        dataservice_block_make(
+            &child, nullptr, foo_block_id,
+            foo_block_cert, foo_block_cert_length));
+
+    /* clean up. */
+    dispose((disposable_t*)&ctx);
+    free(foo_cert);
+    free(foo_block_cert);
+}
+
+/**
+ * Test that appending a block with an invalid block ID will fail.
+ */
+TEST_F(dataservice_test, transaction_make_block_bad_block_id)
+{
+    uint8_t foo_key[16] = {
+        0x9b, 0xfe, 0xec, 0xc9, 0x28, 0x5d, 0x44, 0xba,
+        0x84, 0xdf, 0xd6, 0xfd, 0x3e, 0xe8, 0x79, 0x2f
+    };
+    uint8_t foo_prev[16] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    uint8_t foo_artifact[16] = {
+        0xef, 0x44, 0xe7, 0xb4, 0xbf, 0x39, 0x45, 0xe4,
+        0xb3, 0x4b, 0x6e, 0x82, 0xee, 0x41, 0x76, 0x21
+    };
+    uint8_t foo_block_id[16] = {
+        0x96, 0x1e, 0xdd, 0x16, 0xbd, 0xa6, 0x4b, 0x9d,
+        0x93, 0xac, 0x40, 0xd4, 0x74, 0x85, 0x0d, 0xe5
+    };
+    uint8_t* foo_cert = nullptr;
+    size_t foo_cert_length = 0;
+    uint8_t* foo_block_cert = nullptr;
+    size_t foo_block_cert_length = 0;
+    string DB_PATH;
+    dataservice_root_context_t ctx;
+    dataservice_child_context_t child;
+
+    /* create the directory for this test. */
+    ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
+
+    BITCAP(reducedcaps, DATASERVICE_API_CAP_BITS_MAX);
+
+    /* precondition: ctx is invalid. */
+    memset(&ctx, 0xFF, sizeof(ctx));
+    /* precondition: disposer is NULL. */
+    ctx.hdr.dispose = nullptr;
+
+    /* explicitly grant the capability to create this root context. */
+    BITCAP_SET_TRUE(ctx.apicaps, DATASERVICE_API_CAP_LL_ROOT_CONTEXT_CREATE);
+
+    /* initialize the root context given a test data directory. */
+    ASSERT_EQ(0, dataservice_root_context_init(&ctx, DB_PATH.c_str()));
+
+    /* create a reduced capabilities set for the child context. */
+    BITCAP_INIT_FALSE(reducedcaps);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_BLOCK_WRITE);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_TRANSACTION_READ);
+
+    /* explicitly grant the capability to create child contexts in the child
+     * context. */
+    BITCAP_SET_TRUE(child.childcaps,
+        DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
+
+    /* create a child context using this reduced capabilities set. */
+    ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* create foo transaction. */
+    ASSERT_EQ(0,
+        create_dummy_transaction(
+            foo_key, foo_prev, foo_artifact, &foo_cert, &foo_cert_length));
+
+    /* submit foo transaction. */
+    ASSERT_EQ(0,
+        dataservice_transaction_submit(
+            &child, nullptr, foo_key, foo_artifact, foo_cert,
+            foo_cert_length));
+
+    /* create foo block with invalid block ID (root block ID). */
+    ASSERT_EQ(0,
+        create_dummy_block(
+            &builder_opts,
+            vccert_certificate_type_uuid_root_block,
+            vccert_certificate_type_uuid_root_block, 1,
+            &foo_block_cert, &foo_block_cert_length,
+            foo_cert, foo_cert_length,
+            nullptr));
+
+    /* make block fails due to invalid block ID. */
+    ASSERT_EQ(11,
+        dataservice_block_make(
+            &child, nullptr, foo_block_id,
+            foo_block_cert, foo_block_cert_length));
+
+    /* clean up. */
+    dispose((disposable_t*)&ctx);
+    free(foo_cert);
+    free(foo_block_cert);
 }

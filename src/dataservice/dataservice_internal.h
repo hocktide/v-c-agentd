@@ -117,6 +117,26 @@ int dataservice_child_details_create(dataservice_instance_t* inst, int* offset);
 void dataservice_child_details_delete(dataservice_instance_t* inst, int offset);
 
 /**
+ * \brief Drop a given transaction by ID from the queue.
+ *
+ * This is the internal version of the function, which does not perform any
+ * capabilities checking.  As such, it SHOULD NOT BE USED OUTSIDE OF THE DATA
+ * SERVICE.
+ *
+ * \param ctx           The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation.
+ * \param txn_id        The transaction ID for this transaction.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success
+ *          - 1 if the transaction could not be found.
+ *          - non-zero on failure.
+ */
+int dataservice_transaction_drop_internal(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id);
+
+/**
  * \brief Decode and dispatch requests received by the data service.
  *
  * Returns 0 on success or non-fatal error.  If a non-zero error message is
@@ -343,6 +363,25 @@ int dataservice_decode_and_dispatch_transaction_get(
  * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
  */
 int dataservice_decode_and_dispatch_transaction_drop(
+    dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
+    size_t size);
+
+/**
+ * \brief Decode and dispatch a block make request.
+ *
+ * Returns 0 on success or non-fatal error.  If a non-zero error message is
+ * returned, then a fatal error has occurred that should not be recovered from.
+ * Any additional information on the socket is suspect.
+ *
+ * \param inst          The instance on which the dispatch occurs.
+ * \param sock          The socket on which the request was received and the
+ *                      response is to be written.
+ * \param req           The request to be decoded and dispatched.
+ * \param size          The size of the request.
+ *
+ * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ */
+int dataservice_decode_and_dispatch_block_make(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
     size_t size);
 

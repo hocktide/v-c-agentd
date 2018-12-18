@@ -293,6 +293,61 @@ int dataservice_transaction_drop(
     dataservice_child_context_t* child,
     dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id);
 
+/**
+ * \brief Make a block in the data service.
+ *
+ * The data service will scan through a completed block, finding the UUIDs of
+ * the transactions associated with the block.  For each UUID, it will
+ * automatically remove the transaction from the transaction queue, index the
+ * ID, and update its artifact.  This update is done under a single transaction,
+ * so all changes either succeed or fail atomically.
+ *
+ * \param ctx           The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation.
+ * \param block_id      The block ID for this block.
+ * \param block_data    The block data for this block.
+ * \param block_size    The size of this block.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success
+ *          - non-zero on failure.
+ */
+int dataservice_block_make(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx, const uint8_t* block_id,
+    const uint8_t* block_data, size_t block_size);
+
+/**
+ * \brief Get a block transaction fom the data service.
+ *
+ * \param child         The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation,
+ *                      or NULL.
+ * \param txn_id        The transaction ID for this operation.
+ * \param node          Optional transaction node details.  If NULL, this is
+ *                      ignored.  If not NULL, this structure is provided by the
+ *                      caller and is populated by the transaction node data on
+ *                      success.
+ * \param txn_bytes     Pointer to be updated with the transaction.
+ * \param txn_size      Pointer to size to be updated by the size of txn.
+ *
+ * Note that this transaction will be a COPY if dtxn_ctx is NULL, and a raw
+ * pointer to the database data if dtxn_ctx is not NULL which will be valid
+ * until the transaction pointed to by dtxn_ctx is committed or released.  If
+ * this is a COPY, then the caller is responsible for freeing the memory
+ * associated with this copy by calling free().  If this is NOT a COPY, then
+ * this memory will be released when dtxn_ctx is committed or released.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success.
+ *          - non-zero on failure.
+ */
+int dataservice_block_transaction_get(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id,
+    data_transaction_node_t* node,
+    uint8_t** txn_bytes, size_t* txn_size);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

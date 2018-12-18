@@ -456,6 +456,48 @@ int dataservice_api_sendreq_transaction_drop(
 int dataservice_api_recvresp_transaction_drop(
     ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status);
 
+/**
+ * \brief Make a block from transactions in the transaction queue.
+ *
+ * Caller submits a valid signed block containing the transactions to drop from
+ * the transaction queue.  If this call is successful, then this block and those
+ * transactions are canonized.
+ *
+ * \param sock              The socket on which this request is made.
+ * \param child             The child index used for this operation.
+ * \param txn_id            The block UUID bytes for this transaction.
+ * \param block_cert        Buffer holding the raw bytes for the block cert.
+ * \param block_cert_size   The size of this block cert.
+ *
+ * \returns 0 if the request was successfully written to the socket, and
+ * non-zero otherwise.
+ */
+int dataservice_api_sendreq_block_make(
+    ipc_socket_context_t* sock, uint32_t child, const uint8_t* block_id,
+    const void* block_cert, uint32_t block_cert_size);
+
+/**
+ * \brief Receive a response from the block make operation.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates success, and a non-zero status indicates failure.  On
+ * success, the data value and size are both updated to reflect the data read
+ * from the query.
+ *
+ * \returns 0 if the response was read successfully, IPC_ERROR_CODE_WOULD_BLOCK
+ * if the response cannot yet be read, and non-zero if the response could not be
+ * successfully read.
+ */
+int dataservice_api_recvresp_block_make(
+    ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status);
+
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

@@ -1,7 +1,7 @@
 /**
- * \file dataservice/dataservice_transaction_get_first.c
+ * \file dataservice/dataservice_block_transaction_get.c
  *
- * \brief Get the first transaction in the queue.
+ * \brief Get a transaction from the transaction database.
  *
  * \copyright 2018 Velo Payments, Inc.  All rights reserved.
  */
@@ -15,14 +15,17 @@
 #include "dataservice_internal.h"
 
 /**
- * \brief Get the first transaction in the queue.
+ * \brief Get a block transaction fom the data service.
  *
- * \param ctx           The child context for this operation.
- * \param dtxn_ctx      The dataservice transaction context for this operation.
+ * \param child         The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation,
+ *                      or NULL.
+ * \param txn_id        The transaction ID for this operation.
  * \param node          Optional transaction node details.  If NULL, this is
  *                      ignored.  If not NULL, this structure is provided by the
  *                      caller and is populated by the transaction node data on
- * \param txn_bytes     Pointer to be updated to the transaction.
+ *                      success.
+ * \param txn_bytes     Pointer to be updated with the transaction.
  * \param txn_size      Pointer to size to be updated by the size of txn.
  *
  * Note that this transaction will be a COPY if dtxn_ctx is NULL, and a raw
@@ -33,13 +36,12 @@
  * this memory will be released when dtxn_ctx is committed or released.
  *
  * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - 1 if the transaction queue is empty.
+ *          - 0 on success.
  *          - non-zero on failure.
  */
-int dataservice_transaction_get_first(
+int dataservice_block_transaction_get(
     dataservice_child_context_t* child,
-    dataservice_transaction_context_t* dtxn_ctx,
+    dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id,
     data_transaction_node_t* node,
     uint8_t** txn_bytes, size_t* txn_size)
 {
@@ -49,12 +51,13 @@ int dataservice_transaction_get_first(
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != child);
     MODEL_ASSERT(NULL != child->root);
+    MODEL_ASSERT(NULL != txn_id);
     MODEL_ASSERT(NULL != txn_bytes);
     MODEL_ASSERT(NULL != txn_size);
 
     /* verify that we are allowed to read the transaction queue. */
     if (!BITCAP_ISSET(child->childcaps,
-            DATASERVICE_API_CAP_APP_PQ_TRANSACTION_FIRST_READ))
+            DATASERVICE_API_CAP_APP_TRANSACTION_READ))
     {
         retval = 3;
         goto done;
@@ -66,67 +69,6 @@ int dataservice_transaction_get_first(
 
     /* set the parent transaction. */
     MDB_txn* parent = (NULL != dtxn_ctx) ? dtxn_ctx->txn : NULL;
-    int parent_flags = (NULL != parent) ? 0 : MDB_RDONLY;
-
-    /* create the read transaction for the root transaction node. */
-    if (0 != mdb_txn_begin(details->env, parent, parent_flags, &txn))
-    {
-        retval = 4;
-        txn = NULL;
-        goto done;
-    }
-
-    /* set up the key and val. */
-    uint8_t key[16];
-    memset(key, 0, sizeof(key));
-    MDB_val lkey;
-    lkey.mv_size = sizeof(key);
-    lkey.mv_data = key;
-    MDB_val lval;
-    memset(&lval, 0, sizeof(lval));
-
-    /* attempt to read the start of the queue from the database. */
-    retval = mdb_get(txn, details->pq_db, &lkey, &lval);
-    if (MDB_NOTFOUND == retval)
-    {
-        /* the value was not found. */
-        retval = 1;
-        goto maybe_transaction_abort;
-    }
-    else if (0 != retval)
-    {
-        /* some error has occurred. */
-        retval = 5;
-        goto maybe_transaction_abort;
-    }
-
-    /* verify that this transaction is valid. */
-    if (lval.mv_size < sizeof(data_transaction_node_t))
-    {
-        retval = 2;
-        goto maybe_transaction_abort;
-    }
-
-    /* get the node value. */
-    data_transaction_node_t* first_node =
-        (data_transaction_node_t*)lval.mv_data;
-
-    /* verify that this node's next points to a valid entry. */
-    uint8_t last[16];
-    memset(last, 0xFF, sizeof(last));
-    if (!memcmp(first_node->next, last, sizeof(last)))
-    {
-        /* this queue is empty. */
-        retval = 1;
-        goto maybe_transaction_abort;
-    }
-
-    /* copy the new key. */
-    memcpy(key, first_node->next, sizeof(key));
-
-    /* stop the transaction (free memory) */
-    mdb_txn_abort(txn);
-    txn = NULL;
 
     /* if the parent transaction is NULL, begin a transaction, or else use the
      * parent transaction. */
@@ -142,13 +84,15 @@ int dataservice_transaction_get_first(
     /* set the transaction to be used from now on. */
     MDB_txn* query_txn = (NULL != txn) ? txn : parent;
 
-    /* query the actual first entry. */
-    lkey.mv_size = sizeof(key);
-    lkey.mv_data = key;
+    /* query the entry. */
+    MDB_val lkey;
+    lkey.mv_size = 16;
+    lkey.mv_data = (uint8_t*)txn_id;
+    MDB_val lval;
     memset(&lval, 0, sizeof(lval));
 
     /* attempt to read this node from the database. */
-    retval = mdb_get(query_txn, details->pq_db, &lkey, &lval);
+    retval = mdb_get(query_txn, details->txn_db, &lkey, &lval);
     if (MDB_NOTFOUND == retval)
     {
         /* the value was not found. */
