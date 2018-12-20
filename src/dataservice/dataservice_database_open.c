@@ -56,8 +56,8 @@ int dataservice_database_open(
         goto close_environment;
     }
 
-    /* We need 4 database handles. */
-    if (0 != mdb_env_set_maxdbs(details->env, 4))
+    /* We need 5 database handles. */
+    if (0 != mdb_env_set_maxdbs(details->env, 5))
     {
         retval = 4;
         goto close_environment;
@@ -105,10 +105,17 @@ int dataservice_database_open(
         goto rollback_txn;
     }
 
+    /* open the artifact database. */
+    if (0 != mdb_dbi_open(txn, "artifact.db", MDB_CREATE, &details->artifact_db))
+    {
+        retval = 11;
+        goto rollback_txn;
+    }
+
     /* commit the open. */
     if (0 != mdb_txn_commit(txn))
     {
-        retval = 11;
+        retval = 12;
         goto rollback_txn;
     }
 

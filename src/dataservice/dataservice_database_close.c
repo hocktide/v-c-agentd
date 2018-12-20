@@ -37,6 +37,7 @@ void dataservice_database_close(
     mdb_dbi_close(details->env, details->block_db);
     mdb_dbi_close(details->env, details->txn_db);
     mdb_dbi_close(details->env, details->pq_db);
+    mdb_dbi_close(details->env, details->artifact_db);
 
     /* close database environment. */
     mdb_env_close(details->env);
