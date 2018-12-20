@@ -318,7 +318,7 @@ int dataservice_block_make(
     const uint8_t* block_data, size_t block_size);
 
 /**
- * \brief Get a block transaction fom the data service.
+ * \brief Get a block transaction from the data service.
  *
  * \param child         The child context for this operation.
  * \param dtxn_ctx      The dataservice transaction context for this operation,
@@ -347,6 +347,24 @@ int dataservice_block_transaction_get(
     dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id,
     data_transaction_node_t* node,
     uint8_t** txn_bytes, size_t* txn_size);
+
+/**
+ * \brief Get an artifact record from the data service.
+ *
+ * \param child         The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation,
+ *                      or NULL.
+ * \param artifact_id   The artifact ID for this operation.
+ * \param record        Artifact record structure to update via this call.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success.
+ *          - non-zero on failure.
+ */
+int dataservice_artifact_get(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx, const uint8_t* artifact_id,
+    data_artifact_record_t* record);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

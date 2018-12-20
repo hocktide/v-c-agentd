@@ -71,9 +71,13 @@ static int dataservice_block_make_update_prev(
 static int dataservice_block_make_update_end(
     MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id,
     const data_block_node_t* curr_end);
+static int dataservice_block_make_update_artifact(
+    MDB_dbi artifact_db, MDB_txn* txn, const uint8_t* artifact_id,
+    const uint8_t* transaction_id, uint64_t height, uint32_t state);
 static int dataservice_block_make_process_child(
     dataservice_child_context_t* child,
-    vccert_parser_options_t* parser_options, MDB_dbi txn_db, MDB_txn* txn,
+    vccert_parser_options_t* parser_options, MDB_dbi txn_db,
+    MDB_dbi artifact_db, MDB_txn* txn, uint64_t height,
     const uint8_t* block_id, const uint8_t* txn_cert, size_t txn_cert_size);
 static int dataservice_block_make_update_prev_txn(
     MDB_dbi txn_db, MDB_txn* txn, const uint8_t* txn_id,
@@ -247,7 +251,7 @@ int dataservice_block_make(
     while (NULL != wrapped_transaction_raw)
     {
         /* process this transaction. */
-        if (0 != dataservice_block_make_process_child(child, &parser_options, details->txn_db, txn, block_id, wrapped_transaction_raw, wrapped_transaction_raw_size))
+        if (0 != dataservice_block_make_process_child(child, &parser_options, details->txn_db, details->artifact_db, txn, expected_block_height, block_id, wrapped_transaction_raw, wrapped_transaction_raw_size))
         {
             retval = 17;
             goto maybe_transaction_abort;
@@ -549,7 +553,10 @@ static int dataservice_block_make_update_end(
  * \param child             The child context for the data service.
  * \param parser_options    The options for parsing certificates.
  * \param txn_db            The transaction database to update.
+ * \param artifact_db       The artifact database to update.
  * \param txn               The transaction under which updates are done.
+ * \param height            The height of the block to which this transaction
+ *                          belongs.
  * \param block_id          The block identifier to which this transaction
  *                          belongs.
  * \param txn_cert          The certificate for this transaction.
@@ -559,7 +566,8 @@ static int dataservice_block_make_update_end(
  */
 static int dataservice_block_make_process_child(
     dataservice_child_context_t* child,
-    vccert_parser_options_t* parser_options, MDB_dbi txn_db, MDB_txn* txn,
+    vccert_parser_options_t* parser_options, MDB_dbi txn_db,
+    MDB_dbi artifact_db, MDB_txn* txn, uint64_t height,
     const uint8_t* block_id, const uint8_t* txn_cert, size_t txn_cert_size)
 {
     int retval = 0;
@@ -602,6 +610,20 @@ static int dataservice_block_make_process_child(
         retval = 4;
         goto dispose_parser;
     }
+
+    /* find the state field. */
+    const uint8_t* state_raw = NULL;
+    size_t state_raw_size = 0;
+    if (VCCERT_STATUS_SUCCESS != vccert_parser_find_short(&parser, VCCERT_FIELD_TYPE_NEW_ARTIFACT_STATE, &state_raw, &state_raw_size) || sizeof(uint32_t) != state_raw_size)
+    {
+        retval = 5;
+        goto dispose_parser;
+    }
+
+    /* decode the state field. */
+    uint32_t net_state;
+    memcpy(&net_state, state_raw, sizeof(uint32_t));
+    uint32_t state = ntohl(net_state);
 
     /* allocate memory for the transaction node. */
     size_t txn_rec_size = sizeof(data_transaction_node_t) + txn_cert_size;
@@ -658,7 +680,12 @@ static int dataservice_block_make_process_child(
         }
     }
 
-    /* TODO - insert/update artifact. */
+    /* insert / update the artifact. */
+    if (0 != dataservice_block_make_update_artifact(artifact_db, txn, artifact_id, transaction_id, height, state))
+    {
+        retval = 9;
+        goto free_data;
+    }
 
     /* success. */
     retval = 0;
@@ -669,6 +696,101 @@ free_data:
 
 dispose_parser:
     dispose((disposable_t*)&parser);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Update the artifact database with the latest transaction for this
+ * artifact.
+ *
+ * \param artifact_db       The artifact database to update.
+ * \param txn               The transaction under which updates are done.
+ * \param artifact_id       The artifact id to update.
+ * \param transaction_id    The latest transaction changing this artifact.
+ * \param height            The height of the block to which this transaction
+ *                          belongs.
+ * \param state             The new state for this artifact.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+static int dataservice_block_make_update_artifact(
+    MDB_dbi artifact_db, MDB_txn* txn, const uint8_t* artifact_id,
+    const uint8_t* transaction_id, uint64_t height, uint32_t state)
+{
+    data_artifact_record_t record;
+    int retval = 0;
+
+    MODEL_ASSERT(NULL != txn);
+    MODEL_ASSERT(NULL != artifact_id);
+    MODEL_ASSERT(NULL != transaction_id);
+
+    /* query for the artifact. */
+    MDB_val lkey;
+    lkey.mv_size = 16;
+    lkey.mv_data = (uint8_t*)artifact_id;
+    MDB_val lval;
+    memset(&lval, 0, sizeof(lval));
+    retval = mdb_get(txn, artifact_db, &lkey, &lval);
+
+    /* if not found, insert an artifact record. */
+    if (MDB_NOTFOUND == retval)
+    {
+        memset(&record, 0, sizeof(record));
+        memcpy(record.key, artifact_id, sizeof(record.key));
+        memcpy(record.txn_first, transaction_id, sizeof(record.txn_first));
+        memcpy(record.txn_latest, transaction_id, sizeof(record.txn_latest));
+        record.net_height_first = htonll(height);
+        record.net_height_latest = htonll(height);
+        record.net_state_latest = htonl(state);
+
+        /* insert this record. */
+        lkey.mv_size = 16;
+        lkey.mv_data = record.key;
+        lval.mv_size = sizeof(record);
+        lval.mv_data = &record;
+        if (0 != mdb_put(txn, artifact_db, &lkey, &lval, MDB_NOOVERWRITE))
+        {
+            retval = 1;
+            goto done;
+        }
+
+        /* success. */
+        retval = 0;
+    }
+    /* if found, update the artifact record. */
+    else if (0 == retval && sizeof(record) == lval.mv_size)
+    {
+        memcpy(&record, lval.mv_data, sizeof(record));
+        memcpy(record.txn_latest, transaction_id, sizeof(record.txn_latest));
+        record.net_height_latest = htonll(height);
+        record.net_state_latest = htonl(state);
+
+        /* update this record. */
+        lkey.mv_size = 16;
+        lkey.mv_data = record.key;
+        lval.mv_size = sizeof(record);
+        lval.mv_data = &record;
+        if (0 != mdb_put(txn, artifact_db, &lkey, &lval, 0))
+        {
+            retval = 2;
+            goto done;
+        }
+
+        /* success. */
+        retval = 0;
+    }
+    /* found, but the size is wrong. */
+    else if (0 == retval && sizeof(record) != lval.mv_size)
+    {
+        retval = 3;
+    }
+    /* an error occurred. */
+    else
+    {
+        retval = 4;
+    }
 
 done:
     return retval;

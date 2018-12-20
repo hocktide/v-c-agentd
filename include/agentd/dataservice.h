@@ -124,6 +124,11 @@ enum dataservice_api_cap_enum
     DATASERVICE_API_CAP_APP_PQ_TRANSACTION_DROP,
 
     /**
+     * \brief Capability to read an artifact by ID.
+     */
+    DATASERVICE_API_CAP_APP_ARTIFACT_READ,
+
+    /**
      * \brief Capability to write a block to the block table.
      *
      * This transaction automatically populates the transaction table with
@@ -270,6 +275,11 @@ enum dataservice_api_method_enum
      * \brief Drop a transaction from the process queue by id.
      */
     DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_DROP,
+
+    /**
+     * \brief Read an artifact by ID.
+     */
+    DATASERVICE_API_METHOD_APP_ARTIFACT_READ,
 
     /**
      * \brief Write a block to the block table.

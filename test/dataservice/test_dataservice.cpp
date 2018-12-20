@@ -2783,6 +2783,7 @@ TEST_F(dataservice_test, transaction_make_block_simple)
     dataservice_root_context_t ctx;
     dataservice_child_context_t child;
     data_transaction_node_t node;
+    data_artifact_record_t foo_artifact_record;
     uint8_t* txn_bytes;
     size_t txn_size;
 
@@ -2812,6 +2813,8 @@ TEST_F(dataservice_test, transaction_make_block_simple)
         DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
     BITCAP_SET_TRUE(reducedcaps,
         DATASERVICE_API_CAP_APP_TRANSACTION_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_ARTIFACT_READ);
 
     /* explicitly grant the capability to create child contexts in the child
      * context. */
@@ -2820,6 +2823,12 @@ TEST_F(dataservice_test, transaction_make_block_simple)
 
     /* create a child context using this reduced capabilities set. */
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
+
+    /* first, verify that our artifact does not exist. */
+    /* getting the artifact record by artifact id should return not found. */
+    ASSERT_EQ(1,
+        dataservice_artifact_get(
+            &child, nullptr, foo_artifact, &foo_artifact_record));
 
     /* create foo transaction. */
     ASSERT_EQ(0,
@@ -2868,6 +2877,21 @@ TEST_F(dataservice_test, transaction_make_block_simple)
         dataservice_block_transaction_get(
             &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
     free(txn_bytes);
+
+    /* getting the artifact record by artifact id should return success. */
+    ASSERT_EQ(0,
+        dataservice_artifact_get(
+            &child, nullptr, foo_artifact, &foo_artifact_record));
+    /* the key should match the artifact ID. */
+    ASSERT_EQ(0, memcmp(foo_artifact_record.key, foo_artifact, 16));
+    /* the first transaction should be the foo transaction. */
+    ASSERT_EQ(0, memcmp(foo_artifact_record.txn_first, foo_key, 16));
+    /* the latest transaction should be the foo transaction. */
+    ASSERT_EQ(0, memcmp(foo_artifact_record.txn_latest, foo_key, 16));
+    /* the first height for this artifact should be 1. */
+    ASSERT_EQ(1U, ntohll(foo_artifact_record.net_height_first));
+    /* the latest height for this artifact should be 1. */
+    ASSERT_EQ(1U, ntohll(foo_artifact_record.net_height_latest));
 
     /* clean up. */
     dispose((disposable_t*)&ctx);

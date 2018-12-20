@@ -55,6 +55,45 @@ typedef struct data_transaction_node
 } data_transaction_node_t;
 
 /**
+ * \brief An artifact record is stores data specific to a transaction in the
+ * blockchain database.
+ */
+typedef struct data_artifact_record
+{
+    /**
+     * \brief The key for this artifact, i.e. its artifact UUID.
+     */
+    uint8_t key[16];
+
+    /**
+     * \brief The first transaction ID describing this artifact.
+     */
+    uint8_t txn_first[16];
+
+    /**
+     * \brief The latest transaction ID describing this artifact.
+     */
+    uint8_t txn_latest[16];
+
+    /**
+     * \brief The block height when this artifact was created, in network order.
+     */
+    uint64_t net_height_first;
+
+    /**
+     * \brief The latest height in which an artifact was updated, in network
+     * order.
+     */
+    uint64_t net_height_latest;
+
+    /**
+     * \brief The latest state of the artifact, in network order.
+     */
+    uint32_t net_state_latest;
+
+} data_artifact_record_t;
+
+/**
  * \brief A block node is a linked list node backed by the database, which is
  * used to describe a block in the blockchain.
  */

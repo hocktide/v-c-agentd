@@ -226,6 +226,8 @@ int dataservice_isolation_test::create_dummy_transaction(
     const uint8_t* artifact_id, uint8_t** cert, size_t* cert_length)
 {
     vccert_builder_context_t builder;
+    uint32_t prev_state = 0xFFFFFFFF;
+    uint32_t new_state = 0x00000000;
     int retval = 0;
 
     /* create the builder. */
@@ -291,12 +293,30 @@ int dataservice_isolation_test::create_dummy_transaction(
         goto dispose_builder;
     }
 
+    /* add the previous state. */
+    retval = vccert_builder_add_short_uint32(
+        &builder, VCCERT_FIELD_TYPE_PREVIOUS_ARTIFACT_STATE, prev_state);
+    if (VCCERT_STATUS_SUCCESS != retval)
+    {
+        retval = 8;
+        goto dispose_builder;
+    }
+
+    /* add the new state. */
+    retval = vccert_builder_add_short_uint32(
+        &builder, VCCERT_FIELD_TYPE_NEW_ARTIFACT_STATE, new_state);
+    if (VCCERT_STATUS_SUCCESS != retval)
+    {
+        retval = 9;
+        goto dispose_builder;
+    }
+
     /* add the artifact id for this dummy transaction. */
     retval = vccert_builder_add_short_UUID(
         &builder, VCCERT_FIELD_TYPE_ARTIFACT_ID, artifact_id);
     if (VCCERT_STATUS_SUCCESS != retval)
     {
-        retval = 8;
+        retval = 10;
         goto dispose_builder;
     }
 
@@ -309,7 +329,7 @@ int dataservice_isolation_test::create_dummy_transaction(
     *cert = (uint8_t*)malloc(certsize);
     if (NULL == *cert)
     {
-        retval = 9;
+        retval = 11;
         goto dispose_builder;
     }
 
