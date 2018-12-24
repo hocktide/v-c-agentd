@@ -2784,8 +2784,11 @@ TEST_F(dataservice_test, transaction_make_block_simple)
     dataservice_child_context_t child;
     data_transaction_node_t node;
     data_artifact_record_t foo_artifact_record;
+    data_block_node_t block_node;
     uint8_t* txn_bytes;
     size_t txn_size;
+    uint8_t* block_txn_bytes;
+    size_t block_txn_size;
 
     /* create the directory for this test. */
     ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
@@ -2808,6 +2811,8 @@ TEST_F(dataservice_test, transaction_make_block_simple)
     BITCAP_SET_TRUE(reducedcaps,
         DATASERVICE_API_CAP_APP_BLOCK_WRITE);
     BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_BLOCK_READ);
+    BITCAP_SET_TRUE(reducedcaps,
         DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
     BITCAP_SET_TRUE(reducedcaps,
         DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
@@ -2824,7 +2829,13 @@ TEST_F(dataservice_test, transaction_make_block_simple)
     /* create a child context using this reduced capabilities set. */
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
 
-    /* first, verify that our artifact does not exist. */
+    /* verify that our block does not exist. */
+    ASSERT_EQ(1,
+        dataservice_block_get(
+            &child, nullptr, foo_block_id, &block_node,
+            &block_txn_bytes, &block_txn_size));
+
+    /* verify that our artifact does not exist. */
     /* getting the artifact record by artifact id should return not found. */
     ASSERT_EQ(1,
         dataservice_artifact_get(
@@ -2877,6 +2888,16 @@ TEST_F(dataservice_test, transaction_make_block_simple)
         dataservice_block_transaction_get(
             &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
     free(txn_bytes);
+
+    /* getting the block record by block id should return success. */
+    ASSERT_EQ(0,
+        dataservice_block_get(
+            &child, nullptr, foo_block_id, &block_node,
+            &block_txn_bytes, &block_txn_size));
+    /* the key should match our block id. */
+    ASSERT_EQ(0, memcmp(block_node.key, foo_block_id, 16));
+    ASSERT_EQ(0, memcmp(block_node.first_transaction_id, foo_key, 16));
+    ASSERT_EQ(1U, ntohll(block_node.net_block_height));
 
     /* getting the artifact record by artifact id should return success. */
     ASSERT_EQ(0,

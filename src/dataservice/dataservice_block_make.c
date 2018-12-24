@@ -74,6 +74,10 @@ static int dataservice_block_make_update_end(
 static int dataservice_block_make_update_artifact(
     MDB_dbi artifact_db, MDB_txn* txn, const uint8_t* artifact_id,
     const uint8_t* transaction_id, uint64_t height, uint32_t state);
+static int dataservice_make_block_get_first_transaction_id(
+    vccert_parser_options_t* parser_options,
+    const uint8_t* txn_cert, size_t txn_cert_size,
+    uint8_t* first_child_txn_id);
 static int dataservice_block_make_process_child(
     dataservice_child_context_t* child,
     vccert_parser_options_t* parser_options, MDB_dbi txn_db,
@@ -84,8 +88,8 @@ static int dataservice_block_make_update_prev_txn(
     const uint8_t* next_txn_id);
 static int dataservice_make_block_insert_block(
     MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id,
-    const uint8_t* block_prev_id, uint64_t block_height,
-    const uint8_t* block_data, size_t block_size);
+    const uint8_t* block_prev_id, const uint8_t* first_child_txn_id,
+    uint64_t block_height, const uint8_t* block_data, size_t block_size);
 
 /**
  * \brief Make a block in the data service.
@@ -203,10 +207,29 @@ int dataservice_block_make(
         goto maybe_transaction_abort;
     }
 
-    /* insert block into the database. */
-    if (0 != dataservice_make_block_insert_block(details->block_db, txn, block_id, block_prev_uuid, expected_block_height, block_data, block_size))
+    /* get the first wrapped transaction. */
+    const uint8_t* wrapped_transaction_raw = NULL;
+    size_t wrapped_transaction_raw_size;
+    if (VCCERT_STATUS_SUCCESS != vccert_parser_find_short(&parser, VCCERT_FIELD_TYPE_WRAPPED_TRANSACTION_TUPLE, &wrapped_transaction_raw, &wrapped_transaction_raw_size))
     {
+        /* there must be at least one transaction. */
         retval = 12;
+        goto maybe_transaction_abort;
+    }
+
+    /* get the first child transaction id. */
+    uint8_t first_child_txn_id[16];
+    if (0 != dataservice_make_block_get_first_transaction_id(&parser_options, wrapped_transaction_raw, wrapped_transaction_raw_size, first_child_txn_id))
+    {
+        /* we need the first transaction id. */
+        retval = 13;
+        goto maybe_transaction_abort;
+    }
+
+    /* insert block into the database. */
+    if (0 != dataservice_make_block_insert_block(details->block_db, txn, block_id, block_prev_uuid, first_child_txn_id, expected_block_height, block_data, block_size))
+    {
+        retval = 14;
         goto maybe_transaction_abort;
     }
 
@@ -215,7 +238,7 @@ int dataservice_block_make(
     {
         if (0 != dataservice_block_make_create_queue(details->block_db, txn, block_id))
         {
-            retval = 13;
+            retval = 15;
             goto maybe_transaction_abort;
         }
     }
@@ -225,26 +248,16 @@ int dataservice_block_make(
         /* update the previous block data. */
         if (0 != dataservice_block_make_update_prev(details->block_db, txn, block_id, end_node->prev))
         {
-            retval = 14;
+            retval = 16;
             goto maybe_transaction_abort;
         }
 
         /* update the end node's prev. */
         if (0 != dataservice_block_make_update_end(details->block_db, txn, block_id, end_node))
         {
-            retval = 15;
+            retval = 17;
             goto maybe_transaction_abort;
         }
-    }
-
-    /* get the first wrapped transaction. */
-    const uint8_t* wrapped_transaction_raw = NULL;
-    size_t wrapped_transaction_raw_size;
-    if (VCCERT_STATUS_SUCCESS != vccert_parser_find_short(&parser, VCCERT_FIELD_TYPE_WRAPPED_TRANSACTION_TUPLE, &wrapped_transaction_raw, &wrapped_transaction_raw_size))
-    {
-        /* there must be at least one transaction. */
-        retval = 16;
-        goto maybe_transaction_abort;
     }
 
     /* iterate through each wrapped transaction. */
@@ -253,7 +266,7 @@ int dataservice_block_make(
         /* process this transaction. */
         if (0 != dataservice_block_make_process_child(child, &parser_options, details->txn_db, details->artifact_db, txn, expected_block_height, block_id, wrapped_transaction_raw, wrapped_transaction_raw_size))
         {
-            retval = 17;
+            retval = 18;
             goto maybe_transaction_abort;
         }
 
@@ -545,6 +558,57 @@ static int dataservice_block_make_update_end(
 
     /* success. */
     return 0;
+}
+
+/**
+ * \brief Get the first transaction id from the first child transaction.
+ *
+ * \param parser_options    The options for parsing certificates.
+ * \param txn_cert          The certificate for this transaction.
+ * \param txn_cert_size     The size of the transaction certificate.
+ * \param first_child_txn_id The first child transaction id to update.
+ *
+ * \returns 0 on success and non-zero on failure.
+ */
+static int dataservice_make_block_get_first_transaction_id(
+    vccert_parser_options_t* parser_options,
+    const uint8_t* txn_cert, size_t txn_cert_size,
+    uint8_t* first_child_txn_id)
+{
+    int retval = 0;
+    vccert_parser_context_t parser;
+    MODEL_ASSERT(NULL != parser_options);
+    MODEL_ASSERT(NULL != txn_cert);
+    MODEL_ASSERT(txn_cert_size > 0);
+    MODEL_ASSERT(NULL != first_child_txn_id);
+
+    /* create a parser for parsing this transaction. */
+    if (VCCERT_STATUS_SUCCESS != vccert_parser_init(parser_options, &parser, txn_cert, txn_cert_size))
+    {
+        retval = 1;
+        goto done;
+    }
+
+    /* get the transaction id. */
+    const uint8_t* transaction_id = NULL;
+    size_t transaction_id_size = 0U;
+    if (VCCERT_STATUS_SUCCESS != vccert_parser_find_short(&parser, VCCERT_FIELD_TYPE_CERTIFICATE_ID, &transaction_id, &transaction_id_size) || 16 != transaction_id_size)
+    {
+        retval = 2;
+        goto dispose_parser;
+    }
+
+    /* copy the transaction id. */
+    memcpy(first_child_txn_id, transaction_id, 16);
+
+    /* success. */
+    retval = 0;
+
+dispose_parser:
+    dispose((disposable_t*)&parser);
+
+done:
+    return retval;
 }
 
 /**
@@ -1020,6 +1084,7 @@ static int query_end_node(
  *                          performed.
  * \param block_id          The block id to insert.
  * \param block_prev_id     The previous block id in the blockchain.
+ * \param first_child_txn_id The first child transaction ID.
  * \param block_height      The height of the blockchain with this block.
  * \param block_data        The raw certificate data for this block.
  * \param block_size        The size of this block certificate.
@@ -1028,8 +1093,8 @@ static int query_end_node(
  */
 static int dataservice_make_block_insert_block(
     MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id,
-    const uint8_t* block_prev_id, uint64_t block_height,
-    const uint8_t* block_data, size_t block_size)
+    const uint8_t* block_prev_id, const uint8_t* first_child_txn_id,
+    uint64_t block_height, const uint8_t* block_data, size_t block_size)
 {
     int retval = 0;
 
@@ -1052,7 +1117,8 @@ static int dataservice_make_block_insert_block(
     memcpy(blocknode->key, block_id, sizeof(blocknode->key));
     memset(blocknode->next, 0xFF, sizeof(blocknode->next));
     memcpy(blocknode->prev, block_prev_id, sizeof(blocknode->prev));
-    /* TODO - fill out first and last txn IDs for iterating transactions in
+    memcpy(blocknode->first_transaction_id, first_child_txn_id, 16);
+    /* TODO - fill out last txn ID for iterating transactions in
        block. */
     blocknode->net_block_height = htonll(block_height);
     blocknode->net_block_cert_size = htonll(block_size);
