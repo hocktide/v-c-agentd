@@ -386,6 +386,25 @@ int dataservice_decode_and_dispatch_block_make(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
     size_t size);
 
+/**
+ * \brief Decode and dispatch a block read request.
+ *
+ * Returns 0 on success or non-fatal error.  If a non-zero error message is
+ * returned, then a fatal error has occurred that should not be recovered from.
+ * Any additional information on the socket is suspect.
+ *
+ * \param inst          The instance on which the dispatch occurs.
+ * \param sock          The socket on which the request was received and the
+ *                      response is to be written.
+ * \param req           The request to be decoded and dispatched.
+ * \param size          The size of the request.
+ *
+ * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ */
+int dataservice_decode_and_dispatch_block_read(
+    dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
+    size_t size);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

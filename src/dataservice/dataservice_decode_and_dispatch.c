@@ -117,6 +117,11 @@ int dataservice_decode_and_dispatch(
             return dataservice_decode_and_dispatch_block_make(
                 inst, sock, breq, payload_size);
 
+        /* handle block read. */
+        case DATASERVICE_API_METHOD_APP_BLOCK_READ:
+            return dataservice_decode_and_dispatch_block_read(
+                inst, sock, breq, payload_size);
+
         /* unknown method.  Return an error. */
         default:
             /* make sure to write an error to the socket as well. */

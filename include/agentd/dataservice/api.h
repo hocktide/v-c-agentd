@@ -497,6 +497,52 @@ int dataservice_api_sendreq_block_make(
 int dataservice_api_recvresp_block_make(
     ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status);
 
+/**
+ * \brief Get a block from the dataservice by ID.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param child         The child index used for the query.
+ * \param block_id      The block UUID of the block to retrieve.
+ *
+ * \returns 0 if the request was successfully written to the socket, and
+ * non-zero otherwise.
+ */
+int dataservice_api_sendreq_block_get(
+    ipc_socket_context_t* sock, uint32_t child, const uint8_t* block_id);
+
+/**
+ * \brief Receive a response from the get block query.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ * \param node          Pointer to the node to be updated with data from this
+ *                      node in the block database.
+ * \param data          This pointer is updated with the data received from the
+ *                      response.  The caller owns this buffer and it must be
+ *                      freed when no longer needed.
+ * \param data_size     Pointer to the size of the data buffer.  On successful
+ *                      execution, this size is updated with the size of the
+ *                      data allocated for this buffer.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates success, and a non-zero status indicates failure.  On
+ * success, the data pointer and size are both updated to reflect the data read
+ * from the query.  This is a dynamically allocated buffer that must be freed by
+ * the caller.
+ *
+ * A status code of 1 represents a "not found" error code.  In future versions
+ * of this API, this will be updated to a enumerated value.
+ *
+ * \returns 0 if the response was read successfully, IPC_ERROR_CODE_WOULD_BLOCK
+ * if the response cannot yet be read, and non-zero if the response could not be
+ * successfully read.
+ */
+int dataservice_api_recvresp_block_get(
+    ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status,
+    data_block_node_t* node, void** data, size_t* data_size);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
