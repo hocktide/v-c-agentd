@@ -457,6 +457,44 @@ int dataservice_api_recvresp_transaction_drop(
     ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status);
 
 /**
+ * \brief Get an artifact from the artifact database by ID.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param child         The child index used for the query.
+ * \param artifact_id   The artifact UUID of the artifact to retrieve.
+ *
+ * \returns 0 if the request was successfully written to the socket, and
+ * non-zero otherwise.
+ */
+int dataservice_api_sendreq_artifact_get(
+    ipc_socket_context_t* sock, uint32_t child, const uint8_t* artifact_id);
+
+/**
+ * \brief Receive a response from the get artifact query.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ * \param record        Pointer to the record to be updated with data from this
+ *                      artifact record.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates success, and a non-zero status indicates failure.
+ *
+ * A status code of 1 represents a "not found" error code.  In future versions
+ * of this API, this will be updated to a enumerated value.
+ *
+ * \returns 0 if the response was read successfully, IPC_ERROR_CODE_WOULD_BLOCK
+ * if the response cannot yet be read, and non-zero if the response could not be
+ * successfully read.
+ */
+int dataservice_api_recvresp_artifact_get(
+    ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status,
+    data_artifact_record_t* record);
+
+/**
  * \brief Make a block from transactions in the transaction queue.
  *
  * Caller submits a valid signed block containing the transactions to drop from

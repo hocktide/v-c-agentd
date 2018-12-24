@@ -112,6 +112,11 @@ int dataservice_decode_and_dispatch(
             return dataservice_decode_and_dispatch_transaction_drop(
                 inst, sock, breq, payload_size);
 
+        /* handle artifact read. */
+        case DATASERVICE_API_METHOD_APP_ARTIFACT_READ:
+            return dataservice_decode_and_dispatch_artifact_read(
+                inst, sock, breq, payload_size);
+
         /* handle block make. */
         case DATASERVICE_API_METHOD_APP_BLOCK_WRITE:
             return dataservice_decode_and_dispatch_block_make(

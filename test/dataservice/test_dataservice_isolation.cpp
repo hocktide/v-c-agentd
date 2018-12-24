@@ -1589,6 +1589,7 @@ TEST_F(dataservice_isolation_test, make_block_simple)
     uint8_t* foo_block_cert = nullptr;
     size_t foo_block_cert_length = 0;
     data_transaction_node_t node;
+    data_artifact_record_t artifact_rec;
     data_block_node_t block_node;
     const uint8_t foo_block_id[16] = {
         0x5f, 0x5f, 0x5b, 0xea, 0xdb, 0xcd, 0x4c, 0xff,
@@ -1709,6 +1710,43 @@ TEST_F(dataservice_isolation_test, make_block_simple)
     ASSERT_EQ(0U, status);
     ASSERT_EQ(foo_block_cert_length, block_data_size);
     ASSERT_EQ(0, memcmp(foo_block_id, block_node.key, 16));
+
+    /* query the artifact. */
+    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_artifact_get(
+                        &nonblockdatasock, &offset, &status, &artifact_rec);
+
+                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_artifact_get(
+                        &nonblockdatasock, child_context, foo_artifact);
+            }
+        });
+
+    /* verify that everything ran correctly. */
+    EXPECT_EQ(0, sendreq_status);
+    EXPECT_EQ(0, recvresp_status);
+    ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
+    ASSERT_EQ(0U, status);
+    ASSERT_EQ(0, memcmp(foo_artifact, artifact_rec.key, 16));
+    ASSERT_EQ(0, memcmp(foo_key, artifact_rec.txn_first, 16));
+    ASSERT_EQ(0, memcmp(foo_key, artifact_rec.txn_latest, 16));
 
     /* clean up. */
     free(block_data);
