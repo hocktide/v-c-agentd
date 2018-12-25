@@ -56,8 +56,8 @@ int dataservice_database_open(
         goto close_environment;
     }
 
-    /* We need 5 database handles. */
-    if (0 != mdb_env_set_maxdbs(details->env, 5))
+    /* We need 6 database handles. */
+    if (0 != mdb_env_set_maxdbs(details->env, 6))
     {
         retval = 4;
         goto close_environment;
@@ -112,10 +112,17 @@ int dataservice_database_open(
         goto rollback_txn;
     }
 
+    /* open the block height database. */
+    if (0 != mdb_dbi_open(txn, "height.db", MDB_CREATE, &details->height_db))
+    {
+        retval = 12;
+        goto rollback_txn;
+    }
+
     /* commit the open. */
     if (0 != mdb_txn_commit(txn))
     {
-        retval = 12;
+        retval = 13;
         goto rollback_txn;
     }
 

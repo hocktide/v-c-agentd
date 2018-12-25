@@ -2789,6 +2789,7 @@ TEST_F(dataservice_test, transaction_make_block_simple)
     size_t txn_size;
     uint8_t* block_txn_bytes;
     size_t block_txn_size;
+    uint8_t block_id_for_height_1[16];
 
     /* create the directory for this test. */
     ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
@@ -2820,6 +2821,8 @@ TEST_F(dataservice_test, transaction_make_block_simple)
         DATASERVICE_API_CAP_APP_TRANSACTION_READ);
     BITCAP_SET_TRUE(reducedcaps,
         DATASERVICE_API_CAP_APP_ARTIFACT_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_BLOCK_ID_BY_HEIGHT_READ);
 
     /* explicitly grant the capability to create child contexts in the child
      * context. */
@@ -2834,6 +2837,11 @@ TEST_F(dataservice_test, transaction_make_block_simple)
         dataservice_block_get(
             &child, nullptr, foo_block_id, &block_node,
             &block_txn_bytes, &block_txn_size));
+
+    /* verify that a block ID does not exist for block height 1. */
+    ASSERT_EQ(1,
+        dataservice_block_id_by_height_get(
+            &child, nullptr, 1, block_id_for_height_1));
 
     /* verify that our artifact does not exist. */
     /* getting the artifact record by artifact id should return not found. */
@@ -2898,6 +2906,13 @@ TEST_F(dataservice_test, transaction_make_block_simple)
     ASSERT_EQ(0, memcmp(block_node.key, foo_block_id, 16));
     ASSERT_EQ(0, memcmp(block_node.first_transaction_id, foo_key, 16));
     ASSERT_EQ(1U, ntohll(block_node.net_block_height));
+
+    /* verify that a block ID exists for block height 1. */
+    ASSERT_EQ(0,
+        dataservice_block_id_by_height_get(
+            &child, nullptr, 1, block_id_for_height_1));
+    /* this block ID matches our block ID. */
+    EXPECT_EQ(0, memcmp(foo_block_id, block_id_for_height_1, 16));
 
     /* getting the artifact record by artifact id should return success. */
     ASSERT_EQ(0,

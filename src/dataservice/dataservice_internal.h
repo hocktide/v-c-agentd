@@ -31,6 +31,7 @@ typedef struct dataservice_database_details
     MDB_dbi txn_db;
     MDB_dbi pq_db;
     MDB_dbi artifact_db;
+    MDB_dbi height_db;
 } dataservice_database_details_t;
 
 /**

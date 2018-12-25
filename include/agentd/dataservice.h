@@ -138,6 +138,11 @@ enum dataservice_api_cap_enum
     DATASERVICE_API_CAP_APP_BLOCK_WRITE,
 
     /**
+     * \brief Capability to query a block ID by block height.
+     */
+    DATASERVICE_API_CAP_APP_BLOCK_ID_BY_HEIGHT_READ,
+
+    /**
      * \brief The number of capabilities bits needed for this API.
      *
      * Must be immediately after the last enumerated bit value.
@@ -289,6 +294,11 @@ enum dataservice_api_method_enum
      * matching transactions.
      */
     DATASERVICE_API_METHOD_APP_BLOCK_WRITE,
+
+    /**
+     * \brief Query a block ID by block height.
+     */
+    DATASERVICE_API_METHOD_APP_BLOCK_ID_BY_HEIGHT_READ,
 
     /**
      * \brief The number of methods in this API.

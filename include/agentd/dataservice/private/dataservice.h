@@ -347,6 +347,24 @@ int dataservice_block_get(
     uint8_t** block_bytes, size_t* block_size);
 
 /**
+ * \brief Get the block ID associated with the given block height.
+ *
+ * \param child         The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation,
+ *                      or NULL.
+ * \param height        The block height for this query.
+ * \param block_id      Pointer to the block UUID (16 bytes) to set.
+ *
+ * \returns A status code indicating success or failure.
+ *          - 0 on success.
+ *          - non-zero on failure.
+ */
+int dataservice_block_id_by_height_get(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx, uint64_t height,
+    uint8_t* block_id);
+
+/**
  * \brief Get a block transaction from the data service.
  *
  * \param child         The child context for this operation.

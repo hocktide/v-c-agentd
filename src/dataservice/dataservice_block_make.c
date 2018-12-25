@@ -87,7 +87,7 @@ static int dataservice_block_make_update_prev_txn(
     MDB_dbi txn_db, MDB_txn* txn, const uint8_t* txn_id,
     const uint8_t* next_txn_id);
 static int dataservice_make_block_insert_block(
-    MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id,
+    MDB_dbi block_db, MDB_dbi height_db, MDB_txn* txn, const uint8_t* block_id,
     const uint8_t* block_prev_id, const uint8_t* first_child_txn_id,
     uint64_t block_height, const uint8_t* block_data, size_t block_size);
 
@@ -227,7 +227,7 @@ int dataservice_block_make(
     }
 
     /* insert block into the database. */
-    if (0 != dataservice_make_block_insert_block(details->block_db, txn, block_id, block_prev_uuid, first_child_txn_id, expected_block_height, block_data, block_size))
+    if (0 != dataservice_make_block_insert_block(details->block_db, details->height_db, txn, block_id, block_prev_uuid, first_child_txn_id, expected_block_height, block_data, block_size))
     {
         retval = 14;
         goto maybe_transaction_abort;
@@ -1080,6 +1080,7 @@ static int query_end_node(
  * \brief Insert a block into the blockchain database.
  *
  * \param block_db          The block database to update.
+ * \param height_db         The block height database to update.
  * \param txn               The database transaction under which this insert is
  *                          performed.
  * \param block_id          The block id to insert.
@@ -1092,7 +1093,7 @@ static int query_end_node(
  * \returns 0 on success and non-zero on failure.
  */
 static int dataservice_make_block_insert_block(
-    MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id,
+    MDB_dbi block_db, MDB_dbi height_db, MDB_txn* txn, const uint8_t* block_id,
     const uint8_t* block_prev_id, const uint8_t* first_child_txn_id,
     uint64_t block_height, const uint8_t* block_data, size_t block_size)
 {
@@ -1133,6 +1134,17 @@ static int dataservice_make_block_insert_block(
     if (0 != mdb_put(txn, block_db, &lkey, &lval, MDB_NOOVERWRITE))
     {
         retval = 2;
+        goto cleanup_blocknode;
+    }
+
+    /* insert the block height mapping. */
+    lkey.mv_size = sizeof(blocknode->net_block_height);
+    lkey.mv_data = &blocknode->net_block_height;
+    lval.mv_size = sizeof(blocknode->key);
+    lval.mv_data = blocknode->key;
+    if (0 != mdb_put(txn, height_db, &lkey, &lval, MDB_NOOVERWRITE))
+    {
+        retval = 3;
         goto cleanup_blocknode;
     }
 
