@@ -3,10 +3,11 @@
  *
  * \brief Look up the user and group by name.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/privsep.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 
@@ -18,7 +19,10 @@
  * \param uid           Pointer to the user ID to set.
  * \param gid           Pointer to the group ID to set.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - AGENTD_ERROR_GENERAL_GETPWNAM_FAILURE if user entry lookup fails.
+ *          - AGENTD_ERROR_GENERAL_GETGRNAM_FAILURE if group entry lookup fails.
  */
 int privsep_lookup_usergroup(
     const char* user, const char* group, uid_t* uid, gid_t* gid)
@@ -35,19 +39,20 @@ int privsep_lookup_usergroup(
     pwd = getpwnam(user);
     if (NULL == pwd)
     {
-        return 1;
+        return AGENTD_ERROR_GENERAL_GETPWNAM_FAILURE;
     }
 
     /* get the nobody group. */
     grp = getgrnam(group);
     if (NULL == grp)
     {
-        return 2;
+        return AGENTD_ERROR_GENERAL_GETGRNAM_FAILURE;
     }
 
     /* assign the user and group IDs. */
     *uid = pwd->pw_uid;
     *gid = grp->gr_gid;
 
-    return 0;
+    /* success. */
+    return AGENTD_STATUS_SUCCESS;
 }

@@ -3,12 +3,13 @@
  *
  * \brief Read the response from the global settings get call.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <arpa/inet.h>
 #include <agentd/dataservice/api.h>
 #include <agentd/dataservice/private/dataservice.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -65,8 +66,13 @@ int dataservice_api_recvresp_global_settings_get(
     uint32_t* val = NULL;
     uint32_t size = 0U;
     retval = ipc_read_data_noblock(sock, (void**)&val, &size);
-    if (0 != retval)
+    if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
     {
+        goto done;
+    }
+    else if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        retval = AGENTD_ERROR_DATASERVICE_IPC_READ_DATA_FAILURE;
         goto done;
     }
 
@@ -80,7 +86,7 @@ int dataservice_api_recvresp_global_settings_get(
         sizeof(uint32_t);
     if (size < response_packet_size)
     {
-        retval = 1;
+        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE;
         goto cleanup_val;
     }
 
@@ -88,14 +94,16 @@ int dataservice_api_recvresp_global_settings_get(
     uint32_t code = ntohl(val[0]);
     if (DATASERVICE_API_METHOD_APP_GLOBAL_SETTING_READ != code)
     {
-        retval = 2;
+        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE;
         goto cleanup_val;
     }
+
+    /* TODO - missing status code check. */
 
     /* verify that the data size is large enough to receive this value. */
     if (size - response_packet_size > *data_size)
     {
-        retval = 3;
+        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA;
         goto cleanup_val;
     }
 
@@ -112,7 +120,7 @@ int dataservice_api_recvresp_global_settings_get(
     memcpy(data, val + 3, *data_size);
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
 
     /* fall-through. */
 

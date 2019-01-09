@@ -4,11 +4,12 @@
  * \brief Write the status code from a dataservice method to the caller's
  * socket.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/ipc.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -30,7 +31,12 @@
  * \param data_size     The size of this additional payload data.  Must be 0 if
  *                      data is NULL.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_write_status(
     ipc_socket_context_t* sock, uint32_t method, uint32_t offset,
@@ -68,7 +74,7 @@ int dataservice_decode_and_dispatch_write_status(
     uint32_t* resp = (uint32_t*)malloc(respsize);
     if (NULL == resp)
     {
-        return 1;
+        return AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
     }
 
     /* set the values for the response. */
@@ -84,13 +90,9 @@ int dataservice_decode_and_dispatch_write_status(
 
     /* write the data packet. */
     int retval = ipc_write_data_noblock(sock, resp, respsize);
-    if (retval < 0)
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = 2;
-    }
-    else
-    {
-        retval = 0;
+        retval = AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE;
     }
 
     /* clean up memory. */

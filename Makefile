@@ -50,7 +50,7 @@ STRIPPED_LEXSOURCES=$(patsubst $(SRCDIR)/%,%,$(LEXSOURCES))
 TESTDIR=$(CURDIR)/test
 TESTDIRS=$(TESTDIR) $(TESTDIR)/bitcap $(TESTDIR)/bootstrap_config \
     $(TESTDIR)/commandline $(TESTDIR)/config $(TESTDIR)/dataservice \
-    $(TESTDIR)/ipc $(TESTDIR)/path $(TESTDIR)/string
+    $(TESTDIR)/ipc $(TESTDIR)/path $(TESTDIR)/status_codes $(TESTDIR)/string
 TEST_BUILD_DIR=$(HOST_CHECKED_BUILD_DIR)/test
 TEST_DIRS=$(filter-out $(TESTDIR), \
     $(patsubst $(TESTDIR)/%,$(TEST_BUILD_DIR)/%,$(TESTDIRS)))

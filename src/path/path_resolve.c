@@ -3,10 +3,11 @@
  *
  * \brief Attempt to resolve a file name to a pathname.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/command.h>
+#include <agentd/status_codes.h>
 #include <agentd/string.h>
 #include <cbmc/model_assert.h>
 #include <fcntl.h>
@@ -29,7 +30,12 @@ static int valid_executable(const char* filename, char** fullpath);
  * \param resolved          The character pointer that this parameter points to
  *                          is updated to the resolved path on success.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if the operation cannot
+ *            be completed due to a memory allocation error.
+ *          - AGENTD_ERROR_GENERAL_PATH_NOT_FOUND if the filename could not be
+ *            found in the given path.
  */
 int path_resolve(const char* filename, const char* path, char** resolved)
 {
@@ -44,9 +50,9 @@ int path_resolve(const char* filename, const char* path, char** resolved)
     *resolved = NULL;
 
     /* attempt to canonicalize this as a valid executable. */
-    if (0 == valid_executable(filename, resolved))
+    if (AGENTD_STATUS_SUCCESS == valid_executable(filename, resolved))
     {
-        retval = 0;
+        retval = AGENTD_STATUS_SUCCESS;
         goto done;
     }
 
@@ -54,7 +60,7 @@ int path_resolve(const char* filename, const char* path, char** resolved)
     workpath = strdup(path);
     if (NULL == workpath)
     {
-        retval = 1;
+        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
         goto done;
     }
 
@@ -71,7 +77,7 @@ int path_resolve(const char* filename, const char* path, char** resolved)
         char* fullpath = strcatv(pathent, "/", filename, NULL);
         if (NULL == fullpath)
         {
-            retval = 1;
+            retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
             goto cleanup_workpath;
         }
 
@@ -82,14 +88,14 @@ int path_resolve(const char* filename, const char* path, char** resolved)
         free(fullpath);
 
         /* if this is a valid executable, exit the loop and clean up. */
-        if (0 == retval)
+        if (AGENTD_STATUS_SUCCESS == retval)
         {
             goto cleanup_workpath;
         }
     }
 
     /* no valid executable was found. */
-    retval = 1;
+    retval = AGENTD_ERROR_GENERAL_PATH_NOT_FOUND;
 
 cleanup_workpath:
     if (NULL != workpath)
@@ -111,7 +117,10 @@ done:
  * \param fullpath          A pointer to a character pointer that is updated
  *                          with the full path to the executable on success.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - AGENTD_ERROR_GENERAL_PATH_NOT_FOUND if the executable is not
+ *            valid.
  */
 static int valid_executable(const char* filename, char** fullpath)
 {
@@ -119,7 +128,7 @@ static int valid_executable(const char* filename, char** fullpath)
     *fullpath = realpath(filename, NULL);
     if (NULL == *fullpath)
     {
-        return 1;
+        return AGENTD_ERROR_GENERAL_PATH_NOT_FOUND;
     }
 
     /* verify that this filename exists and is executable. */
@@ -127,9 +136,9 @@ static int valid_executable(const char* filename, char** fullpath)
     {
         free(*fullpath);
         *fullpath = NULL;
-        return 1;
+        return AGENTD_ERROR_GENERAL_PATH_NOT_FOUND;
     }
 
     /* success. */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }

@@ -4,10 +4,11 @@
  * \brief Set a socket to non-blocking and initialize a non-blocking socket
  * descriptor for use with non-blocking socket I/O.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/ipc.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <fcntl.h>
 #include <string.h>
@@ -17,7 +18,7 @@
 #include "ipc_internal.h"
 
 /* forward decls */
-static ssize_t ipc_fcntl_nonblock(int sock);
+static int ipc_fcntl_nonblock(int sock);
 static void ipc_socket_context_dispose(void* disposable);
 
 /**
@@ -33,9 +34,16 @@ static void ipc_socket_context_dispose(void* disposable);
  * \param ctx           The socket context to initialize using this call.
  * \param user_context  The user context for this connection.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition
+ *        occurred during this operation.
+ *      - AGENTD_ERROR_IPC_FCNTL_GETFL_FAILURE if the fcntl flags could not be
+ *        read.
+ *      - AGENTD_ERROR_IPC_FCNTL_SETFL_FAILURE if the fcntl flags could not be
+ *        updated.
  */
-ssize_t ipc_make_noblock(
+int ipc_make_noblock(
     int sock, ipc_socket_context_t* ctx, void* user_context)
 {
     /* parameter sanity checks. */
@@ -47,7 +55,7 @@ ssize_t ipc_make_noblock(
         (ipc_socket_impl_t*)malloc(sizeof(ipc_socket_impl_t));
     if (NULL == impl)
     {
-        return 1;
+        return AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
     }
 
     /* clear this structure. */
@@ -55,7 +63,7 @@ ssize_t ipc_make_noblock(
 
     /* set the socket to non-blocking. */
     ssize_t retval = ipc_fcntl_nonblock(sock);
-    if (0 != retval)
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
         free(impl);
         return retval;
@@ -69,7 +77,7 @@ ssize_t ipc_make_noblock(
     ctx->impl = impl;
 
     /* success. */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }
 
 /**
@@ -79,22 +87,22 @@ ssize_t ipc_make_noblock(
  *
  * \returns 0 on success and non-zero on failure.
  */
-static ssize_t ipc_fcntl_nonblock(int sock)
+static int ipc_fcntl_nonblock(int sock)
 {
     /* get the flags for this socket. */
     int flags = fcntl(sock, F_GETFL);
     if (0 > flags)
-        return 1;
+        return AGENTD_ERROR_IPC_FCNTL_GETFL_FAILURE;
 
     /* set the non-blocking bit. */
     flags |= O_NONBLOCK;
 
     /* set the flags for this socket. */
     if (0 > fcntl(sock, F_SETFL, flags))
-        return 2;
+        return AGENTD_ERROR_IPC_FCNTL_SETFL_FAILURE;
 
     /* success. */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }
 
 /**

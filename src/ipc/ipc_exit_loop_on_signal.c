@@ -3,10 +3,11 @@
  *
  * \brief Set the event loop to exit when a given signal is caught.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/ipc.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <fcntl.h>
 #include <string.h>
@@ -28,9 +29,16 @@ static void ipc_signal_cb(evutil_socket_t, short, void*);
  *                      caught.
  * \param sig           The signal that triggers this exit.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered.
+ *      - AGENTD_ERROR_IPC_EVSIGNAL_NEW_FAILURE if a new signal event could not
+ *        be created.
+ *      - AGENTD_ERROR_IPC_EVENT_ADD_FAILURE if the signal event could not be
+ *        added to the event base.
  */
-ssize_t ipc_exit_loop_on_signal(
+int ipc_exit_loop_on_signal(
     ipc_event_loop_context_t* loop, int sig)
 {
     ssize_t retval = 0;
@@ -46,7 +54,7 @@ ssize_t ipc_exit_loop_on_signal(
         (ipc_signal_event_impl_t*)malloc(sizeof(ipc_signal_event_impl_t));
     if (NULL == sigev)
     {
-        retval = 6;
+        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
         goto done;
     }
 
@@ -54,14 +62,14 @@ ssize_t ipc_exit_loop_on_signal(
     sigev->ev = evsignal_new(loop_impl->evb, sig, &ipc_signal_cb, loop);
     if (NULL == sigev->ev)
     {
-        retval = 7;
+        retval = AGENTD_ERROR_IPC_EVSIGNAL_NEW_FAILURE;
         goto cleanup_sigev;
     }
 
     /* add the event to the event base. */
     if (0 != event_add(sigev->ev, NULL))
     {
-        retval = 8;
+        retval = AGENTD_ERROR_IPC_EVENT_ADD_FAILURE;
         goto cleanup_event;
     }
 
@@ -70,7 +78,7 @@ ssize_t ipc_exit_loop_on_signal(
     loop_impl->sig_head = sigev;
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
     goto done;
 
 cleanup_event:

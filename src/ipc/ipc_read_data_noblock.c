@@ -3,11 +3,12 @@
  *
  * \brief Non-blocking read of a data packet value.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/ipc.h>
 #include <agentd/inet.h>
+#include <agentd/status_codes.h>
 #include <arpa/inet.h>
 #include <cbmc/model_assert.h>
 #include <string.h>
@@ -28,9 +29,22 @@
  * \param size          Pointer to the variable to receive the size of this
  *                      packet.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if the the operation was halted because
+ *        it would block this thread.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if an unexpected data type
+ *        was encountered when attempting to read this value.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if an unexpected data size
+ *        was encountered when attempting to read this value.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error condition while executing.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_DRAIN_FAILURE if draining the read buffer
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_REMOVE_FAILURE if removing the payload
+ *        from the read buffer failed.
  */
-ssize_t ipc_read_data_noblock(
+int ipc_read_data_noblock(
     ipc_socket_context_t* sock, void** val, uint32_t* size)
 {
     ssize_t retval = 0;
@@ -52,7 +66,7 @@ ssize_t ipc_read_data_noblock(
     retval = evbuffer_read(sock_impl->readbuf, sock->fd, -1);
     if (retval < 0)
     {
-        retval = 1;
+        retval = AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE;
         goto done;
     }
 
@@ -60,14 +74,14 @@ ssize_t ipc_read_data_noblock(
     uint8_t* mem = (uint8_t*)evbuffer_pullup(sock_impl->readbuf, header_sz);
     if (NULL == mem)
     {
-        retval = IPC_ERROR_CODE_WOULD_BLOCK;
+        retval = AGENTD_ERROR_IPC_WOULD_BLOCK;
         goto done;
     }
 
     /* if the type does not match our expected type, return an error. */
     if (IPC_DATA_TYPE_DATA_PACKET != mem[0])
     {
-        retval = 2;
+        retval = AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE;
         goto done;
     }
 
@@ -79,7 +93,7 @@ ssize_t ipc_read_data_noblock(
     *size = ntohl(nsize);
     if (*size <= 0 || *size >= 1024 * 1024 * 1024)
     {
-        retval = 3;
+        retval = AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE;
         goto done;
     }
 
@@ -87,7 +101,7 @@ ssize_t ipc_read_data_noblock(
      * available. */
     if (evbuffer_get_length(sock_impl->readbuf) < (*size + (size_t)header_sz))
     {
-        retval = IPC_ERROR_CODE_WOULD_BLOCK;
+        retval = AGENTD_ERROR_IPC_WOULD_BLOCK;
         goto done;
     }
 
@@ -95,26 +109,26 @@ ssize_t ipc_read_data_noblock(
     *val = malloc(*size);
     if (NULL == *val)
     {
-        retval = 4;
+        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
         goto done;
     }
 
     /* drain the header from the buffer. */
     if (0 != evbuffer_drain(sock_impl->readbuf, header_sz))
     {
-        retval = 5;
+        retval = AGENTD_ERROR_IPC_READ_BUFFER_DRAIN_FAILURE;
         goto cleanup_val;
     }
 
     /* read the data from the buffer. */
     if (*size != (size_t)evbuffer_remove(sock_impl->readbuf, *val, *size))
     {
-        retval = 6;
+        retval = AGENTD_ERROR_IPC_READ_BUFFER_REMOVE_FAILURE;
         goto cleanup_val;
     }
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
     goto done;
 
 cleanup_val:

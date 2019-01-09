@@ -3,10 +3,11 @@
  *
  * \brief Create a socketpair for inter-process communication.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/ipc.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -25,25 +26,28 @@
  *                      left-hand-side descriptor.
  * \param rhs           Pointer to the integer variable updated to the
  *                      right-hand-side descriptor for the socket pair.
+ *
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_SOCKETPAIR_FAILURE if creating the socket pair
+ *        failed.
  */
-ssize_t ipc_socketpair(int domain, int type, int protocol, int* lhs, int* rhs)
+int ipc_socketpair(int domain, int type, int protocol, int* lhs, int* rhs)
 {
-    ssize_t retval;
     int sd[2];
 
     MODEL_ASSERT(NULL != lhs);
     MODEL_ASSERT(NULL != rhs);
 
     /* build the socket pair. */
-    retval = socketpair(domain, type, protocol, sd);
-    if (0 != retval)
+    if (0 != socketpair(domain, type, protocol, sd))
     {
-        return retval;
+        return AGENTD_ERROR_IPC_SOCKETPAIR_FAILURE;
     }
 
     /* assign the socket descriptors. */
     *lhs = sd[0];
     *rhs = sd[1];
 
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }

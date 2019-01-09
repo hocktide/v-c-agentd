@@ -3,11 +3,12 @@
  *
  * \brief Decode requests and dispatch them using the data service instance.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/ipc.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -27,7 +28,14 @@
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet size is invalid.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -44,7 +52,7 @@ int dataservice_decode_and_dispatch(
     /* the payload size should be at least large enough for the method. */
     if (size < sizeof(uint32_t))
     {
-        return 1;
+        return AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
     }
 
     /* get the method. */
@@ -135,8 +143,9 @@ int dataservice_decode_and_dispatch(
         default:
             /* make sure to write an error to the socket as well. */
             dataservice_decode_and_dispatch_write_status(
-                sock, method, 0U, 0xFFFFFFFF, NULL, 0);
+                sock, method, 0U, AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_BAD,
+                NULL, 0);
 
-            return 2;
+            return AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_BAD;
     }
 }

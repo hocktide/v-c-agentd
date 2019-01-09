@@ -3,12 +3,13 @@
  *
  * \brief Decode and dispatch the block id read by height request.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/inet.h>
 #include <agentd/ipc.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -50,7 +51,7 @@ int dataservice_decode_and_dispatch_block_id_by_height_read(
     /* the payload size should be equal to the child context */
     if (size != (sizeof(uint32_t) + sizeof(uint64_t)))
     {
-        retval = 1;
+        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
         goto done;
     }
 
@@ -68,14 +69,14 @@ int dataservice_decode_and_dispatch_block_id_by_height_read(
     /* check bounds. */
     if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
     {
-        retval = 2;
+        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX;
         goto done;
     }
 
     /* verify that this child context is open. */
     if (NULL == inst->children[child_index].hdr.dispose)
     {
-        retval = 3;
+        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID;
         goto done;
     }
 
@@ -95,7 +96,7 @@ int dataservice_decode_and_dispatch_block_id_by_height_read(
     retval =
         dataservice_block_id_by_height_get(
             &inst->children[child_index].ctx, NULL, block_height, block_id);
-    if (0 != retval)
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
     }
