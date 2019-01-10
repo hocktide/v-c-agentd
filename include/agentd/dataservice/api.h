@@ -325,8 +325,14 @@ int dataservice_api_recvresp_child_context_create(
  * \param sock          The socket on which this request is made.
  * \param child         The child index to be closed.
  *
- * \returns 0 if the request was successfully written to the socket, and
- * non-zero otherwise.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory condition.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if this write operation would block this
+ *        thread.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if an error occurred
+ *        when writing to the socket.
  */
 int dataservice_api_sendreq_child_context_close(
     ipc_socket_context_t* sock, uint32_t child);
