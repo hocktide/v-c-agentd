@@ -2834,7 +2834,7 @@ TEST_F(dataservice_test, transaction_make_block_simple)
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
 
     /* verify that our block does not exist. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_block_get(
             &child, nullptr, foo_block_id, &block_node,
             &block_txn_bytes, &block_txn_size));

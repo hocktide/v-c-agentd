@@ -286,6 +286,12 @@ extern "C" {
 #define AGENTD_ERROR_DATASERVICE_INVALID_ARTIFACT_NODE_SIZE \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x002FU)
 
+/**
+ * \brief Invalid block node encountered in the database.
+ */
+#define AGENTD_ERROR_DATASERVICE_INVALID_STORED_BLOCK_NODE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x0030U)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
