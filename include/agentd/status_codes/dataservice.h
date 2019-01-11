@@ -3,7 +3,7 @@
  *
  * \brief Status code definitions for dataservice.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_STATUS_CODES_DATASERVICE_HEADER_GUARD
