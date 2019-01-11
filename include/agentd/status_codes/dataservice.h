@@ -262,6 +262,24 @@ extern "C" {
 #define AGENTD_ERROR_DATASERVICE_MDB_TXN_COMMIT_FAILURE \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x002BU)
 
+/**
+ * \brief Invalid transaction node encountered in the database.
+ */
+#define AGENTD_ERROR_DATASERVICE_INVALID_STORED_TRANSACTION_NODE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x002CU)
+
+/**
+ * \brief Failure encountered reading data from the datastore.
+ */
+#define AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x002DU)
+
+/**
+ * \brief Failure encountered writing data to the datastore.
+ */
+#define AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x002EU)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
  *
  * \brief Private internal API for the data service.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_DATASERVICE_PRIVATE_DATASERVICE_HEADER_GUARD
@@ -206,10 +206,21 @@ int dataservice_global_settings_set(
  * \param txn_bytes     The raw bytes of the transaction certificate.
  * \param txn_size      The size of the transaction certificate.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - 1 if the transaction already exists.
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is
+ *            not authorized to perform this operation.
+ *          - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function
+ *            could not begin a database transaction to insert this transaction.
+ *          - AGENTD_ERROR_DATASERVICE_INVALID_STORED_TRANSACTION_NODE if this
+ *            function encountered an invalid transaction node in the
+ *            transaction queue.
+ *          - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if a failure occurred
+ *            when reading data from the database.
+ *          - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if a failure occurred
+ *            when writing data to the database.
+ *          - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition
+ *            was detected during this operation.
  */
 int dataservice_transaction_submit(
     dataservice_child_context_t* child,

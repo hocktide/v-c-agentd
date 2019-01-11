@@ -6,6 +6,7 @@
  * \copyright 2018 Velo-Payments, Inc.  All rights reserved.
  */
 
+#include <agentd/status_codes.h>
 #include <vccert/certificate_types.h>
 
 #include "test_dataservice.h"
@@ -2593,7 +2594,7 @@ TEST_F(dataservice_test, transaction_submit_bitcap)
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
 
     /* submitting foo transaction fails. */
-    ASSERT_EQ(3,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED,
         dataservice_transaction_submit(
             &child, nullptr, foo_key, foo_artifact, foo_data,
             sizeof(foo_data)));

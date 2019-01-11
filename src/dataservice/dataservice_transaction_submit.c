@@ -3,11 +3,12 @@
  *
  * \brief Submit a transaction to the transaction queue.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/inet.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -33,10 +34,21 @@ static int dataservice_transaction_submit_update_end(
  * \param txn_bytes     The raw bytes of the transaction certificate.
  * \param txn_size      The size of the transaction certificate.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - 1 if the transaction already exists.
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is
+ *            not authorized to perform this operation.
+ *          - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function
+ *            could not begin a database transaction to insert this transaction.
+ *          - AGENTD_ERROR_DATASERVICE_INVALID_STORED_TRANSACTION_NODE if this
+ *            function encountered an invalid transaction node in the
+ *            transaction queue.
+ *          - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if a failure occurred
+ *            when reading data from the database.
+ *          - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if a failure occurred
+ *            when writing data to the database.
+ *          - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition
+ *            was detected during this operation.
  */
 int dataservice_transaction_submit(
     dataservice_child_context_t* child,
@@ -58,7 +70,7 @@ int dataservice_transaction_submit(
     if (!BITCAP_ISSET(child->childcaps,
             DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT))
     {
-        retval = 3;
+        retval = AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED;
         goto done;
     }
 
@@ -72,7 +84,7 @@ int dataservice_transaction_submit(
     /* create the transaction for the end transaction node. */
     if (0 != mdb_txn_begin(details->env, parent, 0, &txn))
     {
-        retval = 4;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE;
         txn = NULL;
         goto done;
     }
@@ -105,14 +117,14 @@ int dataservice_transaction_submit(
         /* verify that this transaction is valid. */
         if (lval.mv_size < sizeof(data_transaction_node_t))
         {
-            retval = 2;
+            retval = AGENTD_ERROR_DATASERVICE_INVALID_STORED_TRANSACTION_NODE;
             goto maybe_transaction_abort;
         }
     }
     else if (0 != retval)
     {
         /* some error has occurred. */
-        retval = 5;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE;
         goto maybe_transaction_abort;
     }
 
@@ -120,7 +132,12 @@ int dataservice_transaction_submit(
     size_t newnode_size = sizeof(data_transaction_node_t) + txn_size;
     data_transaction_node_t* newnode =
         (data_transaction_node_t*)malloc(newnode_size);
-    /* TODO - memory allocation could fail. */
+    if (NULL == newnode)
+    {
+        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
+        goto maybe_transaction_abort;
+    }
+
     memset(newnode, 0, newnode_size);
     memcpy(((uint8_t*)newnode) + sizeof(data_transaction_node_t),
         txn_bytes, txn_size);
@@ -147,32 +164,35 @@ int dataservice_transaction_submit(
     lval.mv_data = newnode;
     if (0 != mdb_put(txn, details->pq_db, &lkey, &lval, MDB_NOOVERWRITE))
     {
-        retval = 6;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
         goto cleanup_newnode;
     }
 
     /* if the queue does not exist, create start and end. */
     if (!queue_initialized)
     {
-        if (0 != dataservice_transaction_submit_create_queue(details->pq_db, txn, txn_id))
+        retval = dataservice_transaction_submit_create_queue(
+            details->pq_db, txn, txn_id);
+        if (AGENTD_STATUS_SUCCESS != retval)
         {
-            retval = 7;
             goto cleanup_newnode;
         }
     }
     /* if the queue DOES exist, update end and end->prev. */
     else
     {
-        if (0 != dataservice_transaction_submit_update_prev(details->pq_db, txn, txn_id, end_node->prev))
+        retval = dataservice_transaction_submit_update_prev(
+            details->pq_db, txn, txn_id, end_node->prev);
+        if (AGENTD_STATUS_SUCCESS != retval)
         {
-            retval = 8;
             goto cleanup_newnode;
         }
 
         /* update end_node prev. */
-        if (0 != dataservice_transaction_submit_update_end(details->pq_db, txn, txn_id, end_node))
+        retval = dataservice_transaction_submit_update_end(
+            details->pq_db, txn, txn_id, end_node);
+        if (AGENTD_STATUS_SUCCESS != retval)
         {
-            retval = 9;
             goto cleanup_newnode;
         }
     }
@@ -182,7 +202,7 @@ int dataservice_transaction_submit(
     txn = NULL;
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
 
     /* fall-through. */
 
@@ -208,7 +228,10 @@ done:
  * \param txn           The transaction under which this queue is created.
  * \param txn_id        The transaction id to use to populate this queue.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if a failure occurred when
+ *        writing data to the database.
  */
 static int dataservice_transaction_submit_create_queue(
     MDB_dbi pq_db, MDB_txn* txn, const uint8_t* txn_id)
@@ -235,7 +258,7 @@ static int dataservice_transaction_submit_create_queue(
     lval.mv_data = &start;
     if (0 != mdb_put(txn, pq_db, &lkey, &lval, 0))
     {
-        return 1;
+        return AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
     }
 
     /* insert end. */
@@ -245,11 +268,11 @@ static int dataservice_transaction_submit_create_queue(
     lval.mv_data = &end;
     if (0 != mdb_put(txn, pq_db, &lkey, &lval, 0))
     {
-        return 2;
+        return AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
     }
 
     /* success. */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }
 
 /**
@@ -261,7 +284,14 @@ static int dataservice_transaction_submit_create_queue(
  * \param txn_id        The transaction id to set as prev->next.
  * \param prev          The previous transaction node to update.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered during this operation.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if a failure occurred when
+ *        reading data from the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if a failure occurred when
+ *        writing data to the database.
  */
 static int dataservice_transaction_submit_update_prev(
     MDB_dbi pq_db, MDB_txn* txn, const uint8_t* txn_id, const uint8_t* prev)
@@ -274,7 +304,7 @@ static int dataservice_transaction_submit_update_prev(
     memset(&lval, 0, sizeof(lval));
     if (0 != mdb_get(txn, pq_db, &lkey, &lval))
     {
-        return 1;
+        return AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE;
     }
 
     /* get the node header. */
@@ -285,7 +315,12 @@ static int dataservice_transaction_submit_update_prev(
 
     /* copy this header into a local value so we can update it. */
     data_transaction_node_t* node = (data_transaction_node_t*)malloc(prev_size);
-    /* TODO - allocation could fail. */
+    if (NULL == node)
+    {
+        return AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
+    }
+
+    /* copy the previous node value. */
     memcpy(node, prev_node, prev_size);
 
     /* update this node header's next to point to the transaction. */
@@ -302,9 +337,9 @@ static int dataservice_transaction_submit_update_prev(
 
     /* decode success or failure. */
     if (0 != retval)
-        return 2;
+        return AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
     else
-        return 0;
+        return AGENTD_STATUS_SUCCESS;
 }
 
 /**
@@ -315,7 +350,10 @@ static int dataservice_transaction_submit_update_prev(
  * \param txn_id        The new transaction id to set as end->next.
  * \param curr_end      The current end node, a copy of which is updated.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if a failure occurred when
+ *        writing data to the database.
  */
 static int dataservice_transaction_submit_update_end(
     MDB_dbi pq_db, MDB_txn* txn, const uint8_t* txn_id,
@@ -335,9 +373,9 @@ static int dataservice_transaction_submit_update_end(
     lval.mv_data = &end;
     if (0 != mdb_put(txn, pq_db, &lkey, &lval, 0))
     {
-        return 1;
+        return AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
     }
 
     /* success */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }
