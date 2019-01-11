@@ -112,7 +112,10 @@ int dataservice_child_context_create(
  *
  * \param child         The child context to close.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is not
+ *        authorized to close.
  */
 int dataservice_child_context_close(
     dataservice_child_context_t* child);
