@@ -136,7 +136,10 @@ int dataservice_child_context_close(
  *                      ignored when creating a child transaction; the parent
  *                      transaction's state overrides this one.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if the transaction
+ *        could not begin.
  */
 int dataservice_data_txn_begin(
     dataservice_child_context_t* child,
