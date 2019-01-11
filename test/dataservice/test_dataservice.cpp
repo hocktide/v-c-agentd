@@ -988,7 +988,7 @@ TEST_F(dataservice_test, transaction_get_first_empty)
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
 
     /* getting the first transaction should return a "not found" result. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_get_first(
             &child, nullptr, nullptr, &txn_bytes, &txn_size));
 
@@ -1080,7 +1080,7 @@ TEST_F(dataservice_test, transaction_get_first_empty_with_start_end)
     ASSERT_EQ(0, mdb_txn_commit(txn));
 
     /* getting the first transaction should return a "not found" result. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_get_first(
             &child, nullptr, nullptr, &txn_bytes, &txn_size));
 
@@ -1132,7 +1132,7 @@ TEST_F(dataservice_test, transaction_get_first_no_capability)
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
 
     /* getting the first transaction should fail due to missing caps. */
-    ASSERT_EQ(3,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED,
         dataservice_transaction_get_first(
             &child, nullptr, nullptr, &txn_bytes, &txn_size));
 
@@ -2132,7 +2132,7 @@ TEST_F(dataservice_test, transaction_drop)
             &child, nullptr, foo_key));
 
     /* getting the first transaction should fail. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_get_first(
             &child, nullptr, &node, &txn_bytes, &txn_size));
 
@@ -2644,7 +2644,7 @@ TEST_F(dataservice_test, transaction_get_first_bitcap)
 
     /* getting the first transaction fails due no capabilities. */
     data_transaction_node_t node;
-    ASSERT_EQ(3,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED,
         dataservice_transaction_get_first(
             &child, nullptr, &node, &txn_bytes, &txn_size));
 
