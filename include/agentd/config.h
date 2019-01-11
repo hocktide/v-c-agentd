@@ -3,7 +3,7 @@
  *
  * \brief Configuration data structure for agentd.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_CONFIG_HEADER_GUARD
@@ -157,7 +157,12 @@ void config_dispose(void* disp);
  * \param s             The socket descriptor to write.
  * \param conf          The config structure to write.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_CONFIG_IPC_WRITE_DATA_FAILURE if writing data to the
+ *        socket failed.
+ *      - AGENTD_ERROR_CONFIG_INET_NTOP_FAILURE if converting the listen address
+ *        to a string failed.
  */
 int config_write_block(int s, agent_config_t* conf);
 
@@ -171,7 +176,16 @@ int config_write_block(int s, agent_config_t* conf);
  * \param s             The socket descriptor to read.
  * \param conf          The config structure to populate.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered during this operation.
+ *      - AGENTD_ERROR_CONFIG_IPC_READ_DATA_FAILURE if there was a failure
+ *        reading from the config socket.
+ *      - AGENTD_ERROR_CONFIG_INVALID_STREAM the stream data was corrupted or
+ *        invalid.
+ *      - AGENTD_ERROR_CONFIG_INET_PTON_FAILURE if converting an address to a
+ *        network address failed.
  */
 int config_read_block(int s, agent_config_t* conf);
 
@@ -197,7 +211,34 @@ int config_set_defaults(agent_config_t* conf, bootstrap_config_t* bconf);
  *                      reader process.
  * \param conf          The config structure to populate.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_CONFIG_PROC_RUNSECURE_ROOT_USER_REQUIRED if spawning this
+ *        process failed because the user is not root and runsecure is true.
+ *      - AGENTD_ERROR_CONFIG_IPC_SOCKETPAIR_FAILURE if creating a socketpair
+ *        for the dataservice process failed.
+ *      - AGENTD_ERROR_CONFIG_FORK_FAILURE if forking the private process
+ *        failed.
+ *      - AGENTD_ERROR_CONFIG_PRIVSEP_LOOKUP_USERGROUP_FAILURE if there was a
+ *        failure looking up the configured user and group for the dataservice
+ *        process.
+ *      - AGENTD_ERROR_CONFIG_PRIVSEP_CHROOT_FAILURE if chrooting failed.
+ *      - AGENTD_ERROR_CONFIG_PRIVSEP_DROP_PRIVILEGES_FAILURE if dropping
+ *        privileges failed.
+ *      - AGENTD_ERROR_CONFIG_OPEN_CONFIG_FILE_FAILURE if opening the config
+ *        file failed.
+ *      - AGENTD_ERROR_CONFIG_PRIVSEP_SETFDS_FAILURE if setting file descriptors
+ *        failed.
+ *      - AGENTD_ERROR_CONFIG_PRIVSEP_EXEC_PRIVATE_FAILURE if executing the
+ *        private command failed.
+ *      - AGENTD_ERROR_CONFIG_PRIVSEP_EXEC_SURVIVAL_WEIRDNESS if the process
+ *        survived execution (weird!).      
+ *      - AGENTD_ERROR_CONFIG_IPC_READ_DATA_FAILURE if reading data from the
+ *        config stream failed.
+ *      - AGENTD_ERROR_CONFIG_PROC_EXIT_FAILURE if the config proc did not
+ *        properly exit.
+ *      - AGENTD_ERROR_CONFIG_DEFAULTS_SET_FAILURE if setting the config
+ *        defaults failed.
  */
 int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf);
 
