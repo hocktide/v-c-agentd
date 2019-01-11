@@ -220,6 +220,48 @@ extern "C" {
 #define AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_CREATE_FAILURE \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x0024U)
 
+/**
+ * \brief Creating a database environment failed.
+ */
+#define AGENTD_ERROR_DATASERVICE_MDB_ENV_CREATE_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x0025U)
+
+/**
+ * \brief Setting the database map size failed.
+ */
+#define AGENTD_ERROR_DATASERVICE_MDB_ENV_SET_MAPSIZE_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x0026U)
+
+/**
+ * \brief Setting the maximum databases for the environment failed.
+ */
+#define AGENTD_ERROR_DATASERVICE_MDB_ENV_SET_MAXDBS_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x0027U)
+
+/**
+ * \brief Opening the database environment failed.
+ */
+#define AGENTD_ERROR_DATASERVICE_MDB_ENV_OPEN_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x0028U)
+
+/**
+ * \brief Beginning a transaction failed.
+ */
+#define AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x0029U)
+
+/**
+ * \brief Opening a database instance failed.
+ */
+#define AGENTD_ERROR_DATASERVICE_MDB_DBI_OPEN_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x002AU)
+
+/**
+ * \brief Committing a transaction failed.
+ */
+#define AGENTD_ERROR_DATASERVICE_MDB_TXN_COMMIT_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x002BU)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
