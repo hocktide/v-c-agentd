@@ -22,7 +22,10 @@
  * \param dirname           The character pointer that this parameter points to
  *                          is updated to the directory name on success.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if the operation cannot
+ *            be completed due to a memory allocation error.
  */
 int path_dirname(const char* filename, char** dirname)
 {
