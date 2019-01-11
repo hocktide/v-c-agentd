@@ -118,7 +118,10 @@ int dataservice_root_context_reduce_capabilities(
  *                      structure must be the same size as the capabilities
  *                      structure defined in dataservice_child_context_t.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this context cannot create
+ *        child contexts.
  */
 int dataservice_child_context_create(
     dataservice_root_context_t* root, dataservice_child_context_t* child,
