@@ -280,6 +280,12 @@ extern "C" {
 #define AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x002EU)
 
+/**
+ * \brief Invalid artifact node size.
+ */
+#define AGENTD_ERROR_DATASERVICE_INVALID_ARTIFACT_NODE_SIZE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x002FU)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

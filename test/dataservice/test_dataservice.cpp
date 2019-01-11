@@ -2846,7 +2846,7 @@ TEST_F(dataservice_test, transaction_make_block_simple)
 
     /* verify that our artifact does not exist. */
     /* getting the artifact record by artifact id should return not found. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_artifact_get(
             &child, nullptr, foo_artifact, &foo_artifact_record));
 

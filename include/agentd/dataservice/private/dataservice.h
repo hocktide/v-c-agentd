@@ -419,8 +419,17 @@ int dataservice_block_transaction_get(
  * \param record        Artifact record structure to update via this call.
  *
  * \returns A status code indicating success or failure.
- *          - 0 on success.
- *          - non-zero on failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if this artifact could not be
+ *        found.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is not
+ *        authorized for this operation.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this operation
+ *        failed to begin a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if there was a failure
+ *        getting this value.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_ARTIFACT_NODE_SIZE if the artifact
+ *        data is an invalid size.
  */
 int dataservice_artifact_get(
     dataservice_child_context_t* child,
