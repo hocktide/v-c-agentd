@@ -2137,7 +2137,7 @@ TEST_F(dataservice_test, transaction_drop)
             &child, nullptr, &node, &txn_bytes, &txn_size));
 
     /* now if we try to get the transaction by id, this fails. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_get(
             &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
 
@@ -2310,7 +2310,7 @@ TEST_F(dataservice_test, transaction_drop_ordering)
             &child, nullptr, foo2_key));
 
     /* now if we try to get the transaction by id, this fails. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_get(
             &child, nullptr, foo2_key, &node, &txn_bytes, &txn_size));
 
@@ -2509,7 +2509,7 @@ TEST_F(dataservice_test, transaction_drop_first_ordering)
             &child, nullptr, foo1_key));
 
     /* now if we try to get the transaction by id, this fails. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_get(
             &child, nullptr, foo1_key, &node, &txn_bytes, &txn_size));
 
@@ -2696,7 +2696,7 @@ TEST_F(dataservice_test, transaction_get_bitcap)
 
     /* getting the first transaction fails due no capabilities. */
     data_transaction_node_t node;
-    ASSERT_EQ(3,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED,
         dataservice_transaction_get(
             &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
 
@@ -2888,7 +2888,7 @@ TEST_F(dataservice_test, transaction_make_block_simple)
             foo_block_cert, foo_block_cert_length));
 
     /* getting the transaction by id should return not found. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_get(
             &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
 

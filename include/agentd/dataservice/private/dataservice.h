@@ -321,10 +321,17 @@ int dataservice_transaction_get_first(
  * associated with this copy by calling free().  If this is NOT a COPY, then
  * this memory will be released when dtxn_ctx is committed or released.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - 1 if the transaction could not be found.
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if this transaction was not found.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this function encountered an
+ *        out-of-memory condition.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is not
+ *        authorized to call this function.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function failed
+ *        to begin a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read data from the database.
  */
 int dataservice_transaction_get(
     dataservice_child_context_t* child,

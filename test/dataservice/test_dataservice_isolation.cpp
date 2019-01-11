@@ -1421,7 +1421,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
     EXPECT_EQ(0, sendreq_status);
     EXPECT_EQ(0, recvresp_status);
     ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
-    ASSERT_EQ(1U, status);
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND, (int)status);
 
     /* clean up. */
     free(txn_data);
@@ -1675,7 +1675,7 @@ TEST_F(dataservice_isolation_test, make_block_simple)
     EXPECT_EQ(0, sendreq_status);
     EXPECT_EQ(0, recvresp_status);
     ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
-    ASSERT_EQ(1U, status);
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND, (int)status);
 
     /* query the first block. */
     sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
