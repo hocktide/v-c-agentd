@@ -81,7 +81,10 @@ int dataservice_root_context_init(
  *                      structure must be the same size as the capabilities
  *                      structure defined in dataservice_root_context_t.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if the current context lacks
+ *        authorization to perform this operation.
  */
 int dataservice_root_context_reduce_capabilities(
     dataservice_root_context_t* ctx, uint32_t* caps);
