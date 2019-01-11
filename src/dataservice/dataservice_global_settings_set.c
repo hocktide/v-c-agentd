@@ -3,10 +3,11 @@
  *
  * \brief Set a value in global settings.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -23,9 +24,16 @@
  * \param buffer        The buffer from which the setting is set.
  * \param size          The size of the buffer.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is not
+ *        authorized to perform this operation.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this method failed
+ *        to begin a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if this function failed to
+ *        write the setting to the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_COMMIT_FAILURE if this function
+ *        failed to commit a transaction to the database.
  */
 int dataservice_global_settings_set(
     dataservice_child_context_t* child, uint64_t key, const char* buffer,
@@ -46,7 +54,7 @@ int dataservice_global_settings_set(
     if (!BITCAP_ISSET(child->childcaps,
             DATASERVICE_API_CAP_APP_GLOBAL_SETTING_WRITE))
     {
-        retval = 3;
+        retval = AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED;
         goto done;
     }
 
@@ -57,7 +65,7 @@ int dataservice_global_settings_set(
     /* create a write transaction for writing data to the database. */
     if (0 != mdb_txn_begin(details->env, NULL, 0, &txn))
     {
-        retval = 4;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE;
         goto done;
     }
 
@@ -72,19 +80,19 @@ int dataservice_global_settings_set(
     /* attempt to put the value into the database. */
     if (0 != mdb_put(txn, details->global_db, &lkey, &lval, 0))
     {
-        retval = 5;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
         goto transaction_rollback;
     }
 
     /* attempt to commit the transaction. */
     if (0 != mdb_txn_commit(txn))
     {
-        retval = 6;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_TXN_COMMIT_FAILURE;
         goto transaction_rollback;
     }
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
     goto done;
 
 transaction_rollback:

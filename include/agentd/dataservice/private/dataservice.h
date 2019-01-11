@@ -214,9 +214,16 @@ int dataservice_global_settings_get(
  * \param buffer        The buffer from which the setting is set.
  * \param size          The size of the buffer.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is not
+ *        authorized to perform this operation.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this method failed
+ *        to begin a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if this function failed to
+ *        write the setting to the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_COMMIT_FAILURE if this function
+ *        failed to commit a transaction to the database.
  */
 int dataservice_global_settings_set(
     dataservice_child_context_t* child, uint64_t key, const char* buffer,
