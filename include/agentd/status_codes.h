@@ -23,13 +23,13 @@ extern "C" {
 /**
  * \brief Success status code.
  */
-#define AGENTD_STATUS_SUCCESS 0x00000000U
+#define AGENTD_STATUS_SUCCESS 0x00000000
 
 /**
  * \brief Error code macro.
  */
 #define AGENTD_STATUS_ERROR_MACRO(service, reason) \
-    (0x8000000U | ((service & 0xFFU) << 16U) | (reason & 0xFFFFU))
+    ((int32_t)(0x8000000 | ((service & 0xFF) << 16) | (reason & 0xFFFF)))
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

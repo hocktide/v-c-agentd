@@ -16,5 +16,5 @@ using namespace std;
  */
 TEST(status_codes_test, basic_test)
 {
-    EXPECT_EQ(0x8000001U, AGENTD_ERROR_GENERAL_OUT_OF_MEMORY);
+    EXPECT_EQ(0x8000001, AGENTD_ERROR_GENERAL_OUT_OF_MEMORY);
 }
