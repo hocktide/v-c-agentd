@@ -2840,7 +2840,7 @@ TEST_F(dataservice_test, transaction_make_block_simple)
             &block_txn_bytes, &block_txn_size));
 
     /* verify that a block ID does not exist for block height 1. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_block_id_by_height_get(
             &child, nullptr, 1, block_id_for_height_1));
 

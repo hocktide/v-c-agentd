@@ -426,9 +426,18 @@ int dataservice_block_get(
  * \param height        The block height for this query.
  * \param block_id      Pointer to the block UUID (16 bytes) to set.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success.
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if a block was not found for this
+ *        block height.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is not
+ *        authorized to call this function.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function failed
+ *        to begin a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read data from the database.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_INDEX_ENTRY if this function
+ *        encountered an invalid index entry.
  */
 int dataservice_block_id_by_height_get(
     dataservice_child_context_t* child,

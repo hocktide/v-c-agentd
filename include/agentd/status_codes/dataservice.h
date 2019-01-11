@@ -292,6 +292,12 @@ extern "C" {
 #define AGENTD_ERROR_DATASERVICE_INVALID_STORED_BLOCK_NODE \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x0030U)
 
+/**
+ * \brief Invalid index entry in the database.
+ */
+#define AGENTD_ERROR_DATASERVICE_INVALID_INDEX_ENTRY \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x0031U)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
