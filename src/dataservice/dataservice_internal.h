@@ -101,8 +101,6 @@ int dataservice_database_open(
  * \brief Close the database.
  *
  * \param ctx       The root context with the opened database.
- *
- * \returns 0 on success and non-zero on failure.
  */
 void dataservice_database_close(
     dataservice_root_context_t* ctx);
