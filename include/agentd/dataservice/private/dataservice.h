@@ -429,9 +429,19 @@ int dataservice_block_id_by_height_get(
  * associated with this copy by calling free().  If this is NOT a COPY, then
  * this memory will be released when dtxn_ctx is committed or released.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success.
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if the transaction was not found.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this function encountered an
+ *        out-of-memory condition.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is not
+ *        authorized to perform this operation.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function failed
+ *        to begin a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if a failure occurred when
+ *        reading the database.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_STORED_TRANSACTION_NODE if the
+ *        transaction node could not be deserialized.
  */
 int dataservice_block_transaction_get(
     dataservice_child_context_t* child,
