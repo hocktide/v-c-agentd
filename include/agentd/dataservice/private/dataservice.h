@@ -66,7 +66,24 @@ typedef struct dataservice_child_context
  * \param ctx           The private data service context to initialize.
  * \param datadir       The data directory for this private data service.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if the root context is not
+ *        authorized to perform this action.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_ENV_CREATE_FAILURE if this function
+ *        failed to create a database environment.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_ENV_SET_MAPSIZE_FAILURE if this function
+ *        failed to set the database map size.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_ENV_SET_MAXDBS_FAILURE if this function
+ *        failed to set the maximum number of databases.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_ENV_OPEN_FAILURE if this function failed
+ *        to open the database environment.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function failed
+ *        to begin a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_DBI_OPEN_FAILURE if this function failed
+ *        to open a database instance.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_COMMIT_FAILURE if this function
+ *        failed to commit the database open transaction.
  */
 int dataservice_root_context_init(
     dataservice_root_context_t* ctx, const char* datadir);
