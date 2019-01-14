@@ -142,10 +142,18 @@ void dataservice_child_details_delete(dataservice_instance_t* inst, int offset);
  * \param dtxn_ctx      The dataservice transaction context for this operation.
  * \param txn_id        The transaction ID for this transaction.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - 1 if the transaction could not be found.
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if the transaction uuid could not
+ *        be found.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out of memory condition was
+ *        encountered during this operation.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function could
+ *        not create a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read from the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_DEL_FAILURE if this function failed to
+ *        delete from the database.
  */
 int dataservice_transaction_drop_internal(
     dataservice_child_context_t* child,

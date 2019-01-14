@@ -346,10 +346,20 @@ int dataservice_transaction_get(
  * \param dtxn_ctx      The dataservice transaction context for this operation.
  * \param txn_id        The transaction ID for this transaction.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - 1 if the transaction could not be found.
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is not
+ *        authorized to call this function.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if the transaction uuid could not
+ *        be found.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out of memory condition was
+ *        encountered during this operation.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function could
+ *        not create a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read from the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_DEL_FAILURE if this function failed to
+ *        delete from the database.
  */
 int dataservice_transaction_drop(
     dataservice_child_context_t* child,
@@ -370,9 +380,55 @@ int dataservice_transaction_drop(
  * \param block_data    The block data for this block.
  * \param block_size    The size of this block.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if transaction could not be found
+ *        in the transaction process queue.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out of memory condition was
+ *        encountered during this operation.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is not
+ *        authorized to call this function.
+ *      - AGENTD_ERROR_DATASERVICE_VCCRYPT_SUITE_OPTIONS_INIT_FAILURE if this
+ *        function failed to initialize crypto suite options.
+ *      - AGENTD_ERROR_DATASERVICE_VCCERT_PARSER_OPTIONS_INIT_FAILURE if this
+ *        function failed to initialize parser options.
+ *      - AGENTD_ERROR_DATASERVICE_VCCERT_PARSER_INIT_FAILURE if this
+ *        function failed to initialize a parser.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function failed
+ *        to create a database transaction.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_STORED_BLOCK_NODE if this function
+ *        encountered an invalid block node in the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function could not
+ *        read from the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if this function failed to
+ *        update the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_DEL_FAILURE if this function failed to
+ *        delete from the database.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_BLOCK_HEIGHT if this block
+ *        certificate is missing a block height field.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_BLOCK_HEIGHT if this block
+ *        certificate has a block height that is not valid.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_PREVIOUS_BLOCK_UUID if the previous
+ *        block uuid field is missing in this block certificate.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_PREVIOUS_BLOCK_UUID if the previous
+ *        block uuid field is invalid or does not match the expected previous
+ *        block uuid value.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_BLOCK_UUID if
+ *        the block UUID field is missing.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_BLOCK_UUID if the block UUID field is
+ *        invalid or violates a constraint.
+ *      - AGENTD_ERROR_DATASERVICE_NO_CHILD_TRANSACTIONS if there is not at
+ *        least one child transaction in this block.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_CHILD_TRANSACTION_UUID if a child
+ *        transaction is missing its transaction UUID.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_CHILD_PREVIOUS_TRANSACTION_UUID if a
+ *        child transaction is missing its previous transaction UUID.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_CHILD_ARTIFACT_UUID if a child
+ *        transaction is missing its artifact UUID.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_CHILD_STATE if a child transaction is
+ *        missing its state field.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_ARTIFACT_NODE_SIZE if an invalid
+ *        artifact node was encountered.
  */
 int dataservice_block_make(
     dataservice_child_context_t* child,
