@@ -135,7 +135,7 @@ int dataservice_api_recvresp_artifact_get(
 
     /* get the status code. */
     *status = ntohl(val[2]);
-    if (*status != 0)
+    if (0 != *status)
     {
         retval = AGENTD_STATUS_SUCCESS;
         goto done;
@@ -145,7 +145,7 @@ int dataservice_api_recvresp_artifact_get(
     dat_size -= 3 * sizeof(uint32_t);
 
     /* if the record size is invalid, return an error code. */
-    if (dat_size != 68U)
+    if (68U != dat_size)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA;
         goto done;

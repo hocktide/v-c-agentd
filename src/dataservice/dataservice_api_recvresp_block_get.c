@@ -145,7 +145,7 @@ int dataservice_api_recvresp_block_get(
 
     /* get the status code. */
     *status = ntohl(val[2]);
-    if (*status != 0)
+    if (0 != *status)
     {
         retval = AGENTD_STATUS_SUCCESS;
         goto cleanup_val;

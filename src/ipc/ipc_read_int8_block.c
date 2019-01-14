@@ -53,7 +53,7 @@ int ipc_read_int8_block(int sock, int8_t* val)
     size = ntohl(nsize);
 
     /* verify the size. */
-    if (size != sizeof(int8_t))
+    if (sizeof(int8_t) != size)
         return AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE;
 
     /* attempt to read the value. */

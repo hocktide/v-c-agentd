@@ -54,7 +54,7 @@ int ipc_read_uint64_block(int sock, uint64_t* val)
     size = ntohl(nsize);
 
     /* verify the size. */
-    if (size != sizeof(uint64_t))
+    if (sizeof(uint64_t) != size)
         return AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE;
 
     /* attempt to read the value. */

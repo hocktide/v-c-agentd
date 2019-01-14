@@ -48,7 +48,7 @@ int dataservice_decode_and_dispatch_root_context_create(
     uint8_t* breq = (uint8_t*)req;
 
     /* the payload size should be greater than zero. */
-    if (size == 0U)
+    if (0U == size)
     {
         return AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
     }

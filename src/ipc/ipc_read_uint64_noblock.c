@@ -71,7 +71,7 @@ int ipc_read_uint64_noblock(ipc_socket_context_t* sock, uint64_t* val)
 
     /* sanity check on size. */
     uint32_t size = ntohl(nsize);
-    if (size != sizeof(uint64_t))
+    if (sizeof(uint64_t) != size)
     {
         return AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE;
     }
