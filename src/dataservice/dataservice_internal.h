@@ -119,7 +119,10 @@ dataservice_instance_t* dataservice_instance_create();
  * \param offset        Pointer to the offset that is updated with this child
  *                      context offset in the children array.
  *
- * \returns 0 on success, and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_OUT_OF_CHILD_INSTANCES if no more child
+ *        instances are available.
  */
 int dataservice_child_details_create(dataservice_instance_t* inst, int* offset);
 

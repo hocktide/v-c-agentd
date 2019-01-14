@@ -376,6 +376,12 @@ extern "C" {
 #define AGENTD_ERROR_DATASERVICE_MISSING_CHILD_STATE \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x003FU)
 
+/**
+ * \brief No more child detail instances are available.
+ */
+#define AGENTD_ERROR_DATASERVICE_OUT_OF_CHILD_INSTANCES \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x0040U)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
