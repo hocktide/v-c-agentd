@@ -4,12 +4,13 @@
  * \brief Read the response from the root context init api method using a
  * blocking socket.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <arpa/inet.h>
 #include <agentd/dataservice/api.h>
 #include <agentd/dataservice/private/dataservice.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -26,9 +27,29 @@
  * status code from the API request.  This status should be checked.  A zero
  * status indicates success, and a non-zero status indicates failure.
  *
- * \returns 0 if the response was read successfully, IPC_ERROR_CODE_WOULD_BLOCK
- * if the response cannot yet be read, and non-zero if the response could not be
- * successfully read.
+ * If the status code is updated with an error from the service, then this error
+ * will be reflected in the status variable, and a AGENTD_STATUS_SUCCESS will be
+ * returned by this function.  Thus, both the return value of this function and
+ * the upstream status code must be checked for correct operation.  Here are a
+ * few possible status codes; it is not possible to list them all.
+ *      - AGENTD_STATUS_SUCCESS if the remote operation completed successfully.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this client node is not
+ *        authorized to perform the requested operation.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet size is invalid.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_READ_DATA_FAILURE if reading data from
+ *        the socket failed.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE if the
+ *        data packet size is unexpected.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE if the
+ *        method code was unexpected.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA if the
+ *        payload data was malformed.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error.
  */
 int dataservice_api_recvresp_root_context_init_block(
     int sock, uint32_t* offset, uint32_t* status)
@@ -54,16 +75,16 @@ int dataservice_api_recvresp_root_context_init_block(
     /* read a data packet from the socket. */
     uint32_t newsize = data_size;
     retval = ipc_read_data_block(sock, (void**)&val, &newsize);
-    if (0 != retval)
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = 1;
+        retval = AGENTD_ERROR_DATASERVICE_IPC_READ_DATA_FAILURE;
         goto done;
     }
 
     /* compare the sizes. */
     if (data_size != newsize)
     {
-        retval = 2;
+        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE;
         goto cleanup_val;
     }
 
@@ -71,7 +92,7 @@ int dataservice_api_recvresp_root_context_init_block(
     uint32_t code = ntohl(val[0]);
     if (DATASERVICE_API_METHOD_LL_ROOT_CONTEXT_CREATE != code)
     {
-        retval = 3;
+        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE;
         goto cleanup_val;
     }
 

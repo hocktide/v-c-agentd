@@ -3,11 +3,12 @@
  *
  * \brief Get a block from the blockchain database by id.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/inet.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -32,10 +33,19 @@
  * associated with this copy by calling free().  If this is NOT a COPY, then
  * this memory will be released when dtxn_ctx is committed or released.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - 1 if the block could not be found.
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if the block was not found.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out of memory condition was
+ *        encountered during this operation.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is not
+ *        authorized to perform this operation.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function failed
+ *        to begin a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read data from the database.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_STORED_BLOCK_NODE if the block node
+ *        read from the database could not be deserialized.
  */
 int dataservice_block_get(
     dataservice_child_context_t* child,
@@ -58,7 +68,7 @@ int dataservice_block_get(
     if (!BITCAP_ISSET(child->childcaps,
             DATASERVICE_API_CAP_APP_BLOCK_READ))
     {
-        retval = 3;
+        retval = AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED;
         goto done;
     }
 
@@ -75,7 +85,7 @@ int dataservice_block_get(
     {
         if (0 != mdb_txn_begin(details->env, NULL, MDB_RDONLY, &txn))
         {
-            retval = 4;
+            retval = AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE;
             goto done;
         }
     }
@@ -95,20 +105,20 @@ int dataservice_block_get(
     if (MDB_NOTFOUND == retval)
     {
         /* the value was not found. */
-        retval = 1;
+        retval = AGENTD_ERROR_DATASERVICE_NOT_FOUND;
         goto maybe_transaction_abort;
     }
     else if (0 != retval)
     {
         /* some error has occurred. */
-        retval = 5;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE;
         goto maybe_transaction_abort;
     }
 
     /* verify that this value is large enough to be a node value. */
     if (lval.mv_size <= sizeof(data_block_node_t))
     {
-        retval = 2;
+        retval = AGENTD_ERROR_DATASERVICE_INVALID_STORED_BLOCK_NODE;
         goto maybe_transaction_abort;
     }
 
@@ -121,7 +131,7 @@ int dataservice_block_get(
     /* the block size should match exactly the data size. */
     if (*block_size != data_size)
     {
-        retval = 2;
+        retval = AGENTD_ERROR_DATASERVICE_INVALID_STORED_BLOCK_NODE;
         goto maybe_transaction_abort;
     }
 
@@ -132,7 +142,7 @@ int dataservice_block_get(
         *block_bytes = (uint8_t*)malloc(*block_size);
         if (NULL == *block_bytes)
         {
-            retval = 6;
+            retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
             goto maybe_transaction_abort;
         }
 
@@ -150,7 +160,7 @@ int dataservice_block_get(
     memcpy(node, bdata, sizeof(data_block_node_t));
 
     /* success on copy. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
 
     /* fall-through. */
 

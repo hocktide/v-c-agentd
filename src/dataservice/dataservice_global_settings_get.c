@@ -3,10 +3,11 @@
  *
  * \brief Get a value from the global settings.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -25,11 +26,19 @@
  *                      successful or the size required if a would truncate
  *                      error occurs.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - 1 if the value is not found.
- *          - 2 if the value would be truncated.
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if this global setting could not be
+ *        found.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if the child context is not
+ *        authorized to call this function.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function failed
+ *        to begin a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read from the database.
+ *      - AGENTD_ERROR_DATASERVICE_WOULD_TRUNCATE if the provided buffer would
+ *        truncate the value.  The size parameter is updated with the size of
+ *        this value.
  */
 int dataservice_global_settings_get(
     dataservice_child_context_t* child, uint64_t key, char* buffer,
@@ -51,7 +60,7 @@ int dataservice_global_settings_get(
     if (!BITCAP_ISSET(child->childcaps,
             DATASERVICE_API_CAP_APP_GLOBAL_SETTING_READ))
     {
-        retval = 3;
+        retval = AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED;
         goto done;
     }
 
@@ -62,7 +71,7 @@ int dataservice_global_settings_get(
     /* create a read transaction for reading data from the database. */
     if (0 != mdb_txn_begin(details->env, NULL, MDB_RDONLY, &txn))
     {
-        retval = 4;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE;
         goto done;
     }
 
@@ -78,20 +87,20 @@ int dataservice_global_settings_get(
     if (MDB_NOTFOUND == retval)
     {
         /* the value was not found. */
-        retval = 1;
+        retval = AGENTD_ERROR_DATASERVICE_NOT_FOUND;
         goto transaction_rollback;
     }
     else if (0 != retval)
     {
         /* some error has occurred. */
-        retval = 5;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE;
         goto transaction_rollback;
     }
 
     /* if this value would be truncated, give the caller the real size. */
     if (lval.mv_size > *size)
     {
-        retval = 2;
+        retval = AGENTD_ERROR_DATASERVICE_WOULD_TRUNCATE;
         *size = lval.mv_size;
         goto transaction_rollback;
     }
@@ -99,7 +108,7 @@ int dataservice_global_settings_get(
     /* success.  Copy the value to the caller and return. */
     *size = lval.mv_size;
     memcpy(buffer, lval.mv_data, *size);
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
 
 transaction_rollback:
     mdb_txn_abort(txn);

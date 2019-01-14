@@ -330,8 +330,17 @@ typedef struct
  *                      on this socket.
  *
  * \returns a status code on service exit indicating a normal or abnormal exit.
- *          - 0 on normal exit.
- *          - non-zero on abnormal exit.
+ *          - AGENTD_STATUS_SUCCESS on normal exit.
+ *          - AGENTD_ERROR_DATASERVICE_INSTANCE_CREATE_FAILURE if it was not
+ *            possible to create a dataservice instance.
+ *          - AGENTD_ERROR_DATASERVICE_IPC_MAKE_NOBLOCK_FAILURE if attempting to
+ *            make the process socket non-blocking failed.
+ *          - AGENTD_ERROR_DATASERVICE_IPC_EVENT_LOOP_INIT_FAILURE if
+ *            initializing the event loop failed.
+ *          - AGENTD_ERROR_DATASERVICE_IPC_EVENT_LOOP_ADD_FAILURE if adding the
+ *            dataservice socket to the event loop failed.
+ *          - AGENTD_ERROR_DATASERVICE_IPC_EVENT_LOOP_RUN_FAILURE if running the
+ *            dataservice event loop failed.
  */
 int dataservice_event_loop(int datasock, int logsock);
 
@@ -354,7 +363,27 @@ int dataservice_event_loop(int datasock, int logsock);
  *                      successful completion of this function.
  * \param runsecure     Set to false if we are not being run in secure mode.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_PROC_RUNSECURE_ROOT_USER_REQUIRED if spawning
+ *        this process failed because the user is not root and runsecure is
+ *        true.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_SOCKETPAIR_FAILURE if creating a
+ *        socketpair for the dataservice process failed.
+ *      - AGENTD_ERROR_DATASERVICE_FORK_FAILURE if forking the private process
+ *        failed.
+ *      - AGENTD_ERROR_DATASERVICE_PRIVSEP_LOOKUP_USERGROUP_FAILURE if there was
+ *        a failure looking up the configured user and group for the dataservice
+ *        process.
+ *      - AGENTD_ERROR_DATASERVICE_PRIVSEP_CHROOT_FAILURE if chrooting failed.
+ *      - AGENTD_ERROR_DATASERVICE_PRIVSEP_DROP_PRIVILEGES_FAILURE if dropping
+ *        privileges failed.
+ *      - AGENTD_ERROR_DATASERVICE_PRIVSEP_SETFDS_FAILURE if setting file
+ *        descriptors failed.
+ *      - AGENTD_ERROR_DATASERVICE_PRIVSEP_EXEC_PRIVATE_FAILURE if executing the
+ *        private command failed.
+ *      - AGENTD_ERROR_DATASERVICE_PRIVSEP_EXEC_SURVIVAL_WEIRDNESS if the
+ *        process survived execution (weird!).      
  */
 int dataservice_proc(
     const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,

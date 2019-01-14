@@ -3,10 +3,11 @@
  *
  * \brief Add a non-blocking socket descriptor to an event loop.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/ipc.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <fcntl.h>
 #include <string.h>
@@ -31,7 +32,7 @@ static void ipc_event_loop_cb(evutil_socket_t, short, void*);
  *
  * \returns 0 on success and non-zero on failure.
  */
-ssize_t ipc_event_loop_add(
+int ipc_event_loop_add(
     ipc_event_loop_context_t* loop, ipc_socket_context_t* sock)
 {
     ssize_t retval = 0;
@@ -47,7 +48,7 @@ ssize_t ipc_event_loop_add(
     /* if ev is already defined, then this socket has already been assigned. */
     if (NULL != sock_impl->ev)
     {
-        retval = 1;
+        retval = AGENTD_ERROR_IPC_INVALID_ARGUMENT;
         goto done;
     }
 
@@ -65,7 +66,7 @@ ssize_t ipc_event_loop_add(
     /* at least a read or write callback needs to be set. */
     if (0 == callbacks)
     {
-        retval = 2;
+        retval = AGENTD_ERROR_IPC_MISSING_CALLBACK;
         goto done;
     }
 
@@ -73,7 +74,7 @@ ssize_t ipc_event_loop_add(
     sock_impl->readbuf = evbuffer_new();
     if (NULL == sock_impl->readbuf)
     {
-        retval = 4;
+        retval = AGENTD_ERROR_IPC_EVBUFFER_NEW_FAILURE;
         goto done;
     }
 
@@ -81,7 +82,7 @@ ssize_t ipc_event_loop_add(
     sock_impl->writebuf = evbuffer_new();
     if (NULL == sock_impl->writebuf)
     {
-        retval = 5;
+        retval = AGENTD_ERROR_IPC_EVBUFFER_NEW_FAILURE;
         goto cleanup_readbuf;
     }
 
@@ -92,19 +93,19 @@ ssize_t ipc_event_loop_add(
             sock);
     if (NULL == sock_impl->ev)
     {
-        retval = 6;
+        retval = AGENTD_ERROR_IPC_EVENT_NEW_FAILURE;
         goto cleanup_writebuf;
     }
 
     /* add the event to the event base. */
     if (0 != event_add(sock_impl->ev, NULL))
     {
-        retval = 7;
+        retval = AGENTD_ERROR_IPC_EVENT_ADD_FAILURE;
         goto cleanup_event;
     }
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
     goto done;
 
 cleanup_event:

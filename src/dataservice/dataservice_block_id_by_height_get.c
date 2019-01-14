@@ -3,11 +3,12 @@
  *
  * \brief Get a block ID associated with a given block height.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/inet.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -23,9 +24,18 @@
  * \param height        The block height for this query.
  * \param block_id      Pointer to the block UUID (16 bytes) to set.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success.
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if a block was not found for this
+ *        block height.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is not
+ *        authorized to call this function.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function failed
+ *        to begin a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read data from the database.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_INDEX_ENTRY if this function
+ *        encountered an invalid index entry.
  */
 int dataservice_block_id_by_height_get(
     dataservice_child_context_t* child,
@@ -45,7 +55,7 @@ int dataservice_block_id_by_height_get(
     if (!BITCAP_ISSET(child->childcaps,
             DATASERVICE_API_CAP_APP_BLOCK_ID_BY_HEIGHT_READ))
     {
-        retval = 3;
+        retval = AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED;
         goto done;
     }
 
@@ -62,7 +72,7 @@ int dataservice_block_id_by_height_get(
     {
         if (0 != mdb_txn_begin(details->env, NULL, MDB_RDONLY, &txn))
         {
-            retval = 4;
+            retval = AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE;
             goto done;
         }
     }
@@ -83,20 +93,20 @@ int dataservice_block_id_by_height_get(
     if (MDB_NOTFOUND == retval)
     {
         /* the value was not found. */
-        retval = 1;
+        retval = AGENTD_ERROR_DATASERVICE_NOT_FOUND;
         goto maybe_transaction_abort;
     }
     else if (0 != retval)
     {
         /* some error has occurred. */
-        retval = 5;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE;
         goto maybe_transaction_abort;
     }
 
     /* verify that this value matches what we expect for a uuid. */
     if (lval.mv_size != 16)
     {
-        retval = 2;
+        retval = AGENTD_ERROR_DATASERVICE_INVALID_INDEX_ENTRY;
         goto maybe_transaction_abort;
     }
 
@@ -104,7 +114,7 @@ int dataservice_block_id_by_height_get(
     memcpy(block_id, lval.mv_data, 16);
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
 
     /* fall-through. */
 

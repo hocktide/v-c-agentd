@@ -6,6 +6,7 @@
  * \copyright 2018 Velo-Payments, Inc.  All rights reserved.
  */
 
+#include <agentd/status_codes.h>
 #include <vccert/certificate_types.h>
 
 #include "test_dataservice.h"
@@ -751,7 +752,7 @@ TEST_F(dataservice_test, global_settings_get_would_truncate)
     memset(schema_buffer, 0, sizeof(schema_buffer));
 
     /* querying the global data should fail due to truncation. */
-    ASSERT_EQ(2,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_WOULD_TRUNCATE,
         dataservice_global_settings_get(
             &child, DATASERVICE_GLOBAL_SETTING_SCHEMA_VERSION, schema_buffer,
             &schema_buffer_sz));
@@ -809,7 +810,7 @@ TEST_F(dataservice_test, global_settings_get_not_found)
     memset(schema_buffer, 0, sizeof(schema_buffer));
 
     /* querying the global data should fail due to the value not being faund. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_global_settings_get(
             &child, DATASERVICE_GLOBAL_SETTING_SCHEMA_VERSION, schema_buffer,
             &schema_buffer_sz));
@@ -987,7 +988,7 @@ TEST_F(dataservice_test, transaction_get_first_empty)
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
 
     /* getting the first transaction should return a "not found" result. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_get_first(
             &child, nullptr, nullptr, &txn_bytes, &txn_size));
 
@@ -1079,7 +1080,7 @@ TEST_F(dataservice_test, transaction_get_first_empty_with_start_end)
     ASSERT_EQ(0, mdb_txn_commit(txn));
 
     /* getting the first transaction should return a "not found" result. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_get_first(
             &child, nullptr, nullptr, &txn_bytes, &txn_size));
 
@@ -1131,7 +1132,7 @@ TEST_F(dataservice_test, transaction_get_first_no_capability)
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
 
     /* getting the first transaction should fail due to missing caps. */
-    ASSERT_EQ(3,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED,
         dataservice_transaction_get_first(
             &child, nullptr, nullptr, &txn_bytes, &txn_size));
 
@@ -2017,28 +2018,28 @@ TEST_F(dataservice_test, transaction_drop_00_ff)
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
 
     /* attempt to drop the begin transaction. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_drop(
             &child, nullptr, begin_key));
 
     /* attempt to drop the end transaction. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_drop(
             &child, nullptr, end_key));
 
     /* submit foo transaction. */
-    ASSERT_EQ(0,
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
         dataservice_transaction_submit(
             &child, nullptr, foo_key, foo_artifact, foo_data,
             sizeof(foo_data)));
 
     /* attempt to drop the begin transaction. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_drop(
             &child, nullptr, begin_key));
 
     /* attempt to drop the end transaction. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_drop(
             &child, nullptr, end_key));
 
@@ -2131,12 +2132,12 @@ TEST_F(dataservice_test, transaction_drop)
             &child, nullptr, foo_key));
 
     /* getting the first transaction should fail. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_get_first(
             &child, nullptr, &node, &txn_bytes, &txn_size));
 
     /* now if we try to get the transaction by id, this fails. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_get(
             &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
 
@@ -2309,7 +2310,7 @@ TEST_F(dataservice_test, transaction_drop_ordering)
             &child, nullptr, foo2_key));
 
     /* now if we try to get the transaction by id, this fails. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_get(
             &child, nullptr, foo2_key, &node, &txn_bytes, &txn_size));
 
@@ -2508,7 +2509,7 @@ TEST_F(dataservice_test, transaction_drop_first_ordering)
             &child, nullptr, foo1_key));
 
     /* now if we try to get the transaction by id, this fails. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_get(
             &child, nullptr, foo1_key, &node, &txn_bytes, &txn_size));
 
@@ -2593,7 +2594,7 @@ TEST_F(dataservice_test, transaction_submit_bitcap)
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
 
     /* submitting foo transaction fails. */
-    ASSERT_EQ(3,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED,
         dataservice_transaction_submit(
             &child, nullptr, foo_key, foo_artifact, foo_data,
             sizeof(foo_data)));
@@ -2643,7 +2644,7 @@ TEST_F(dataservice_test, transaction_get_first_bitcap)
 
     /* getting the first transaction fails due no capabilities. */
     data_transaction_node_t node;
-    ASSERT_EQ(3,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED,
         dataservice_transaction_get_first(
             &child, nullptr, &node, &txn_bytes, &txn_size));
 
@@ -2695,7 +2696,7 @@ TEST_F(dataservice_test, transaction_get_bitcap)
 
     /* getting the first transaction fails due no capabilities. */
     data_transaction_node_t node;
-    ASSERT_EQ(3,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED,
         dataservice_transaction_get(
             &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
 
@@ -2744,7 +2745,7 @@ TEST_F(dataservice_test, transaction_drop_bitcap)
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
 
     /* dropping a transaction fails due to no capability. */
-    ASSERT_EQ(3,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED,
         dataservice_transaction_drop(
             &child, nullptr, foo_key));
 
@@ -2833,19 +2834,19 @@ TEST_F(dataservice_test, transaction_make_block_simple)
     ASSERT_EQ(0, dataservice_child_context_create(&ctx, &child, reducedcaps));
 
     /* verify that our block does not exist. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_block_get(
             &child, nullptr, foo_block_id, &block_node,
             &block_txn_bytes, &block_txn_size));
 
     /* verify that a block ID does not exist for block height 1. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_block_id_by_height_get(
             &child, nullptr, 1, block_id_for_height_1));
 
     /* verify that our artifact does not exist. */
     /* getting the artifact record by artifact id should return not found. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_artifact_get(
             &child, nullptr, foo_artifact, &foo_artifact_record));
 
@@ -2876,7 +2877,7 @@ TEST_F(dataservice_test, transaction_make_block_simple)
             nullptr));
 
     /* getting the block transaction by id should return not found. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_block_transaction_get(
             &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
 
@@ -2887,7 +2888,7 @@ TEST_F(dataservice_test, transaction_make_block_simple)
             foo_block_cert, foo_block_cert_length));
 
     /* getting the transaction by id should return not found. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_transaction_get(
             &child, nullptr, foo_key, &node, &txn_bytes, &txn_size));
 
@@ -3021,7 +3022,7 @@ TEST_F(dataservice_test, transaction_make_block_bitset)
             nullptr));
 
     /* make block should fail because of missing capability. */
-    ASSERT_EQ(3,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED,
         dataservice_block_make(
             &child, nullptr, foo_block_id,
             foo_block_cert, foo_block_cert_length));
@@ -3117,7 +3118,7 @@ TEST_F(dataservice_test, transaction_make_block_bad_height)
             nullptr));
 
     /* make block fails due to invalid block height. */
-    ASSERT_EQ(9,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_INVALID_BLOCK_HEIGHT,
         dataservice_block_make(
             &child, nullptr, foo_block_id,
             foo_block_cert, foo_block_cert_length));
@@ -3213,7 +3214,7 @@ TEST_F(dataservice_test, transaction_make_block_bad_prev_block_id)
             nullptr));
 
     /* make block fails due to invalid previous block ID. */
-    ASSERT_EQ(10,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_INVALID_PREVIOUS_BLOCK_UUID,
         dataservice_block_make(
             &child, nullptr, foo_block_id,
             foo_block_cert, foo_block_cert_length));
@@ -3310,7 +3311,7 @@ TEST_F(dataservice_test, transaction_make_block_bad_block_id)
             nullptr));
 
     /* make block fails due to invalid block ID. */
-    ASSERT_EQ(11,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_INVALID_BLOCK_UUID,
         dataservice_block_make(
             &child, nullptr, foo_block_id,
             foo_block_cert, foo_block_cert_length));

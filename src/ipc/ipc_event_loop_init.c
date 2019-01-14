@@ -3,10 +3,11 @@
  *
  * \brief Initialize an event loop for non-blocking ipc.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/ipc.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <fcntl.h>
 #include <string.h>
@@ -26,9 +27,12 @@ static void ipc_event_loop_dispose(void* disposable);
  *
  * \param loop          The event loop context to initialize.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory.
+ *      - AGENTD_ERROR_IPC_EVENT_BASE_NEW_FAILURE if event_base_new() failed.
  */
-ssize_t ipc_event_loop_init(ipc_event_loop_context_t* loop)
+int ipc_event_loop_init(ipc_event_loop_context_t* loop)
 {
     ssize_t retval = 0;
     /* parameter sanity checking. */
@@ -44,7 +48,7 @@ ssize_t ipc_event_loop_init(ipc_event_loop_context_t* loop)
     loop->impl = internal;
     if (NULL == internal)
     {
-        retval = 1;
+        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
         goto done;
     }
 
@@ -55,7 +59,7 @@ ssize_t ipc_event_loop_init(ipc_event_loop_context_t* loop)
     internal->evb = event_base_new();
     if (NULL == internal->evb)
     {
-        retval = 2;
+        retval = AGENTD_ERROR_IPC_EVENT_BASE_NEW_FAILURE;
         goto cleanup_internal;
     }
 
@@ -63,7 +67,7 @@ ssize_t ipc_event_loop_init(ipc_event_loop_context_t* loop)
     loop->hdr.dispose = &ipc_event_loop_dispose;
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
     goto done;
 
 cleanup_internal:

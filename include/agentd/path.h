@@ -3,7 +3,7 @@
  *
  * \brief Utility methods for resolving paths.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_PATH_HEADER_GUARD
@@ -24,7 +24,10 @@ extern "C" {
  * \param outpath           The character pointer that this parameter points to
  *                          is updated to the appended path on success.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if the operation cannot
+ *            be completed due to a memory allocation error.
  */
 int path_append_default(const char* path, char** outpath);
 
@@ -40,7 +43,12 @@ int path_append_default(const char* path, char** outpath);
  * \param resolved          The character pointer that this parameter points to
  *                          is updated to the resolved path on success.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if the operation cannot
+ *            be completed due to a memory allocation error.
+ *          - AGENTD_ERROR_GENERAL_PATH_NOT_FOUND if the filename could not be
+ *            found in the given path.
  */
 int path_resolve(const char* filename, const char* path, char** resolved);
 
@@ -54,7 +62,10 @@ int path_resolve(const char* filename, const char* path, char** resolved);
  * \param dirname           The character pointer that this parameter points to
  *                          is updated to the directory name on success.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if the operation cannot
+ *            be completed due to a memory allocation error.
  */
 int path_dirname(const char* filename, char** dirname);
 

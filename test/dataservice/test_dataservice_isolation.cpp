@@ -3,11 +3,12 @@
  *
  * Isolation tests for the data service.
  *
- * \copyright 2018 Velo-Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/api.h>
 #include <agentd/dataservice/private/dataservice.h>
+#include <agentd/status_codes.h>
 #include <iostream>
 #include <lmdb.h>
 #include <string>
@@ -136,20 +137,20 @@ TEST_F(dataservice_isolation_test, create_root_block)
     /* create the directory for this test. */
     ASSERT_EQ(0, createDirectoryName(__COUNTER__, DB_PATH));
 
-    int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    int sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    int recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
 
     /* Run the send / receive on creating the root context. */
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_root_context_init(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -157,7 +158,7 @@ TEST_F(dataservice_isolation_test, create_root_block)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
@@ -179,8 +180,8 @@ TEST_F(dataservice_isolation_test, reduce_root_caps)
 {
     uint32_t offset;
     uint32_t status;
-    int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    int sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    int recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     string DB_PATH;
 
     /* create the directory for this test. */
@@ -190,13 +191,13 @@ TEST_F(dataservice_isolation_test, reduce_root_caps)
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_root_context_init(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -204,7 +205,7 @@ TEST_F(dataservice_isolation_test, reduce_root_caps)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
@@ -227,18 +228,18 @@ TEST_F(dataservice_isolation_test, reduce_root_caps)
         DATASERVICE_API_CAP_LL_ROOT_CONTEXT_REDUCE_CAPS);
 
     /* reduce root capabilities. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_root_context_reduce_caps(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -246,7 +247,7 @@ TEST_F(dataservice_isolation_test, reduce_root_caps)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_reduce_caps(
@@ -265,18 +266,18 @@ TEST_F(dataservice_isolation_test, reduce_root_caps)
         DATASERVICE_API_CAP_LL_ROOT_CONTEXT_REDUCE_CAPS);
 
     /* reduce root capabilities. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_root_context_reduce_caps(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -284,7 +285,7 @@ TEST_F(dataservice_isolation_test, reduce_root_caps)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_reduce_caps(
@@ -303,18 +304,18 @@ TEST_F(dataservice_isolation_test, reduce_root_caps)
         DATASERVICE_API_CAP_LL_ROOT_CONTEXT_REDUCE_CAPS);
 
     /* reduce root capabilities fails. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_root_context_reduce_caps(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -322,7 +323,7 @@ TEST_F(dataservice_isolation_test, reduce_root_caps)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_reduce_caps(
@@ -345,8 +346,8 @@ TEST_F(dataservice_isolation_test, child_context_create_close)
     uint32_t offset;
     uint32_t status;
     uint32_t child_context;
-    int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    int sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    int recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     string DB_PATH;
 
     /* create the directory for this test. */
@@ -356,13 +357,13 @@ TEST_F(dataservice_isolation_test, child_context_create_close)
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_root_context_init(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -370,7 +371,7 @@ TEST_F(dataservice_isolation_test, child_context_create_close)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
@@ -393,18 +394,18 @@ TEST_F(dataservice_isolation_test, child_context_create_close)
         DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
 
     /* create child context. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_child_context_create(
                         &nonblockdatasock, &offset, &status, &child_context);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -412,7 +413,7 @@ TEST_F(dataservice_isolation_test, child_context_create_close)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_child_context_create(
@@ -428,18 +429,18 @@ TEST_F(dataservice_isolation_test, child_context_create_close)
     ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, child_context);
 
     /* close child context. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_child_context_close(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -447,7 +448,7 @@ TEST_F(dataservice_isolation_test, child_context_create_close)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_child_context_close(
@@ -470,8 +471,8 @@ TEST_F(dataservice_isolation_test, global_setting_not_found)
     uint32_t offset;
     uint32_t status;
     uint32_t child_context;
-    int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    int sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    int recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     string DB_PATH;
 
     /* create the directory for this test. */
@@ -481,13 +482,13 @@ TEST_F(dataservice_isolation_test, global_setting_not_found)
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_root_context_init(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -495,7 +496,7 @@ TEST_F(dataservice_isolation_test, global_setting_not_found)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
@@ -518,18 +519,18 @@ TEST_F(dataservice_isolation_test, global_setting_not_found)
         DATASERVICE_API_CAP_APP_GLOBAL_SETTING_READ);
 
     /* create child context. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_child_context_create(
                         &nonblockdatasock, &offset, &status, &child_context);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -537,7 +538,7 @@ TEST_F(dataservice_isolation_test, global_setting_not_found)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_child_context_create(
@@ -556,18 +557,18 @@ TEST_F(dataservice_isolation_test, global_setting_not_found)
     size_t data_size = sizeof(data);
 
     /* query global settings. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_global_settings_get(
                         &nonblockdatasock, &offset, &status, data, &data_size);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -575,7 +576,7 @@ TEST_F(dataservice_isolation_test, global_setting_not_found)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_global_settings_get(
@@ -589,7 +590,7 @@ TEST_F(dataservice_isolation_test, global_setting_not_found)
     EXPECT_EQ(0, recvresp_status);
     ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
     /* this will fail with not found. */
-    ASSERT_EQ(1U, status);
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND, (int)status);
 }
 
 /**
@@ -600,8 +601,8 @@ TEST_F(dataservice_isolation_test, global_setting_set_get)
     uint32_t offset;
     uint32_t status;
     uint32_t child_context;
-    int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    int sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    int recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     string DB_PATH;
 
     /* create the directory for this test. */
@@ -611,13 +612,13 @@ TEST_F(dataservice_isolation_test, global_setting_set_get)
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_root_context_init(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -625,7 +626,7 @@ TEST_F(dataservice_isolation_test, global_setting_set_get)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
@@ -650,18 +651,18 @@ TEST_F(dataservice_isolation_test, global_setting_set_get)
         DATASERVICE_API_CAP_APP_GLOBAL_SETTING_WRITE);
 
     /* create child context. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_child_context_create(
                         &nonblockdatasock, &offset, &status, &child_context);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -669,7 +670,7 @@ TEST_F(dataservice_isolation_test, global_setting_set_get)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_child_context_create(
@@ -691,18 +692,18 @@ TEST_F(dataservice_isolation_test, global_setting_set_get)
     size_t val_size = sizeof(val);
 
     /* write global settings. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_global_settings_set(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -710,7 +711,7 @@ TEST_F(dataservice_isolation_test, global_setting_set_get)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_global_settings_set(
@@ -730,18 +731,18 @@ TEST_F(dataservice_isolation_test, global_setting_set_get)
     size_t data_size = sizeof(data);
 
     /* query global settings. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_global_settings_get(
                         &nonblockdatasock, &offset, &status, data, &data_size);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -749,7 +750,7 @@ TEST_F(dataservice_isolation_test, global_setting_set_get)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_global_settings_get(
@@ -776,8 +777,8 @@ TEST_F(dataservice_isolation_test, txn_submit_get_first)
     uint32_t offset;
     uint32_t status;
     uint32_t child_context;
-    int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    int sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    int recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     string DB_PATH;
 
     /* create the directory for this test. */
@@ -787,13 +788,13 @@ TEST_F(dataservice_isolation_test, txn_submit_get_first)
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_root_context_init(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -801,7 +802,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get_first)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
@@ -826,18 +827,18 @@ TEST_F(dataservice_isolation_test, txn_submit_get_first)
         DATASERVICE_API_CAP_APP_PQ_TRANSACTION_FIRST_READ);
 
     /* create child context. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_child_context_create(
                         &nonblockdatasock, &offset, &status, &child_context);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -845,7 +846,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get_first)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_child_context_create(
@@ -875,18 +876,18 @@ TEST_F(dataservice_isolation_test, txn_submit_get_first)
     size_t foo_data_size = sizeof(foo_data);
 
     /* submit a transaction. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_transaction_submit(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -894,7 +895,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get_first)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_transaction_submit(
@@ -914,19 +915,19 @@ TEST_F(dataservice_isolation_test, txn_submit_get_first)
     data_transaction_node_t node;
 
     /* query the first transaction. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_transaction_get_first(
                         &nonblockdatasock, &offset, &status, &node,
                         &txn_data, &txn_data_size);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -934,7 +935,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get_first)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_transaction_get_first(
@@ -972,8 +973,8 @@ TEST_F(dataservice_isolation_test, txn_submit_get)
     uint32_t offset;
     uint32_t status;
     uint32_t child_context;
-    int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    int sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    int recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     string DB_PATH;
 
     /* create the directory for this test. */
@@ -983,13 +984,13 @@ TEST_F(dataservice_isolation_test, txn_submit_get)
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_root_context_init(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -997,7 +998,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
@@ -1022,18 +1023,18 @@ TEST_F(dataservice_isolation_test, txn_submit_get)
         DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
 
     /* create child context. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_child_context_create(
                         &nonblockdatasock, &offset, &status, &child_context);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1041,7 +1042,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_child_context_create(
@@ -1071,18 +1072,18 @@ TEST_F(dataservice_isolation_test, txn_submit_get)
     size_t foo_data_size = sizeof(foo_data);
 
     /* submit a transaction. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_transaction_submit(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1090,7 +1091,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_transaction_submit(
@@ -1110,19 +1111,19 @@ TEST_F(dataservice_isolation_test, txn_submit_get)
     data_transaction_node_t node;
 
     /* query the first transaction. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_transaction_get(
                         &nonblockdatasock, &offset, &status, &node,
                         &txn_data, &txn_data_size);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1130,7 +1131,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_transaction_get(
@@ -1168,8 +1169,8 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
     uint32_t offset;
     uint32_t status;
     uint32_t child_context;
-    int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    int sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    int recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     string DB_PATH;
 
     /* create the directory for this test. */
@@ -1179,13 +1180,13 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_root_context_init(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1193,7 +1194,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
@@ -1220,18 +1221,18 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
         DATASERVICE_API_CAP_APP_PQ_TRANSACTION_DROP);
 
     /* create child context. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_child_context_create(
                         &nonblockdatasock, &offset, &status, &child_context);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1239,7 +1240,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_child_context_create(
@@ -1269,18 +1270,18 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
     size_t foo_data_size = sizeof(foo_data);
 
     /* submit a transaction. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_transaction_submit(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1288,7 +1289,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_transaction_submit(
@@ -1308,19 +1309,19 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
     data_transaction_node_t node;
 
     /* query the first transaction. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_transaction_get(
                         &nonblockdatasock, &offset, &status, &node,
                         &txn_data, &txn_data_size);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1328,7 +1329,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_transaction_get(
@@ -1354,18 +1355,18 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
     ASSERT_EQ(foo_data_size, (uint64_t)ntohll(node.net_txn_cert_size));
 
     /* drop this transaction. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_transaction_drop(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1373,7 +1374,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_transaction_drop(
@@ -1388,19 +1389,19 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
     ASSERT_EQ(0U, status);
 
     /* query the first transaction. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_transaction_get(
                         &nonblockdatasock, &offset, &status, &node,
                         &txn_data, &txn_data_size);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1408,7 +1409,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_transaction_get(
@@ -1420,7 +1421,7 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
     EXPECT_EQ(0, sendreq_status);
     EXPECT_EQ(0, recvresp_status);
     ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
-    ASSERT_EQ(1U, status);
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND, (int)status);
 
     /* clean up. */
     free(txn_data);
@@ -1434,8 +1435,8 @@ TEST_F(dataservice_isolation_test, make_block_simple)
     uint32_t offset;
     uint32_t status;
     uint32_t child_context;
-    int sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    int recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    int sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    int recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     string DB_PATH;
 
     /* create the directory for this test. */
@@ -1445,13 +1446,13 @@ TEST_F(dataservice_isolation_test, make_block_simple)
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_root_context_init(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1459,7 +1460,7 @@ TEST_F(dataservice_isolation_test, make_block_simple)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_root_context_init(
@@ -1495,18 +1496,18 @@ TEST_F(dataservice_isolation_test, make_block_simple)
         DATASERVICE_API_CAP_APP_BLOCK_ID_BY_HEIGHT_READ);
 
     /* create child context. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_child_context_create(
                         &nonblockdatasock, &offset, &status, &child_context);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1514,7 +1515,7 @@ TEST_F(dataservice_isolation_test, make_block_simple)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_child_context_create(
@@ -1550,18 +1551,18 @@ TEST_F(dataservice_isolation_test, make_block_simple)
             foo_key, foo_prev, foo_artifact, &foo_cert, &foo_cert_length));
 
     /* submit a transaction. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_transaction_submit(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1569,7 +1570,7 @@ TEST_F(dataservice_isolation_test, make_block_simple)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_transaction_submit(
@@ -1608,18 +1609,18 @@ TEST_F(dataservice_isolation_test, make_block_simple)
             nullptr));
 
     /* make a block. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_block_make(
                         &nonblockdatasock, &offset, &status);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1627,7 +1628,7 @@ TEST_F(dataservice_isolation_test, make_block_simple)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_block_make(
@@ -1642,19 +1643,19 @@ TEST_F(dataservice_isolation_test, make_block_simple)
     ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
 
     /* query the first transaction. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_transaction_get(
                         &nonblockdatasock, &offset, &status, &node,
                         &txn_data, &txn_data_size);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1662,7 +1663,7 @@ TEST_F(dataservice_isolation_test, make_block_simple)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_transaction_get(
@@ -1674,22 +1675,22 @@ TEST_F(dataservice_isolation_test, make_block_simple)
     EXPECT_EQ(0, sendreq_status);
     EXPECT_EQ(0, recvresp_status);
     ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
-    ASSERT_EQ(1U, status);
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND, (int)status);
 
     /* query the first block. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_block_get(
                         &nonblockdatasock, &offset, &status, &block_node,
                         &block_data, &block_data_size);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1697,7 +1698,7 @@ TEST_F(dataservice_isolation_test, make_block_simple)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_block_get(
@@ -1715,18 +1716,18 @@ TEST_F(dataservice_isolation_test, make_block_simple)
 
     /* query the block by height. */
     uint8_t height_block_id[16];
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_block_id_by_height_get(
                         &nonblockdatasock, &offset, &status, height_block_id);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1734,7 +1735,7 @@ TEST_F(dataservice_isolation_test, make_block_simple)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_block_id_by_height_get(
@@ -1750,18 +1751,18 @@ TEST_F(dataservice_isolation_test, make_block_simple)
     ASSERT_EQ(0, memcmp(foo_block_id, height_block_id, 16));
 
     /* query the artifact. */
-    sendreq_status = IPC_ERROR_CODE_WOULD_BLOCK;
-    recvresp_status = IPC_ERROR_CODE_WOULD_BLOCK;
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
     nonblockmode(
         /* onRead. */
         [&]() {
-            if (recvresp_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 recvresp_status =
                     dataservice_api_recvresp_artifact_get(
                         &nonblockdatasock, &offset, &status, &artifact_rec);
 
-                if (recvresp_status != IPC_ERROR_CODE_WOULD_BLOCK)
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
                 {
                     ipc_exit_loop(&loop);
                 }
@@ -1769,7 +1770,7 @@ TEST_F(dataservice_isolation_test, make_block_simple)
         },
         /* onWrite. */
         [&]() {
-            if (sendreq_status == IPC_ERROR_CODE_WOULD_BLOCK)
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
             {
                 sendreq_status =
                     dataservice_api_sendreq_artifact_get(

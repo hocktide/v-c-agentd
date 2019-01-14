@@ -3,10 +3,11 @@
  *
  * \brief Append the default path onto the given path.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/command.h>
+#include <agentd/status_codes.h>
 #include <agentd/string.h>
 #include <cbmc/model_assert.h>
 #include <paths.h>
@@ -24,7 +25,10 @@
  * \param outpath           The character pointer that this parameter points to
  *                          is updated to the appended path on success.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if the operation cannot
+ *            be completed due to a memory allocation error.
  */
 int path_append_default(const char* path, char** outpath)
 {
@@ -40,8 +44,8 @@ int path_append_default(const char* path, char** outpath)
     {
         *outpath = strcatv(path, ":", _PATH_DEFPATH, NULL);
         if (NULL == *outpath)
-            return 1;
+            return AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
     }
 
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }

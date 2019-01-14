@@ -3,7 +3,7 @@
  *
  * \brief Internal header for the data service.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_DATASERVICE_INTERNAL_HEADER_GUARD
@@ -77,7 +77,22 @@ struct dataservice_transaction_context
  * \param ctx       The initialized root context that stores this database.
  * \param datadir   The directory where the database is stored.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_ENV_CREATE_FAILURE if this function
+ *        failed to create a database environment.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_ENV_SET_MAPSIZE_FAILURE if this function
+ *        failed to set the database map size.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_ENV_SET_MAXDBS_FAILURE if this function
+ *        failed to set the maximum number of databases.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_ENV_OPEN_FAILURE if this function failed
+ *        to open the database environment.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function failed
+ *        to begin a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_DBI_OPEN_FAILURE if this function failed
+ *        to open a database instance.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_COMMIT_FAILURE if this function
+ *        failed to commit the database open transaction.
  */
 int dataservice_database_open(
     dataservice_root_context_t* ctx, const char* datadir);
@@ -86,8 +101,6 @@ int dataservice_database_open(
  * \brief Close the database.
  *
  * \param ctx       The root context with the opened database.
- *
- * \returns 0 on success and non-zero on failure.
  */
 void dataservice_database_close(
     dataservice_root_context_t* ctx);
@@ -106,7 +119,10 @@ dataservice_instance_t* dataservice_instance_create();
  * \param offset        Pointer to the offset that is updated with this child
  *                      context offset in the children array.
  *
- * \returns 0 on success, and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_OUT_OF_CHILD_INSTANCES if no more child
+ *        instances are available.
  */
 int dataservice_child_details_create(dataservice_instance_t* inst, int* offset);
 
@@ -129,10 +145,18 @@ void dataservice_child_details_delete(dataservice_instance_t* inst, int offset);
  * \param dtxn_ctx      The dataservice transaction context for this operation.
  * \param txn_id        The transaction ID for this transaction.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - 1 if the transaction could not be found.
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if the transaction uuid could not
+ *        be found.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out of memory condition was
+ *        encountered during this operation.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function could
+ *        not create a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read from the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_DEL_FAILURE if this function failed to
+ *        delete from the database.
  */
 int dataservice_transaction_drop_internal(
     dataservice_child_context_t* child,
@@ -151,7 +175,14 @@ int dataservice_transaction_drop_internal(
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet size is invalid.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -172,7 +203,12 @@ int dataservice_decode_and_dispatch(
  * \param data_size     The size of this additional payload data.  Must be 0 if
  *                      data is NULL.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_write_status(
     ipc_socket_context_t* sock, uint32_t method, uint32_t offset,
@@ -191,7 +227,12 @@ int dataservice_decode_and_dispatch_write_status(
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_root_context_create(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -210,7 +251,12 @@ int dataservice_decode_and_dispatch_root_context_create(
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_root_context_reduce_caps(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -229,7 +275,12 @@ int dataservice_decode_and_dispatch_root_context_reduce_caps(
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_child_context_create(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -248,7 +299,12 @@ int dataservice_decode_and_dispatch_child_context_create(
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_child_context_close(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -267,7 +323,12 @@ int dataservice_decode_and_dispatch_child_context_close(
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_global_setting_get(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -286,7 +347,12 @@ int dataservice_decode_and_dispatch_global_setting_get(
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_global_setting_set(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -305,7 +371,12 @@ int dataservice_decode_and_dispatch_global_setting_set(
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_transaction_submit(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -324,7 +395,12 @@ int dataservice_decode_and_dispatch_transaction_submit(
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_transaction_get_first(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -343,7 +419,12 @@ int dataservice_decode_and_dispatch_transaction_get_first(
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_transaction_get(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -362,7 +443,12 @@ int dataservice_decode_and_dispatch_transaction_get(
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_transaction_drop(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -381,7 +467,12 @@ int dataservice_decode_and_dispatch_transaction_drop(
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_artifact_read(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -400,7 +491,12 @@ int dataservice_decode_and_dispatch_artifact_read(
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_block_make(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -419,7 +515,12 @@ int dataservice_decode_and_dispatch_block_make(
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_block_read(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -438,7 +539,12 @@ int dataservice_decode_and_dispatch_block_read(
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_block_id_by_height_read(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,

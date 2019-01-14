@@ -3,11 +3,12 @@
  *
  * \brief Drop a transaction from the queue by id.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/inet.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -25,10 +26,20 @@ static int dataservice_transaction_drop_fixup_prev_next(
  * \param dtxn_ctx      The dataservice transaction context for this operation.
  * \param txn_id        The transaction ID for this transaction.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - 1 if the transaction could not be found.
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is not
+ *        authorized to call this function.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if the transaction uuid could not
+ *        be found.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out of memory condition was
+ *        encountered during this operation.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function could
+ *        not create a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read from the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_DEL_FAILURE if this function failed to
+ *        delete from the database.
  */
 int dataservice_transaction_drop(
     dataservice_child_context_t* child,
@@ -44,7 +55,7 @@ int dataservice_transaction_drop(
     if (!BITCAP_ISSET(child->childcaps,
             DATASERVICE_API_CAP_APP_PQ_TRANSACTION_DROP))
     {
-        return 3;
+        return AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED;
     }
 
     return dataservice_transaction_drop_internal(
@@ -62,10 +73,18 @@ int dataservice_transaction_drop(
  * \param dtxn_ctx      The dataservice transaction context for this operation.
  * \param txn_id        The transaction ID for this transaction.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - 1 if the transaction could not be found.
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if the transaction uuid could not
+ *        be found.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out of memory condition was
+ *        encountered during this operation.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function could
+ *        not create a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read from the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_DEL_FAILURE if this function failed to
+ *        delete from the database.
  */
 int dataservice_transaction_drop_internal(
     dataservice_child_context_t* child,
@@ -88,7 +107,7 @@ int dataservice_transaction_drop_internal(
     if (0 == cmp1 || 0 == cmp2)
     {
         /* these IDs are never found. */
-        retval = 1;
+        retval = AGENTD_ERROR_DATASERVICE_NOT_FOUND;
         goto done;
     }
 
@@ -105,7 +124,7 @@ int dataservice_transaction_drop_internal(
     {
         if (0 != mdb_txn_begin(details->env, NULL, 0, &txn))
         {
-            retval = 4;
+            retval = AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE;
             goto done;
         }
     }
@@ -123,13 +142,13 @@ int dataservice_transaction_drop_internal(
     if (MDB_NOTFOUND == retval || lval.mv_size < sizeof(data_transaction_node_t))
     {
         /* the record was not found. */
-        retval = 1;
+        retval = AGENTD_ERROR_DATASERVICE_NOT_FOUND;
         goto maybe_transaction_abort;
     }
     else if (0 != retval)
     {
         /* some error has occurred. */
-        retval = 5;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE;
         goto maybe_transaction_abort;
     }
 
@@ -144,13 +163,13 @@ int dataservice_transaction_drop_internal(
     if (MDB_NOTFOUND == retval)
     {
         /* the value was not found. */
-        retval = 1;
+        retval = AGENTD_ERROR_DATASERVICE_NOT_FOUND;
         goto maybe_transaction_abort;
     }
     else if (0 != retval)
     {
         /* some error has occurred. */
-        retval = 5;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_DEL_FAILURE;
         goto maybe_transaction_abort;
     }
 
@@ -158,9 +177,8 @@ int dataservice_transaction_drop_internal(
     retval =
         dataservice_transaction_drop_fixup_prev_next(
             del_txn, details->pq_db, &node);
-    if (0 != retval)
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = 6;
         goto maybe_transaction_abort;
     }
 
@@ -172,7 +190,7 @@ int dataservice_transaction_drop_internal(
     }
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
 
     /* fall-through. */
 
@@ -194,7 +212,14 @@ done:
  * \param pq_db         The transaction database.
  * \param node          The node used for getting next and prev.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out of memory condition was
+ *        encountered during this operation.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read from the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_DEL_FAILURE if this function failed to
+ *        delete from the database.
  */
 static int dataservice_transaction_drop_fixup_prev_next(
     MDB_txn* del_txn, MDB_dbi pq_db, const data_transaction_node_t* node)
@@ -216,7 +241,7 @@ static int dataservice_transaction_drop_fixup_prev_next(
     retval = mdb_get(del_txn, pq_db, &lkey, &lval);
     if (0 != retval || lval.mv_size < sizeof(data_transaction_node_t))
     {
-        retval = 5;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE;
         goto done;
     }
 
@@ -225,7 +250,7 @@ static int dataservice_transaction_drop_fixup_prev_next(
     prev_buffer = (uint8_t*)malloc(prev_buffer_size);
     if (NULL == prev_buffer)
     {
-        retval = 6;
+        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
         goto done;
     }
 
@@ -242,7 +267,7 @@ static int dataservice_transaction_drop_fixup_prev_next(
     retval = mdb_put(del_txn, pq_db, &lkey, &lval, 0);
     if (0 != retval)
     {
-        retval = 7;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
         goto maybe_cleanup_prev_buffer;
     }
 
@@ -253,7 +278,7 @@ static int dataservice_transaction_drop_fixup_prev_next(
     retval = mdb_get(del_txn, pq_db, &lkey, &lval);
     if (0 != retval || lval.mv_size < sizeof(data_transaction_node_t))
     {
-        retval = 5;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE;
         goto done;
     }
 
@@ -262,7 +287,7 @@ static int dataservice_transaction_drop_fixup_prev_next(
     next_buffer = (uint8_t*)malloc(next_buffer_size);
     if (NULL == next_buffer)
     {
-        retval = 6;
+        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
         goto done;
     }
 
@@ -279,12 +304,12 @@ static int dataservice_transaction_drop_fixup_prev_next(
     retval = mdb_put(del_txn, pq_db, &lkey, &lval, 0);
     if (0 != retval)
     {
-        retval = 7;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
         goto maybe_cleanup_next_buffer;
     }
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
 
     /* fall-through. */
 

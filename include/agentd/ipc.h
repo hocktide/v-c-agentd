@@ -3,7 +3,7 @@
  *
  * \brief Inter-process communication.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_IPC_HEADER_GUARD
@@ -29,12 +29,6 @@ extern "C" {
 #define IPC_DATA_TYPE_STRING 0x10
 #define IPC_DATA_TYPE_DATA_PACKET 0x20
 #define IPC_DATA_TYPE_EOM 0xFF
-
-/* error codes for ipc. */
-typedef enum ipc_error_code
-{
-    IPC_ERROR_CODE_WOULD_BLOCK = 0x1005
-} ipc_error_code_t;
 
 /* forward decl for ipc_socket_context. */
 struct ipc_socket_context;
@@ -115,9 +109,12 @@ typedef struct ipc_event_loop_context
  * \param rhs           Pointer to the integer variable updated to the
  *                      right-hand-side descriptor for the socket pair.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_SOCKETPAIR_FAILURE if creating the socket pair
+ *        failed.
  */
-ssize_t ipc_socketpair(int domain, int type, int protocol, int* lhs, int* rhs);
+int ipc_socketpair(int domain, int type, int protocol, int* lhs, int* rhs);
 
 /**
  * \brief Set a socket for synchronous (blocking) I/O.  Afterward, the
@@ -127,9 +124,14 @@ ssize_t ipc_socketpair(int domain, int type, int protocol, int* lhs, int* rhs);
  *
  * \param sd            The socket descriptor to make synchronous.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_FCNTL_GETFL_FAILURE if the fcntl flags could not be
+ *        read.
+ *      - AGENTD_ERROR_IPC_FCNTL_SETFL_FAILURE if the fcntl flags could not be
+ *        updated.
  */
-ssize_t ipc_make_block(int sock);
+int ipc_make_block(int sock);
 
 /**
  * \brief Set a socket for asynchronous (non-blocking) I/O.  Afterward, the
@@ -144,9 +146,16 @@ ssize_t ipc_make_block(int sock);
  * \param ctx           The socket context to initialize using this call.
  * \param user_context  The user context for this connection.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition
+ *        occurred during this operation.
+ *      - AGENTD_ERROR_IPC_FCNTL_GETFL_FAILURE if the fcntl flags could not be
+ *        read.
+ *      - AGENTD_ERROR_IPC_FCNTL_SETFL_FAILURE if the fcntl flags could not be
+ *        updated.
  */
-ssize_t ipc_make_noblock(
+int ipc_make_noblock(
     int sock, ipc_socket_context_t* ctx, void* user_context);
 
 /**
@@ -159,9 +168,11 @@ ssize_t ipc_make_noblock(
  * \param val           The raw data to write.
  * \param size          The size of the raw data to write.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BLOCK_FAILURE if writing data failed.
  */
-ssize_t ipc_write_data_block(int sock, const void* val, uint32_t size);
+int ipc_write_data_block(int sock, const void* val, uint32_t size);
 
 /**
  * \brief Write a character string to the blocking socket.
@@ -172,9 +183,11 @@ ssize_t ipc_write_data_block(int sock, const void* val, uint32_t size);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           The string to write.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BLOCK_FAILURE if writing data failed.
  */
-ssize_t ipc_write_string_block(int sock, const char* val);
+int ipc_write_string_block(int sock, const char* val);
 
 /**
  * \brief Write a uint64_t value to the blocking socket.
@@ -184,9 +197,11 @@ ssize_t ipc_write_string_block(int sock, const char* val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           The value to write.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BLOCK_FAILURE if writing data failed.
  */
-ssize_t ipc_write_uint64_block(int sock, uint64_t val);
+int ipc_write_uint64_block(int sock, uint64_t val);
 
 /**
  * \brief Write an int64_t value to the blocking socket.
@@ -196,9 +211,11 @@ ssize_t ipc_write_uint64_block(int sock, uint64_t val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           The value to write.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BLOCK_FAILURE if writing data failed.
  */
-ssize_t ipc_write_int64_block(int sock, int64_t val);
+int ipc_write_int64_block(int sock, int64_t val);
 
 /**
  * \brief Write a uint8_t value to the blocking socket.
@@ -208,9 +225,11 @@ ssize_t ipc_write_int64_block(int sock, int64_t val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           The value to write.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BLOCK_FAILURE if writing data failed.
  */
-ssize_t ipc_write_uint8_block(int sock, uint8_t val);
+int ipc_write_uint8_block(int sock, uint8_t val);
 
 /**
  * \brief Write an int8_t value to the blocking socket.
@@ -220,9 +239,11 @@ ssize_t ipc_write_uint8_block(int sock, uint8_t val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           The value to write.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BLOCK_FAILURE if writing data failed.
  */
-ssize_t ipc_write_int8_block(int sock, int8_t val);
+int ipc_write_int8_block(int sock, int8_t val);
 
 /**
  * \brief Read a raw data packet from the blocking socket.
@@ -236,9 +257,16 @@ ssize_t ipc_write_int8_block(int sock, int8_t val);
  * \param size          Pointer to the variable to receive the size of this
  *                      packet.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_READ_BLOCK_FAILURE if a blocking read on the socket
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read from
+ *        the socket was unexpected.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error.
  */
-ssize_t ipc_read_data_block(int sock, void** val, uint32_t* size);
+int ipc_read_data_block(int sock, void** val, uint32_t* size);
 
 /**
  * \brief Read a character string from the blocking socket.
@@ -251,9 +279,16 @@ ssize_t ipc_read_data_block(int sock, void** val, uint32_t* size);
  * \param val           Pointer to the string pointer to hold the string value
  *                      on success.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_READ_BLOCK_FAILURE if a blocking read on the socket
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read from
+ *        the socket was unexpected.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error.
  */
-ssize_t ipc_read_string_block(int sock, char** val);
+int ipc_read_string_block(int sock, char** val);
 
 /**
  * \brief Read a uint64_t value from the blocking socket.
@@ -263,9 +298,16 @@ ssize_t ipc_read_string_block(int sock, char** val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           Pointer to hold the value.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_READ_BLOCK_FAILURE if a blocking read on the socket
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read from
+ *        the socket was unexpected.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if the data size read from
+ *        the socket was unexpected.
  */
-ssize_t ipc_read_uint64_block(int sock, uint64_t* val);
+int ipc_read_uint64_block(int sock, uint64_t* val);
 
 /**
  * \brief Read an int64_t value from the blocking socket.
@@ -275,9 +317,16 @@ ssize_t ipc_read_uint64_block(int sock, uint64_t* val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           Pointer to hold the value.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_READ_BLOCK_FAILURE if a blocking read on the socket
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read from
+ *        the socket was unexpected.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if the data size read from
+ *        the socket was unexpected.
  */
-ssize_t ipc_read_int64_block(int sock, int64_t* val);
+int ipc_read_int64_block(int sock, int64_t* val);
 
 /**
  * \brief Read a uint8_t value from the blocking socket.
@@ -287,9 +336,16 @@ ssize_t ipc_read_int64_block(int sock, int64_t* val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           Pointer to hold the value.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_READ_BLOCK_FAILURE if a blocking read on the socket
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read from
+ *        the socket was unexpected.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if the data size read from
+ *        the socket was unexpected.
  */
-ssize_t ipc_read_uint8_block(int sock, uint8_t* val);
+int ipc_read_uint8_block(int sock, uint8_t* val);
 
 /**
  * \brief Read an int8_t value from the blocking socket.
@@ -299,9 +355,16 @@ ssize_t ipc_read_uint8_block(int sock, uint8_t* val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           Pointer to hold the value.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_READ_BLOCK_FAILURE if a blocking read on the socket
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read from
+ *        the socket was unexpected.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if the data size read from
+ *        the socket was unexpected.
  */
-ssize_t ipc_read_int8_block(int sock, int8_t* val);
+int ipc_read_int8_block(int sock, int8_t* val);
 
 /**
  * \brief Initialize the event loop for handling IPC non-blocking I/O.
@@ -311,9 +374,12 @@ ssize_t ipc_read_int8_block(int sock, int8_t* val);
  *
  * \param loop          The event loop context to initialize.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory.
+ *      - AGENTD_ERROR_IPC_EVENT_BASE_NEW_FAILURE if event_base_new() failed.
  */
-ssize_t ipc_event_loop_init(ipc_event_loop_context_t* loop);
+int ipc_event_loop_init(ipc_event_loop_context_t* loop);
 
 /**
  * \brief Add a non-blocking socket to the event loop.
@@ -326,9 +392,20 @@ ssize_t ipc_event_loop_init(ipc_event_loop_context_t* loop);
  * \param loop          The event loop context to which this socket is added.
  * \param sock          The socket context to add to the event loop.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_INVALID_ARGUMENT if the socket context has already
+ *        been added to an event loop.
+ *      - AGENTD_ERROR_IPC_MISSING_CALLBACK if either a read or write callback
+ *        has not been set.
+ *      - AGENTD_ERROR_IPC_EVBUFFER_NEW_FAILURE if a new event buffer could not
+ *        be created.
+ *      - AGENTD_ERROR_IPC_EVENT_NEW_FAILURE if a new event could not be
+ *        created.
+ *      - AGENTD_ERROR_IPC_EVENT_ADD_FAILURE if the event cannot be added to the
+ *        event loop.
  */
-ssize_t ipc_event_loop_add(
+int ipc_event_loop_add(
     ipc_event_loop_context_t* loop, ipc_socket_context_t* sock);
 
 /**
@@ -341,9 +418,16 @@ ssize_t ipc_event_loop_add(
  *                      caught.
  * \param sig           The signal that triggers this exit.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered.
+ *      - AGENTD_ERROR_IPC_EVSIGNAL_NEW_FAILURE if a new signal event could not
+ *        be created.
+ *      - AGENTD_ERROR_IPC_EVENT_ADD_FAILURE if the signal event could not be
+ *        added to the event base.
  */
-ssize_t ipc_exit_loop_on_signal(
+int ipc_exit_loop_on_signal(
     ipc_event_loop_context_t* loop, int sig);
 
 /**
@@ -364,9 +448,12 @@ void ipc_exit_loop(ipc_event_loop_context_t* loop);
  *                      removed.
  * \param sock          This socket context is removed from the event loop.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_INVALID_ARGUMENT if the socket context does not
+ *        belong to a loop.
  */
-ssize_t ipc_event_loop_remove(
+int ipc_event_loop_remove(
     ipc_event_loop_context_t* loop, ipc_socket_context_t* sock);
 
 /**
@@ -471,9 +558,18 @@ void ipc_set_writecb_noblock(
  * \param val           The raw data to write.
  * \param size          The size of the raw data to write.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_TYPE_ADD_FAILURE if adding the type
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_SIZE_ADD_FAILURE if adding the size
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_PAYLOAD_ADD_FAILURE if adding the
+ *        payload data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_NONBLOCK_FAILURE if a non-blocking write
+ *        failed.
  */
-ssize_t ipc_write_data_noblock(
+int ipc_write_data_noblock(
     ipc_socket_context_t* sock, const void* val, uint32_t size);
 
 /**
@@ -485,9 +581,16 @@ ssize_t ipc_write_data_noblock(
  * \param sd            The socket descriptor to which the value is written.
  * \param val           The string to write.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_TYPE_ADD_FAILURE if adding the type
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_SIZE_ADD_FAILURE if adding the size
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_PAYLOAD_ADD_FAILURE if adding the
+ *        payload data to the write buffer failed.
  */
-ssize_t ipc_write_string_noblock(ipc_socket_context_t* sock, const char* val);
+int ipc_write_string_noblock(ipc_socket_context_t* sock, const char* val);
 
 /**
  * \brief Write a uint64_t value to a non-blocking socket.
@@ -497,9 +600,16 @@ ssize_t ipc_write_string_noblock(ipc_socket_context_t* sock, const char* val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           The value to write.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_TYPE_ADD_FAILURE if adding the type
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_SIZE_ADD_FAILURE if adding the size
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_PAYLOAD_ADD_FAILURE if adding the
+ *        payload data to the write buffer failed.
  */
-ssize_t ipc_write_uint64_noblock(ipc_socket_context_t* sock, uint64_t val);
+int ipc_write_uint64_noblock(ipc_socket_context_t* sock, uint64_t val);
 
 /**
  * \brief Write an int64_t value to a non-blocking socket.
@@ -509,9 +619,16 @@ ssize_t ipc_write_uint64_noblock(ipc_socket_context_t* sock, uint64_t val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           The value to write.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_TYPE_ADD_FAILURE if adding the type
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_SIZE_ADD_FAILURE if adding the size
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_PAYLOAD_ADD_FAILURE if adding the
+ *        payload data to the write buffer failed.
  */
-ssize_t ipc_write_int64_noblock(ipc_socket_context_t* sock, int64_t val);
+int ipc_write_int64_noblock(ipc_socket_context_t* sock, int64_t val);
 
 /**
  * \brief Write a uint8_t value to a non-blocking socket.
@@ -521,9 +638,16 @@ ssize_t ipc_write_int64_noblock(ipc_socket_context_t* sock, int64_t val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           The value to write.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_TYPE_ADD_FAILURE if adding the type
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_SIZE_ADD_FAILURE if adding the size
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_PAYLOAD_ADD_FAILURE if adding the
+ *        payload data to the write buffer failed.
  */
-ssize_t ipc_write_uint8_noblock(ipc_socket_context_t* sock, uint8_t val);
+int ipc_write_uint8_noblock(ipc_socket_context_t* sock, uint8_t val);
 
 /**
  * \brief Write an int8_t value to a non-blocking socket.
@@ -533,9 +657,16 @@ ssize_t ipc_write_uint8_noblock(ipc_socket_context_t* sock, uint8_t val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           The value to write.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_TYPE_ADD_FAILURE if adding the type
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_SIZE_ADD_FAILURE if adding the size
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_PAYLOAD_ADD_FAILURE if adding the
+ *        payload data to the write buffer failed.
  */
-ssize_t ipc_write_int8_noblock(ipc_socket_context_t* sock, int8_t val);
+int ipc_write_int8_noblock(ipc_socket_context_t* sock, int8_t val);
 
 /**
  * \brief Read a raw data packet from a non-blocking socket.
@@ -549,9 +680,22 @@ ssize_t ipc_write_int8_noblock(ipc_socket_context_t* sock, int8_t val);
  * \param size          Pointer to the variable to receive the size of this
  *                      packet.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if the the operation was halted because
+ *        it would block this thread.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if an unexpected data type
+ *        was encountered when attempting to read this value.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if an unexpected data size
+ *        was encountered when attempting to read this value.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error condition while executing.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_DRAIN_FAILURE if draining the read buffer
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_REMOVE_FAILURE if removing the payload
+ *        from the read buffer failed.
  */
-ssize_t ipc_read_data_noblock(
+int ipc_read_data_noblock(
     ipc_socket_context_t* sock, void** val, uint32_t* size);
 
 /**
@@ -565,9 +709,22 @@ ssize_t ipc_read_data_noblock(
  * \param val           Pointer to the string pointer to hold the string value
  *                      on success.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if the the operation was halted because
+ *        it would block this thread.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if an unexpected data type
+ *        was encountered when attempting to read this value.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if an unexpected data size
+ *        was encountered when attempting to read this value.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error condition while executing.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_DRAIN_FAILURE if draining the read buffer
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_REMOVE_FAILURE if removing the payload
+ *        from the read buffer failed.
  */
-ssize_t ipc_read_string_noblock(ipc_socket_context_t* sock, char** val);
+int ipc_read_string_noblock(ipc_socket_context_t* sock, char** val);
 
 /**
  * \brief Read a uint64_t value from a non-blocking socket.
@@ -577,9 +734,20 @@ ssize_t ipc_read_string_noblock(ipc_socket_context_t* sock, char** val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           Pointer to hold the value.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if the the operation was halted because
+ *        it would block this thread.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read was
+ *        unexpected.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if the data size read was
+ *        unexpected.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_DRAIN_FAILURE if draining the read buffer
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_REMOVE_FAILURE if removing the payload
+ *        from the read buffer failed.
  */
-ssize_t ipc_read_uint64_noblock(ipc_socket_context_t* sock, uint64_t* val);
+int ipc_read_uint64_noblock(ipc_socket_context_t* sock, uint64_t* val);
 
 /**
  * \brief Read an int64_t value from a non-blocking socket.
@@ -589,9 +757,20 @@ ssize_t ipc_read_uint64_noblock(ipc_socket_context_t* sock, uint64_t* val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           Pointer to hold the value.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if the the operation was halted because
+ *        it would block this thread.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read was
+ *        unexpected.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if the data size read was
+ *        unexpected.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_DRAIN_FAILURE if draining the read buffer
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_REMOVE_FAILURE if removing the payload
+ *        from the read buffer failed.
  */
-ssize_t ipc_read_int64_noblock(ipc_socket_context_t* sock, int64_t* val);
+int ipc_read_int64_noblock(ipc_socket_context_t* sock, int64_t* val);
 
 /**
  * \brief Read a uint8_t value from a non-blocking socket.
@@ -601,9 +780,20 @@ ssize_t ipc_read_int64_noblock(ipc_socket_context_t* sock, int64_t* val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           Pointer to hold the value.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if the the operation was halted because
+ *        it would block this thread.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read was
+ *        unexpected.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if the data size read was
+ *        unexpected.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_DRAIN_FAILURE if draining the read buffer
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_REMOVE_FAILURE if removing the payload
+ *        from the read buffer failed.
  */
-ssize_t ipc_read_uint8_noblock(ipc_socket_context_t* sock, uint8_t* val);
+int ipc_read_uint8_noblock(ipc_socket_context_t* sock, uint8_t* val);
 
 /**
  * \brief Read an int8_t value from a non-blocking socket.
@@ -613,9 +803,20 @@ ssize_t ipc_read_uint8_noblock(ipc_socket_context_t* sock, uint8_t* val);
  * \param sd            The socket descriptor to which the value is written.
  * \param val           Pointer to hold the value.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if the the operation was halted because
+ *        it would block this thread.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read was
+ *        unexpected.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if the data size read was
+ *        unexpected.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_DRAIN_FAILURE if draining the read buffer
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_REMOVE_FAILURE if removing the payload
+ *        from the read buffer failed.
  */
-ssize_t ipc_read_int8_noblock(ipc_socket_context_t* sock, int8_t* val);
+int ipc_read_int8_noblock(ipc_socket_context_t* sock, int8_t* val);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

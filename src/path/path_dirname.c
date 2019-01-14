@@ -3,9 +3,10 @@
  *
  * \brief Return the directory portion of the path.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <string.h>
 #include <unistd.h>
@@ -21,7 +22,10 @@
  * \param dirname           The character pointer that this parameter points to
  *                          is updated to the directory name on success.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if the operation cannot
+ *            be completed due to a memory allocation error.
  */
 int path_dirname(const char* filename, char** dirname)
 {
@@ -42,11 +46,11 @@ int path_dirname(const char* filename, char** dirname)
         *dirname = strdup(".");
         if (NULL == *dirname)
         {
-            retval = 1;
+            retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
             goto cleanup;
         }
 
-        retval = 0;
+        retval = AGENTD_STATUS_SUCCESS;
     }
     else
     {
@@ -54,7 +58,7 @@ int path_dirname(const char* filename, char** dirname)
         workpath = strdup(filename);
         if (NULL == workpath)
         {
-            retval = 1;
+            retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
             goto cleanup;
         }
 
@@ -64,7 +68,7 @@ int path_dirname(const char* filename, char** dirname)
         *dirname = (char*)malloc(pathmax + 1);
         if (NULL == *dirname)
         {
-            retval = 1;
+            retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
             goto cleanup;
         }
 
@@ -123,7 +127,7 @@ int path_dirname(const char* filename, char** dirname)
         (*dirname)[pathmax] = 0;
 
         /* success. */
-        retval = 0;
+        retval = AGENTD_STATUS_SUCCESS;
     }
 
 cleanup:
