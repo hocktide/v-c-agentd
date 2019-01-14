@@ -197,11 +197,19 @@ void dataservice_data_txn_commit(
  *                      successful or the size required if a would truncate
  *                      error occurs.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - 1 if the value is not found.
- *          - 2 if the value would be truncated.
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if this global setting could not be
+ *        found.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if the child context is not
+ *        authorized to call this function.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function failed
+ *        to begin a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read from the database.
+ *      - AGENTD_ERROR_DATASERVICE_WOULD_TRUNCATE if the provided buffer would
+ *        truncate the value.  The size parameter is updated with the size of
+ *        this value.
  */
 int dataservice_global_settings_get(
     dataservice_child_context_t* child, uint64_t key, char* buffer,

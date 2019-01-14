@@ -590,7 +590,7 @@ TEST_F(dataservice_isolation_test, global_setting_not_found)
     EXPECT_EQ(0, recvresp_status);
     ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
     /* this will fail with not found. */
-    ASSERT_EQ(1U, status);
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND, (int)status);
 }
 
 /**

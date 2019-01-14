@@ -382,6 +382,12 @@ extern "C" {
 #define AGENTD_ERROR_DATASERVICE_OUT_OF_CHILD_INSTANCES \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x0040U)
 
+/**
+ * \brief The buffer is too small for this operation.
+ */
+#define AGENTD_ERROR_DATASERVICE_WOULD_TRUNCATE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x0041U)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

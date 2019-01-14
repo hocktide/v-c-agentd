@@ -752,7 +752,7 @@ TEST_F(dataservice_test, global_settings_get_would_truncate)
     memset(schema_buffer, 0, sizeof(schema_buffer));
 
     /* querying the global data should fail due to truncation. */
-    ASSERT_EQ(2,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_WOULD_TRUNCATE,
         dataservice_global_settings_get(
             &child, DATASERVICE_GLOBAL_SETTING_SCHEMA_VERSION, schema_buffer,
             &schema_buffer_sz));
@@ -810,7 +810,7 @@ TEST_F(dataservice_test, global_settings_get_not_found)
     memset(schema_buffer, 0, sizeof(schema_buffer));
 
     /* querying the global data should fail due to the value not being faund. */
-    ASSERT_EQ(1,
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
         dataservice_global_settings_get(
             &child, DATASERVICE_GLOBAL_SETTING_SCHEMA_VERSION, schema_buffer,
             &schema_buffer_sz));
