@@ -29,7 +29,12 @@
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_block_id_by_height_read(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
