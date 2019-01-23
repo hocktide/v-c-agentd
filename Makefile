@@ -183,7 +183,7 @@ testreport.agentd: $(REPORT_FILES)
 $(COVERAGE_REPORT_DIR)/%.c.gcov: $(SRCDIR)/%.c test.agentd
 	mkdir -p $(dir $@)
 	(cd $(dir $@) && \
-	    $(HOST_RELEASE_GCOV) -a -o $(dir $(HOST_CHECKED_BUILD_DIR)/$*.o) $<)
+	    $(HOST_RELEASE_GCOV) -o $(dir $(HOST_CHECKED_BUILD_DIR)/$*.o) $<)
 
 agentd-build: host.exe.checked host.exe.release
 
