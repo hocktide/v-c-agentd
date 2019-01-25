@@ -123,8 +123,6 @@ int dataservice_api_recvresp_global_settings_get(
         goto cleanup_val;
     }
 
-    /* TODO - missing status code check. */
-
     /* verify that the data size is large enough to receive this value. */
     if (size - response_packet_size > *data_size)
     {
