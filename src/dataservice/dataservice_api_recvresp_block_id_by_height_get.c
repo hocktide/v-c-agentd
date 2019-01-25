@@ -127,11 +127,6 @@ int dataservice_api_recvresp_block_id_by_height_get(
 
     /* get the status code. */
     *status = ntohl(val[2]);
-    if (AGENTD_STATUS_SUCCESS != *status)
-    {
-        retval = AGENTD_STATUS_SUCCESS;
-        goto cleanup_val;
-    }
 
     /* get the raw data. */
     const uint8_t* bval = (const uint8_t*)(val + 3);
