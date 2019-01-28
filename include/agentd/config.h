@@ -81,6 +81,10 @@ typedef struct agent_config
     const char* logdir;
     bool loglevel_set;
     int64_t loglevel;
+    bool block_max_seconds_set;
+    int64_t block_max_seconds;
+    bool block_max_transactions_set;
+    int64_t block_max_transactions;
     const char* secret;
     const char* rootblock;
     const char* datastore;

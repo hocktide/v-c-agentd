@@ -42,6 +42,20 @@ int config_set_defaults(agent_config_t* conf, bootstrap_config_t* bconf)
         conf->loglevel_set = true;
     }
 
+    /* if block_max_seconds is not set, set it to 5. */
+    if (!conf->block_max_seconds_set || conf->block_max_seconds < 0 || conf->block_max_seconds > 43200 /* 12 hours in seconds. */)
+    {
+        conf->block_max_seconds = 5;
+        conf->block_max_seconds_set = true;
+    }
+
+    /* if block_max_transactions is not set, set it to 500. */
+    if (!conf->block_max_transactions_set || conf->block_max_transactions < 0 || conf->block_max_transactions > 100000 /* 100k is a lot! */)
+    {
+        conf->block_max_transactions = 500;
+        conf->block_max_transactions_set = true;
+    }
+
     /* if secret is not set, set it to "/root/secret.cert" */
     if (NULL == conf->secret)
     {
