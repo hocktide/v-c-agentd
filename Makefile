@@ -92,12 +92,18 @@ HOST_RELEASE_OBJECTS= \
     $(HOST_RELEASE_COBJECTS) $(HOST_RELEASE_YACCOBJECTS) \
     $(HOST_RELEASE_LEXOBJECTS)
 
+#report files
+COVERAGE_REPORT_DIR=$(TEST_BUILD_DIR)/coverage-report
+REPORT_FILES=\
+    $(patsubst %.c,$(COVERAGE_REPORT_DIR)/%.c.gcov,$(STRIPPED_SOURCES))
+
 #toolchain location
 TOOLCHAIN_DIR?=/opt/vctoolchain
 
 #compilers
 HOST_RELEASE_CC?=$(TOOLCHAIN_DIR)/host/bin/gcc
 HOST_RELEASE_CXX=$(TOOLCHAIN_DIR)/host/bin/g++
+HOST_RELEASE_GCOV?=$(TOOLCHAIN_DIR)/host/bin/gcov
 HOST_RELEASE_AR=$(AR)
 HOST_RELEASE_RANLIB=$(RANLIB)
 HOST_RELEASE_LEX=$(TOOLCHAIN_DIR)/host/bin/flex
@@ -115,9 +121,9 @@ COMMON_INCLUDES=$(MODEL_CHECK_INCLUDES) $(VCBLOCKCHAIN_CFLAGS) \
 COMMON_CFLAGS=$(COMMON_INCLUDES) -Wall -Werror -Wextra \
     -I $(TOOLCHAIN_DIR)/host/include
 HOST_CHECKED_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_CHECKED_BUILD_DIR) \
-    -fPIC -O2
+    -fPIC -O0 --coverage
 HOST_CHECKED_LEXCOMPAT_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_CHECKED_BUILD_DIR) \
-    -fPIC -O2 \
+    -fPIC -O0 --coverage \
 	-Wno-unused-function -Wno-unused-value -Wno-unused-const-variable
 HOST_RELEASE_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_RELEASE_BUILD_DIR) \
     -fPIC -O2
@@ -126,14 +132,14 @@ HOST_RELEASE_LEXCOMPAT_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_RELEASE_BUILD_DIR) \
 	-Wno-unused-function -Wno-unused-value -Wno-unused-const-variable
 COMMON_CXXFLAGS=-I $(PWD)/include $(VCBLOCKCHAIN_CFLAGS) -Wall -Werror -Wextra \
     -I $(TOOLCHAIN_DIR)/host/include
-HOST_CHECKED_CXXFLAGS=-std=c++14 $(COMMON_CXXFLAGS) -O0 -fprofile-arcs \
-    -ftest-coverage
+HOST_CHECKED_CXXFLAGS=-std=c++14 $(COMMON_CXXFLAGS) -O0 --coverage
 HOST_RELEASE_CXXFLAGS=-std=c++14 $(COMMON_CXXFLAGS) -O2
 TEST_CXXFLAGS=$(HOST_RELEASE_CXXFLAGS) $(COMMON_INCLUDES) -I $(GTEST_DIR) \
      -I $(GTEST_DIR)/include -I $(HOST_CHECKED_BUILD_DIR)
 
 .PHONY: ALL clean vcblockchain-build vcblockchain-test vcblockchain-clean
 .PHONY: agentd-build host.exe.release host.exe.checked test test.agentd
+.PHONY: testreport.agentd
 .PHONY: install agentd-install
 
 MODEL_MAKEFILES?= \
@@ -142,7 +148,7 @@ MODEL_MAKEFILES?= \
 
 ALL: agentd-build
 
-test: vcblockchain-test test.agentd
+test: vcblockchain-test testreport.agentd
 
 install: agentd-install
 
@@ -167,9 +173,17 @@ agentd-install: ALL
 test.agentd: vcblockchain-build $(TEST_DIRS) host.exe.checked $(TESTAGENTD)
 	rm -rf $(HOST_CHECKED_BUILD_DIR)/databases
 	rm -rf $(BUILD_DIR)/test/isolation/databases
+	find $(BUILD_DIR) -type f -name "*.gcda" -exec rm {} \; -print
 	TEST_BIN=$(realpath $(shell which cat)) \
 	LD_LIBRARY_PATH=$(TOOLCHAIN_DIR)/host/lib:$(TOOLCHAIN_DIR)/host/lib64:$(LD_LIBRARY_PATH) \
 	$(TESTAGENTD)
+
+testreport.agentd: $(REPORT_FILES)
+
+$(COVERAGE_REPORT_DIR)/%.c.gcov: $(SRCDIR)/%.c test.agentd
+	mkdir -p $(dir $@)
+	(cd $(dir $@) && \
+	    $(HOST_RELEASE_GCOV) -o $(dir $(HOST_CHECKED_BUILD_DIR)/$*.o) $<)
 
 agentd-build: host.exe.checked host.exe.release
 
@@ -186,7 +200,8 @@ $(HOST_CHECKED_EXE) : vcblockchain-build $(HOST_CHECKED_OBJECTS)
 	mkdir -p $(dir $@)
 	$(HOST_CHECKED_CC) -o $@ $(HOST_CHECKED_OBJECTS) \
 	    $(VCBLOCKCHAIN_HOST_RELEASE_LINK) \
-	    -L $(TOOLCHAIN_DIR)/host/lib -Wl,-Bstatic -lfl -ly -Wl,-Bdynamic
+	    -L $(TOOLCHAIN_DIR)/host/lib -Wl,-Bstatic -lfl -ly -Wl,-Bdynamic \
+	    --coverage
 
 #Host release executable
 $(HOST_RELEASE_EXE) : vcblockchain-build $(HOST_RELEASE_OBJECTS)
@@ -279,12 +294,13 @@ $(HRBD)/%.tab.o: $(HRBD)/%.tab.c
 $(TESTAGENTD): vcblockchain-build $(HOST_CHECKED_OBJECTS) $(TEST_OBJECTS) $(GTEST_OBJ)
 	find $(TEST_BUILD_DIR) -name "*.gcda" -exec rm {} \; -print
 	rm -f gtest-all.gcda
-	$(HOST_RELEASE_CXX) $(TEST_CXXFLAGS) -fprofile-arcs \
+	$(HOST_RELEASE_CXX) $(TEST_CXXFLAGS) \
 	    -o $@ $(TEST_OBJECTS) \
 	    $(HOST_CHECKED_OBJECTS) $(GTEST_OBJ) -lpthread \
 	    -L $(TOOLCHAIN_DIR)/host/lib64 -lstdc++ \
 	    $(VCBLOCKCHAIN_HOST_RELEASE_LINK) \
-	    -L $(TOOLCHAIN_DIR)/host/lib -Wl,-Bstatic -lfl -ly -Wl,-Bdynamic
+	    -L $(TOOLCHAIN_DIR)/host/lib -Wl,-Bstatic -lfl -ly -Wl,-Bdynamic \
+        --coverage
 
 model-check:
 	for n in $(MODEL_MAKEFILES); do \

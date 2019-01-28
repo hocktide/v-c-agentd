@@ -116,6 +116,9 @@ int dataservice_api_recvresp_block_get(
     /* set up data size for later. */
     uint32_t dat_size = size;
 
+    /* compute the block packet size. */
+    uint32_t block_packet_size = 16 * 4 + sizeof(uint64_t);
+
     /* the size should be greater than or equal to the size we expect. */
     uint32_t response_packet_size =
         /* size of the API method. */
@@ -123,9 +126,7 @@ int dataservice_api_recvresp_block_get(
         /* size of the offset. */
         sizeof(uint32_t) +
         /* size of the status. */
-        sizeof(uint32_t) +
-        /* size of the block packet. */
-        16 * 4 + sizeof(uint64_t);
+        sizeof(uint32_t);
     if (size < response_packet_size)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE;
@@ -152,7 +153,7 @@ int dataservice_api_recvresp_block_get(
     }
 
     /* if the node size is invalid, return an error code. */
-    if (dat_size < 4 * 16 + sizeof(uint64_t))
+    if (dat_size < block_packet_size)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA;
         goto cleanup_val;
@@ -161,7 +162,7 @@ int dataservice_api_recvresp_block_get(
     /* get the raw data. */
     const uint8_t* bval = (const uint8_t*)(val + 3);
     /* update data size. */
-    dat_size -= 3 * sizeof(uint32_t) + 4 * 16 + sizeof(uint64_t);
+    dat_size -= 3 * sizeof(uint32_t) + block_packet_size;
 
     /* process the node data if the node is specified. */
     if (NULL != node)
@@ -191,7 +192,7 @@ int dataservice_api_recvresp_block_get(
     }
 
     /* get to the location of the data. */
-    bval += 4 * 16 + sizeof(uint64_t);
+    bval += block_packet_size;
 
     /* allocate memory for the data. */
     *data = malloc(dat_size);

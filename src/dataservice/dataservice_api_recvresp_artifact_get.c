@@ -106,6 +106,9 @@ int dataservice_api_recvresp_artifact_get(
     /* set up data size for later. */
     uint32_t dat_size = size;
 
+    /* set up the artifact record size. */
+    uint32_t artifact_record_size = 68U;
+
     /* the size should be equal to the size we expect. */
     uint32_t response_packet_size =
         /* size of the API method. */
@@ -113,10 +116,8 @@ int dataservice_api_recvresp_artifact_get(
         /* size of the offset. */
         sizeof(uint32_t) +
         /* size of the status. */
-        sizeof(uint32_t) +
-        /* size of the payload. */
-        68U;
-    if (size != response_packet_size)
+        sizeof(uint32_t);
+    if (size < response_packet_size)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE;
         goto cleanup_val;
@@ -145,7 +146,7 @@ int dataservice_api_recvresp_artifact_get(
     dat_size -= 3 * sizeof(uint32_t);
 
     /* if the record size is invalid, return an error code. */
-    if (68U != dat_size)
+    if (artifact_record_size != dat_size)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA;
         goto done;
