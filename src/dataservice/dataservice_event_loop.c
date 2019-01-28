@@ -3,11 +3,12 @@
  *
  * \brief The event loop for the data service.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/ipc.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <signal.h>
 #include <unistd.h>
@@ -32,8 +33,17 @@ static void dataservice_ipc_write(
  *                      on this socket.
  *
  * \returns a status code on service exit indicating a normal or abnormal exit.
- *          - 0 on normal exit.
- *          - non-zero on abnormal exit.
+ *          - AGENTD_STATUS_SUCCESS on normal exit.
+ *          - AGENTD_ERROR_DATASERVICE_INSTANCE_CREATE_FAILURE if it was not
+ *            possible to create a dataservice instance.
+ *          - AGENTD_ERROR_DATASERVICE_IPC_MAKE_NOBLOCK_FAILURE if attempting to
+ *            make the process socket non-blocking failed.
+ *          - AGENTD_ERROR_DATASERVICE_IPC_EVENT_LOOP_INIT_FAILURE if
+ *            initializing the event loop failed.
+ *          - AGENTD_ERROR_DATASERVICE_IPC_EVENT_LOOP_ADD_FAILURE if adding the
+ *            dataservice socket to the event loop failed.
+ *          - AGENTD_ERROR_DATASERVICE_IPC_EVENT_LOOP_RUN_FAILURE if running the
+ *            dataservice event loop failed.
  */
 int dataservice_event_loop(int datasock, int UNUSED(logsock))
 {
@@ -50,21 +60,21 @@ int dataservice_event_loop(int datasock, int UNUSED(logsock))
     instance = dataservice_instance_create();
     if (NULL == instance)
     {
-        retval = 1;
+        retval = AGENTD_ERROR_DATASERVICE_INSTANCE_CREATE_FAILURE;
         goto done;
     }
 
     /* set the data socket to non-blocking. */
-    if (0 != ipc_make_noblock(datasock, &data, instance))
+    if (AGENTD_STATUS_SUCCESS != ipc_make_noblock(datasock, &data, instance))
     {
-        retval = 2;
+        retval = AGENTD_ERROR_DATASERVICE_IPC_MAKE_NOBLOCK_FAILURE;
         goto cleanup_instance;
     }
 
     /* initialize an IPC event loop instance. */
-    if (0 != ipc_event_loop_init(&loop))
+    if (AGENTD_STATUS_SUCCESS != ipc_event_loop_init(&loop))
     {
-        retval = 3;
+        retval = AGENTD_ERROR_DATASERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
         goto cleanup_datasock;
     }
 
@@ -81,21 +91,21 @@ int dataservice_event_loop(int datasock, int UNUSED(logsock))
     ipc_exit_loop_on_signal(&loop, SIGQUIT);
 
     /* add the data socket to the event loop. */
-    if (0 != ipc_event_loop_add(&loop, &data))
+    if (AGENTD_STATUS_SUCCESS != ipc_event_loop_add(&loop, &data))
     {
-        retval = 4;
+        retval = AGENTD_ERROR_DATASERVICE_IPC_EVENT_LOOP_ADD_FAILURE;
         goto cleanup_loop;
     }
 
     /* run the ipc event loop. */
-    if (0 != ipc_event_loop_run(&loop))
+    if (AGENTD_STATUS_SUCCESS != ipc_event_loop_run(&loop))
     {
-        retval = 5;
+        retval = AGENTD_ERROR_DATASERVICE_IPC_EVENT_LOOP_RUN_FAILURE;
         goto cleanup_loop;
     }
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
 
 cleanup_loop:
     dispose((disposable_t*)&loop);
@@ -157,7 +167,7 @@ static void dataservice_ipc_read(
             break;
 
         /* Wait for more data on the socket. */
-        case IPC_ERROR_CODE_WOULD_BLOCK:
+        case AGENTD_ERROR_IPC_WOULD_BLOCK:
             return;
 
         /* any other error code indicates that we should no longer trust the

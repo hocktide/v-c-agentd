@@ -3,10 +3,11 @@
  *
  * \brief Set the file descriptors for a new process.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/privsep.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <fcntl.h>
 #include <stdarg.h>
@@ -27,7 +28,18 @@
  * \param curr          The current descriptor.
  * \param mapped        The mapped descriptor.
  *
- * \returns Zero on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDIN_CLOSE if closing
+ *            standard input fails.
+ *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDOUT_CLOSE if closing
+ *            standard output fails.
+ *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDERR_CLOSE if closing
+ *            standard error fails.
+ *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_DUP2_FAILURE if setting a file
+ *            descriptor fails.
+ *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_BAD_ARGUMENT if a bad argument
+ *            is encountered.
  */
 int privsep_setfds(int curr, int mapped, ...)
 {
@@ -41,6 +53,7 @@ int privsep_setfds(int curr, int mapped, ...)
     retval = close(STDIN_FILENO);
     if (0 != retval)
     {
+        retval = AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDIN_CLOSE;
         goto done;
     }
 
@@ -48,6 +61,7 @@ int privsep_setfds(int curr, int mapped, ...)
     retval = close(STDOUT_FILENO);
     if (0 != retval)
     {
+        retval = AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDOUT_CLOSE;
         goto done;
     }
 
@@ -55,6 +69,7 @@ int privsep_setfds(int curr, int mapped, ...)
     retval = close(STDERR_FILENO);
     if (0 != retval)
     {
+        retval = AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDERR_CLOSE;
         goto done;
     }
 
@@ -63,31 +78,33 @@ int privsep_setfds(int curr, int mapped, ...)
     {
         /* map the file descriptor to the new place. */
         retval = dup2(curr, mapped);
-        if (0 > retval)
+        if (retval < 0)
         {
+            retval = AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_DUP2_FAILURE;
             goto done;
         }
 
         /* attempt to read the next descriptor. */
         curr = va_arg(fd_list, int);
-        if (0 > curr)
+        if (curr < 0)
         {
-            retval = 0;
+            /* a negative number denotes the end of the list. */
+            retval = AGENTD_STATUS_SUCCESS;
             goto done;
         }
 
         /* attempt to read the next mapped descriptor. */
         mapped = va_arg(fd_list, int);
-        if (0 > mapped)
+        if (mapped < 0)
         {
             /* the caller fenceposted the arguments. Error out. */
-            retval = 1;
+            retval = AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_BAD_ARGUMENT;
             goto done;
         }
     }
 
     /* success */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
 
 done:
     va_end(fd_list);

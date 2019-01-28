@@ -3,12 +3,13 @@
  *
  * \brief Decode transaction get first request and dispatch the call.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/inet.h>
 #include <agentd/ipc.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -28,7 +29,12 @@
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_transaction_get_first(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -72,14 +78,14 @@ int dataservice_decode_and_dispatch_transaction_get_first(
     /* check bounds. */
     if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
     {
-        retval = 2;
+        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX;
         goto done;
     }
 
     /* verify that this child context is open. */
     if (NULL == inst->children[child_index].hdr.dispose)
     {
-        retval = 3;
+        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID;
         goto done;
     }
 
@@ -89,7 +95,7 @@ int dataservice_decode_and_dispatch_transaction_get_first(
         dataservice_transaction_get_first(
             &inst->children[child_index].ctx, NULL, &node,
             &txn_bytes, &txn_size);
-    if (0 != retval)
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
         txn_bytes = NULL;
         goto done;
@@ -100,7 +106,7 @@ int dataservice_decode_and_dispatch_transaction_get_first(
     payload_bytes = (uint8_t*)malloc(payload_size);
     if (NULL == payload_bytes)
     {
-        retval = 5;
+        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
         goto done;
     }
 

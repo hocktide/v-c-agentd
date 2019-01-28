@@ -3,10 +3,11 @@
  *
  * \brief Change the root directory.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/privsep.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 
@@ -17,21 +18,27 @@
  *
  * \param dir           The new root directory.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_CHDIR_FAILURE if changing to dir fails.
+ *      - AGENTD_ERROR_GENERAL_CHROOT_FAILURE if changing root to dir fails.
  */
 int privsep_chroot(const char* dir)
 {
-    int retval = 1;
-
     MODEL_ASSERT(NULL != dir);
 
     /* change into the prefix directory. */
-    retval = chdir(dir);
-    if (0 != retval)
+    if (0 != chdir(dir))
     {
-        return retval;
+        return AGENTD_ERROR_GENERAL_CHDIR_FAILURE;
     }
 
     /* change root. */
-    return chroot(dir);
+    if (0 != chroot(dir))
+    {
+        return AGENTD_ERROR_GENERAL_CHROOT_FAILURE;
+    }
+
+    /* success. */
+    return AGENTD_STATUS_SUCCESS;
 }

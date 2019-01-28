@@ -3,11 +3,12 @@
  *
  * \brief Make a block in the data service.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/inet.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <vccert/certificate_types.h>
 #include <vccert/fields.h>
@@ -71,17 +72,25 @@ static int dataservice_block_make_update_prev(
 static int dataservice_block_make_update_end(
     MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id,
     const data_block_node_t* curr_end);
+static int dataservice_block_make_update_artifact(
+    MDB_dbi artifact_db, MDB_txn* txn, const uint8_t* artifact_id,
+    const uint8_t* transaction_id, uint64_t height, uint32_t state);
+static int dataservice_make_block_get_first_transaction_id(
+    vccert_parser_options_t* parser_options,
+    const uint8_t* txn_cert, size_t txn_cert_size,
+    uint8_t* first_child_txn_id);
 static int dataservice_block_make_process_child(
     dataservice_child_context_t* child,
-    vccert_parser_options_t* parser_options, MDB_dbi txn_db, MDB_txn* txn,
+    vccert_parser_options_t* parser_options, MDB_dbi txn_db,
+    MDB_dbi artifact_db, MDB_txn* txn, uint64_t height,
     const uint8_t* block_id, const uint8_t* txn_cert, size_t txn_cert_size);
 static int dataservice_block_make_update_prev_txn(
     MDB_dbi txn_db, MDB_txn* txn, const uint8_t* txn_id,
     const uint8_t* next_txn_id);
 static int dataservice_make_block_insert_block(
-    MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id,
-    const uint8_t* block_prev_id, uint64_t block_height,
-    const uint8_t* block_data, size_t block_size);
+    MDB_dbi block_db, MDB_dbi height_db, MDB_txn* txn, const uint8_t* block_id,
+    const uint8_t* block_prev_id, const uint8_t* first_child_txn_id,
+    uint64_t block_height, const uint8_t* block_data, size_t block_size);
 
 /**
  * \brief Make a block in the data service.
@@ -98,9 +107,55 @@ static int dataservice_make_block_insert_block(
  * \param block_data    The block data for this block.
  * \param block_size    The size of this block.
  *
- * \returns A status code indicating success or failure.
- *          - 0 on success
- *          - non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if transaction could not be found
+ *        in the transaction process queue.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out of memory condition was
+ *        encountered during this operation.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is not
+ *        authorized to call this function.
+ *      - AGENTD_ERROR_DATASERVICE_VCCRYPT_SUITE_OPTIONS_INIT_FAILURE if this
+ *        function failed to initialize crypto suite options.
+ *      - AGENTD_ERROR_DATASERVICE_VCCERT_PARSER_OPTIONS_INIT_FAILURE if this
+ *        function failed to initialize parser options.
+ *      - AGENTD_ERROR_DATASERVICE_VCCERT_PARSER_INIT_FAILURE if this
+ *        function failed to initialize a parser.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function failed
+ *        to create a database transaction.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_STORED_BLOCK_NODE if this function
+ *        encountered an invalid block node in the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function could not
+ *        read from the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if this function failed to
+ *        update the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_DEL_FAILURE if this function failed to
+ *        delete from the database.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_BLOCK_HEIGHT if this block
+ *        certificate is missing a block height field.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_BLOCK_HEIGHT if this block
+ *        certificate has a block height that is not valid.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_PREVIOUS_BLOCK_UUID if the previous
+ *        block uuid field is missing in this block certificate.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_PREVIOUS_BLOCK_UUID if the previous
+ *        block uuid field is invalid or does not match the expected previous
+ *        block uuid value.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_BLOCK_UUID if
+ *        the block UUID field is missing.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_BLOCK_UUID if the block UUID field is
+ *        invalid or violates a constraint.
+ *      - AGENTD_ERROR_DATASERVICE_NO_CHILD_TRANSACTIONS if there is not at
+ *        least one child transaction in this block.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_CHILD_TRANSACTION_UUID if a child
+ *        transaction is missing its transaction UUID.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_CHILD_PREVIOUS_TRANSACTION_UUID if a
+ *        child transaction is missing its previous transaction UUID.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_CHILD_ARTIFACT_UUID if a child
+ *        transaction is missing its artifact UUID.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_CHILD_STATE if a child transaction is
+ *        missing its state field.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_ARTIFACT_NODE_SIZE if an invalid
+ *        artifact node was encountered.
  */
 int dataservice_block_make(
     dataservice_child_context_t* child,
@@ -129,7 +184,7 @@ int dataservice_block_make(
     if (!BITCAP_ISSET(child->childcaps,
             DATASERVICE_API_CAP_APP_BLOCK_WRITE))
     {
-        retval = 3;
+        retval = AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED;
         goto done;
     }
 
@@ -145,92 +200,60 @@ int dataservice_block_make(
     /* TODO - this should occur at startup. */
     if (VCCRYPT_STATUS_SUCCESS != vccrypt_suite_options_init(&crypto_suite, &alloc_opts, VCCRYPT_SUITE_VELO_V1))
     {
-        retval = 4;
+        retval = AGENTD_ERROR_DATASERVICE_VCCRYPT_SUITE_OPTIONS_INIT_FAILURE;
         goto dispose_alloc_opts;
     }
 
     /* create parser options for parsing this block. */
     if (VCCERT_STATUS_SUCCESS != vccert_parser_options_init(&parser_options, &alloc_opts, &crypto_suite, &dummy_txn_resolver, &dummy_artifact_state_resolver, &dummy_contract_resolver, &dummy_entity_key_resolver, NULL))
     {
-        retval = 5;
+        retval = AGENTD_ERROR_DATASERVICE_VCCERT_PARSER_OPTIONS_INIT_FAILURE;
         goto dispose_crypto_suite;
     }
 
     /* create parser for parsing this block. */
     if (VCCERT_STATUS_SUCCESS != vccert_parser_init(&parser_options, &parser, block_data, block_size))
     {
-        retval = 6;
+        retval = AGENTD_ERROR_DATASERVICE_VCCERT_PARSER_INIT_FAILURE;
         goto dispose_parser_options;
     }
 
     /* create the child transaction. */
-    if (0 != dataservice_create_child_trasaction(details->env, dtxn_ctx, &txn))
+    retval = dataservice_create_child_trasaction(details->env, dtxn_ctx, &txn);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = 7;
         txn = NULL;
         goto dispose_parser;
     }
 
     /* query the end node. */
-    if (0 != query_end_node(txn, details->block_db, &end_node))
+    retval = query_end_node(txn, details->block_db, &end_node);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = 8;
         goto maybe_transaction_abort;
     }
 
     /* verify the block height constraint. */
-    if (0 != constraint_matching_block_height(&parser, end_node, &expected_block_height))
+    retval = constraint_matching_block_height(
+        &parser, end_node, &expected_block_height);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = 9;
         goto maybe_transaction_abort;
     }
 
     /* verify the previous block UUID constraint. */
-    if (0 != constraint_matching_prev_uuid(&parser, end_node, &block_prev_uuid))
+    retval = constraint_matching_prev_uuid(
+        &parser, end_node, &block_prev_uuid);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = 10;
         goto maybe_transaction_abort;
     }
 
     /* verify that the block ID is sane. */
-    if (0 != constraint_sane_block_uuid(&parser, block_id))
+    retval = constraint_sane_block_uuid(&parser, block_id);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = 11;
         goto maybe_transaction_abort;
-    }
-
-    /* insert block into the database. */
-    if (0 != dataservice_make_block_insert_block(details->block_db, txn, block_id, block_prev_uuid, expected_block_height, block_data, block_size))
-    {
-        retval = 12;
-        goto maybe_transaction_abort;
-    }
-
-    /* do we need to initialize the block queue? */
-    if (NULL == end_node)
-    {
-        if (0 != dataservice_block_make_create_queue(details->block_db, txn, block_id))
-        {
-            retval = 13;
-            goto maybe_transaction_abort;
-        }
-    }
-    /* if the block queue DOES exist, update end and end->prev. */
-    else
-    {
-        /* update the previous block data. */
-        if (0 != dataservice_block_make_update_prev(details->block_db, txn, block_id, end_node->prev))
-        {
-            retval = 14;
-            goto maybe_transaction_abort;
-        }
-
-        /* update the end node's prev. */
-        if (0 != dataservice_block_make_update_end(details->block_db, txn, block_id, end_node))
-        {
-            retval = 15;
-            goto maybe_transaction_abort;
-        }
     }
 
     /* get the first wrapped transaction. */
@@ -239,17 +262,71 @@ int dataservice_block_make(
     if (VCCERT_STATUS_SUCCESS != vccert_parser_find_short(&parser, VCCERT_FIELD_TYPE_WRAPPED_TRANSACTION_TUPLE, &wrapped_transaction_raw, &wrapped_transaction_raw_size))
     {
         /* there must be at least one transaction. */
-        retval = 16;
+        retval = AGENTD_ERROR_DATASERVICE_NO_CHILD_TRANSACTIONS;
         goto maybe_transaction_abort;
+    }
+
+    /* get the first child transaction id. */
+    uint8_t first_child_txn_id[16];
+    retval = dataservice_make_block_get_first_transaction_id(
+        &parser_options, wrapped_transaction_raw,
+        wrapped_transaction_raw_size, first_child_txn_id);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        /* we need the first transaction id. */
+        goto maybe_transaction_abort;
+    }
+
+    /* insert block into the database. */
+    retval = dataservice_make_block_insert_block(
+        details->block_db, details->height_db, txn, block_id,
+        block_prev_uuid, first_child_txn_id, expected_block_height,
+        block_data, block_size);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        goto maybe_transaction_abort;
+    }
+
+    /* do we need to initialize the block queue? */
+    if (NULL == end_node)
+    {
+        retval = dataservice_block_make_create_queue(
+            details->block_db, txn, block_id);
+        if (AGENTD_STATUS_SUCCESS != retval)
+        {
+            goto maybe_transaction_abort;
+        }
+    }
+    /* if the block queue DOES exist, update end and end->prev. */
+    else
+    {
+        /* update the previous block data. */
+        retval = dataservice_block_make_update_prev(
+            details->block_db, txn, block_id, end_node->prev);
+        if (AGENTD_STATUS_SUCCESS != retval)
+        {
+            goto maybe_transaction_abort;
+        }
+
+        /* update the end node's prev. */
+        retval = dataservice_block_make_update_end(
+            details->block_db, txn, block_id, end_node);
+        {
+            goto maybe_transaction_abort;
+        }
     }
 
     /* iterate through each wrapped transaction. */
     while (NULL != wrapped_transaction_raw)
     {
         /* process this transaction. */
-        if (0 != dataservice_block_make_process_child(child, &parser_options, details->txn_db, txn, block_id, wrapped_transaction_raw, wrapped_transaction_raw_size))
+        retval = dataservice_block_make_process_child(
+            child, &parser_options, details->txn_db,
+            details->artifact_db, txn, expected_block_height,
+            block_id, wrapped_transaction_raw,
+            wrapped_transaction_raw_size);
+        if (AGENTD_STATUS_SUCCESS != retval)
         {
-            retval = 17;
             goto maybe_transaction_abort;
         }
 
@@ -260,24 +337,12 @@ int dataservice_block_make(
         }
     }
 
-    /* TODO */
-    /* for each wrapped transaction... */
-    /* verify that the transaction exists in the queue. */
-    /* verify that this transaction ID does not already exist. */
-    /* if a create, verify that the artifact ID does not exist. */
-    /* if not create, verify that the previous transaction exists. */
-    /* verify that the prev trans state matches trans->state. */
-    /* verify that artifact ID exists. */
-    /* create transaction. */
-    /* create / update artifact to include transaction. */
-    /* remove transaction from the queue. */
-
     /* commit transaction. */
     mdb_txn_commit(txn);
     txn = NULL;
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
 
 maybe_transaction_abort:
     if (NULL != txn)
@@ -350,7 +415,12 @@ static vccert_contract_fn_t dummy_contract_resolver(
  * \param parser        The parser for parsing the certificate.
  * \param block_id      The block UUID to check.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_BLOCK_UUID if the block UUID field is
+ *        missing.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_BLOCK_UUID if
+ *        the block UUID field is invalid or violates a constraint.
  */
 static int constraint_sane_block_uuid(
     vccert_parser_context_t* parser, const uint8_t* block_id)
@@ -363,35 +433,37 @@ static int constraint_sane_block_uuid(
     size_t cert_block_id_size = 0;
     if (VCCERT_STATUS_SUCCESS != vccert_parser_find_short(parser, VCCERT_FIELD_TYPE_BLOCK_UUID, &cert_block_id, &cert_block_id_size) || 16 != cert_block_id_size)
     {
-        return 1;
+        return AGENTD_ERROR_DATASERVICE_MISSING_BLOCK_UUID;
     }
 
     /* verify that the block ID matches the ID found in the cert. */
     if (0 != crypto_memcmp(block_id, cert_block_id, 16))
     {
-        return 2;
+        return AGENTD_ERROR_DATASERVICE_INVALID_BLOCK_UUID;
     }
 
     /* check against root block ID. */
     if (!crypto_memcmp(block_id, vccert_certificate_type_uuid_root_block, 16))
     {
-        return 3;
+        return AGENTD_ERROR_DATASERVICE_INVALID_BLOCK_UUID;
     }
 
     /* check against all zeroes ID. */
     if (!crypto_memcmp(block_id, zero_uuid, 16))
     {
-        return 4;
+        return AGENTD_ERROR_DATASERVICE_INVALID_BLOCK_UUID;
     }
 
     /* check against all 0xFFs ID. */
     if (!crypto_memcmp(block_id, ff_uuid, 16))
     {
-        return 5;
+        return AGENTD_ERROR_DATASERVICE_INVALID_BLOCK_UUID;
     }
 
+    /* TODO - check against block uuid Bloom filter. */
+
     /* UUID appears sane. */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }
 
 /**
@@ -402,7 +474,10 @@ static int constraint_sane_block_uuid(
  *                      performed.
  * \param block_id      The block ID representing the first block in this queue.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if this function failed to
+ *        update the database.
  */
 static int dataservice_block_make_create_queue(
     MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id)
@@ -428,7 +503,7 @@ static int dataservice_block_make_create_queue(
     lval.mv_data = &start;
     if (0 != mdb_put(txn, block_db, &lkey, &lval, 0))
     {
-        return 1;
+        return AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
     }
 
     /* insert end. */
@@ -438,11 +513,11 @@ static int dataservice_block_make_create_queue(
     lval.mv_data = &end;
     if (0 != mdb_put(txn, block_db, &lkey, &lval, 0))
     {
-        return 2;
+        return AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
     }
 
     /* success. */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }
 
 /**
@@ -455,7 +530,14 @@ static int dataservice_block_make_create_queue(
  *                      into the blockchain.
  * \param prev          The uuid of the previous block node to update.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read from the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if this function failed to
+ *        update the database.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this function encountered an
+ *        out-of-memory condition.
  */
 static int dataservice_block_make_update_prev(
     MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id,
@@ -469,7 +551,7 @@ static int dataservice_block_make_update_prev(
     memset(&lval, 0, sizeof(lval));
     if (0 != mdb_get(txn, block_db, &lkey, &lval))
     {
-        return 1;
+        return AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE;
     }
 
     /* get the node header. */
@@ -481,7 +563,7 @@ static int dataservice_block_make_update_prev(
     data_block_node_t* node = (data_block_node_t*)malloc(prev_size);
     if (NULL == node)
     {
-        return 2;
+        return AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
     }
 
     /* copy this value to local memory. */
@@ -501,9 +583,9 @@ static int dataservice_block_make_update_prev(
 
     /* decode success or failure. */
     if (0 != retval)
-        return 2;
+        return AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
     else
-        return 0;
+        return AGENTD_STATUS_SUCCESS;
 }
 
 /**
@@ -516,7 +598,10 @@ static int dataservice_block_make_update_prev(
  *                      into the blockchain.
  * \param prev          The current end block node to replace.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if this function failed to
+ *        update the database.
  */
 static int dataservice_block_make_update_end(
     MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id,
@@ -536,11 +621,67 @@ static int dataservice_block_make_update_end(
     lval.mv_data = &end;
     if (0 != mdb_put(txn, block_db, &lkey, &lval, 0))
     {
-        return 1;
+        return AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
     }
 
     /* success. */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
+}
+
+/**
+ * \brief Get the first transaction id from the first child transaction.
+ *
+ * \param parser_options    The options for parsing certificates.
+ * \param txn_cert          The certificate for this transaction.
+ * \param txn_cert_size     The size of the transaction certificate.
+ * \param first_child_txn_id The first child transaction id to update.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_VCCERT_PARSER_INIT_FAILURE if this
+ *        function failed to initialize a parser.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_CHILD_TRANSACTION_UUID if a child
+ *        transaction is missing its transaction UUID.
+ */
+static int dataservice_make_block_get_first_transaction_id(
+    vccert_parser_options_t* parser_options,
+    const uint8_t* txn_cert, size_t txn_cert_size,
+    uint8_t* first_child_txn_id)
+{
+    int retval = 0;
+    vccert_parser_context_t parser;
+    MODEL_ASSERT(NULL != parser_options);
+    MODEL_ASSERT(NULL != txn_cert);
+    MODEL_ASSERT(txn_cert_size > 0);
+    MODEL_ASSERT(NULL != first_child_txn_id);
+
+    /* create a parser for parsing this transaction. */
+    if (VCCERT_STATUS_SUCCESS != vccert_parser_init(parser_options, &parser, txn_cert, txn_cert_size))
+    {
+        retval = AGENTD_ERROR_DATASERVICE_VCCERT_PARSER_INIT_FAILURE;
+        goto done;
+    }
+
+    /* get the transaction id. */
+    const uint8_t* transaction_id = NULL;
+    size_t transaction_id_size = 0U;
+    if (VCCERT_STATUS_SUCCESS != vccert_parser_find_short(&parser, VCCERT_FIELD_TYPE_CERTIFICATE_ID, &transaction_id, &transaction_id_size) || 16 != transaction_id_size)
+    {
+        retval = AGENTD_ERROR_DATASERVICE_MISSING_CHILD_TRANSACTION_UUID;
+        goto dispose_parser;
+    }
+
+    /* copy the transaction id. */
+    memcpy(first_child_txn_id, transaction_id, 16);
+
+    /* success. */
+    retval = AGENTD_STATUS_SUCCESS;
+
+dispose_parser:
+    dispose((disposable_t*)&parser);
+
+done:
+    return retval;
 }
 
 /**
@@ -549,17 +690,44 @@ static int dataservice_block_make_update_end(
  * \param child             The child context for the data service.
  * \param parser_options    The options for parsing certificates.
  * \param txn_db            The transaction database to update.
+ * \param artifact_db       The artifact database to update.
  * \param txn               The transaction under which updates are done.
+ * \param height            The height of the block to which this transaction
+ *                          belongs.
  * \param block_id          The block identifier to which this transaction
  *                          belongs.
  * \param txn_cert          The certificate for this transaction.
  * \param txn_cert_size     The size of the transaction certificate.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if the transaction uuid could not
+ *        be found.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out of memory condition was
+ *        encountered during this operation.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read from the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if this function failed to
+ *        update the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_DEL_FAILURE if this function failed to
+ *        delete from the database.
+ *      - AGENTD_ERROR_DATASERVICE_VCCERT_PARSER_INIT_FAILURE if this
+ *        function failed to initialize a parser.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_CHILD_TRANSACTION_UUID if a child
+ *        transaction is missing its transaction UUID.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_CHILD_PREVIOUS_TRANSACTION_UUID if a
+ *        child transaction is missing its previous transaction UUID.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_CHILD_ARTIFACT_UUID if a child
+ *        transaction is missing its artifact UUID.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_CHILD_STATE if a child transaction is
+ *        missing its state field.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_ARTIFACT_NODE_SIZE if an invalid
+ *        artifact node was encountered.
  */
 static int dataservice_block_make_process_child(
     dataservice_child_context_t* child,
-    vccert_parser_options_t* parser_options, MDB_dbi txn_db, MDB_txn* txn,
+    vccert_parser_options_t* parser_options, MDB_dbi txn_db,
+    MDB_dbi artifact_db, MDB_txn* txn, uint64_t height,
     const uint8_t* block_id, const uint8_t* txn_cert, size_t txn_cert_size)
 {
     int retval = 0;
@@ -572,7 +740,7 @@ static int dataservice_block_make_process_child(
     /* create a parser for parsing this transaction. */
     if (VCCERT_STATUS_SUCCESS != vccert_parser_init(parser_options, &parser, txn_cert, txn_cert_size))
     {
-        retval = 1;
+        retval = AGENTD_ERROR_DATASERVICE_VCCERT_PARSER_INIT_FAILURE;
         goto done;
     }
 
@@ -581,7 +749,7 @@ static int dataservice_block_make_process_child(
     size_t transaction_id_size = 0U;
     if (VCCERT_STATUS_SUCCESS != vccert_parser_find_short(&parser, VCCERT_FIELD_TYPE_CERTIFICATE_ID, &transaction_id, &transaction_id_size) || 16 != transaction_id_size)
     {
-        retval = 2;
+        retval = AGENTD_ERROR_DATASERVICE_MISSING_CHILD_TRANSACTION_UUID;
         goto dispose_parser;
     }
 
@@ -590,7 +758,8 @@ static int dataservice_block_make_process_child(
     size_t prev_transaction_id_size = 0U;
     if (VCCERT_STATUS_SUCCESS != vccert_parser_find_short(&parser, VCCERT_FIELD_TYPE_PREVIOUS_CERTIFICATE_ID, &prev_transaction_id, &prev_transaction_id_size) || 16 != prev_transaction_id_size)
     {
-        retval = 3;
+        retval =
+            AGENTD_ERROR_DATASERVICE_MISSING_CHILD_PREVIOUS_TRANSACTION_UUID;
         goto dispose_parser;
     }
 
@@ -599,16 +768,30 @@ static int dataservice_block_make_process_child(
     size_t artifact_id_size = 0U;
     if (VCCERT_STATUS_SUCCESS != vccert_parser_find_short(&parser, VCCERT_FIELD_TYPE_ARTIFACT_ID, &artifact_id, &artifact_id_size) || 16 != artifact_id_size)
     {
-        retval = 4;
+        retval = AGENTD_ERROR_DATASERVICE_MISSING_CHILD_ARTIFACT_UUID;
         goto dispose_parser;
     }
+
+    /* find the state field. */
+    const uint8_t* state_raw = NULL;
+    size_t state_raw_size = 0;
+    if (VCCERT_STATUS_SUCCESS != vccert_parser_find_short(&parser, VCCERT_FIELD_TYPE_NEW_ARTIFACT_STATE, &state_raw, &state_raw_size) || sizeof(uint32_t) != state_raw_size)
+    {
+        retval = AGENTD_ERROR_DATASERVICE_MISSING_CHILD_STATE;
+        goto dispose_parser;
+    }
+
+    /* decode the state field. */
+    uint32_t net_state;
+    memcpy(&net_state, state_raw, sizeof(uint32_t));
+    uint32_t state = ntohl(net_state);
 
     /* allocate memory for the transaction node. */
     size_t txn_rec_size = sizeof(data_transaction_node_t) + txn_cert_size;
     uint8_t* txn_rec_data = (uint8_t*)malloc(txn_rec_size);
     if (NULL == txn_rec_data)
     {
-        retval = 5;
+        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
         goto dispose_parser;
     }
 
@@ -632,7 +815,7 @@ static int dataservice_block_make_process_child(
     lval.mv_data = txn_rec_data;
     if (0 != mdb_put(txn, txn_db, &lkey, &lval, MDB_NOOVERWRITE))
     {
-        retval = 6;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
         goto free_data;
     }
 
@@ -642,26 +825,35 @@ static int dataservice_block_make_process_child(
     dtxn_ctx.txn = txn;
 
     /* drop the transaction from the transaction queue. */
-    if (0 != dataservice_transaction_drop_internal(child, &dtxn_ctx, transaction_id))
+    retval = dataservice_transaction_drop_internal(
+        child, &dtxn_ctx, transaction_id);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = 7;
         goto free_data;
     }
 
     /* If there is a previous transaction, fix it up. */
     if (crypto_memcmp(prev_transaction_id, zero_uuid, 16))
     {
-        if (0 != dataservice_block_make_update_prev_txn(txn_db, txn, prev_transaction_id, transaction_id))
+        retval = dataservice_block_make_update_prev_txn(
+            txn_db, txn, prev_transaction_id, transaction_id);
+        if (AGENTD_STATUS_SUCCESS != retval)
         {
-            retval = 8;
             goto free_data;
         }
     }
 
-    /* TODO - insert/update artifact. */
+    /* insert / update the artifact. */
+    retval = dataservice_block_make_update_artifact(
+        artifact_db, txn, artifact_id, transaction_id, height,
+        state);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        goto free_data;
+    }
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
 
 free_data:
     memset(txn_rec_data, 0, txn_rec_size);
@@ -669,6 +861,108 @@ free_data:
 
 dispose_parser:
     dispose((disposable_t*)&parser);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Update the artifact database with the latest transaction for this
+ * artifact.
+ *
+ * \param artifact_db       The artifact database to update.
+ * \param txn               The transaction under which updates are done.
+ * \param artifact_id       The artifact id to update.
+ * \param transaction_id    The latest transaction changing this artifact.
+ * \param height            The height of the block to which this transaction
+ *                          belongs.
+ * \param state             The new state for this artifact.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if this function failed to
+ *        update the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read from the database.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_ARTIFACT_NODE_SIZE if an invalid
+ *        artifact node was encountered.
+ */
+static int dataservice_block_make_update_artifact(
+    MDB_dbi artifact_db, MDB_txn* txn, const uint8_t* artifact_id,
+    const uint8_t* transaction_id, uint64_t height, uint32_t state)
+{
+    data_artifact_record_t record;
+    int retval = 0;
+
+    MODEL_ASSERT(NULL != txn);
+    MODEL_ASSERT(NULL != artifact_id);
+    MODEL_ASSERT(NULL != transaction_id);
+
+    /* query for the artifact. */
+    MDB_val lkey;
+    lkey.mv_size = 16;
+    lkey.mv_data = (uint8_t*)artifact_id;
+    MDB_val lval;
+    memset(&lval, 0, sizeof(lval));
+    retval = mdb_get(txn, artifact_db, &lkey, &lval);
+
+    /* if not found, insert an artifact record. */
+    if (MDB_NOTFOUND == retval)
+    {
+        memset(&record, 0, sizeof(record));
+        memcpy(record.key, artifact_id, sizeof(record.key));
+        memcpy(record.txn_first, transaction_id, sizeof(record.txn_first));
+        memcpy(record.txn_latest, transaction_id, sizeof(record.txn_latest));
+        record.net_height_first = htonll(height);
+        record.net_height_latest = htonll(height);
+        record.net_state_latest = htonl(state);
+
+        /* insert this record. */
+        lkey.mv_size = 16;
+        lkey.mv_data = record.key;
+        lval.mv_size = sizeof(record);
+        lval.mv_data = &record;
+        if (0 != mdb_put(txn, artifact_db, &lkey, &lval, MDB_NOOVERWRITE))
+        {
+            retval = AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
+            goto done;
+        }
+
+        /* success. */
+        retval = AGENTD_STATUS_SUCCESS;
+    }
+    /* if found, update the artifact record. */
+    else if (0 == retval && sizeof(record) == lval.mv_size)
+    {
+        memcpy(&record, lval.mv_data, sizeof(record));
+        memcpy(record.txn_latest, transaction_id, sizeof(record.txn_latest));
+        record.net_height_latest = htonll(height);
+        record.net_state_latest = htonl(state);
+
+        /* update this record. */
+        lkey.mv_size = 16;
+        lkey.mv_data = record.key;
+        lval.mv_size = sizeof(record);
+        lval.mv_data = &record;
+        if (0 != mdb_put(txn, artifact_db, &lkey, &lval, 0))
+        {
+            retval = AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
+            goto done;
+        }
+
+        /* success. */
+        retval = AGENTD_STATUS_SUCCESS;
+    }
+    /* found, but the size is wrong. */
+    else if (0 == retval && sizeof(record) != lval.mv_size)
+    {
+        retval = AGENTD_ERROR_DATASERVICE_INVALID_ARTIFACT_NODE_SIZE;
+    }
+    /* an error occurred. */
+    else
+    {
+        retval = AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE;
+    }
 
 done:
     return retval;
@@ -683,7 +977,14 @@ done:
  * \param txn_id            The transaction id to update.
  * \param next_txn_id       The next transaction id.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this function encountered an
+ *        out-of-memory condition.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read from the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if this function failed to
+ *        write to the database.
  */
 static int dataservice_block_make_update_prev_txn(
     MDB_dbi txn_db, MDB_txn* txn, const uint8_t* txn_id,
@@ -702,7 +1003,7 @@ static int dataservice_block_make_update_prev_txn(
     memset(&lval, 0, sizeof(lval));
     if (0 != mdb_get(txn, txn_db, &lkey, &lval) || lval.mv_size < sizeof(data_transaction_node_t))
     {
-        retval = 1;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE;
         goto done;
     }
 
@@ -711,7 +1012,7 @@ static int dataservice_block_make_update_prev_txn(
         (data_transaction_node_t*)malloc(lval.mv_size);
     if (NULL == rec)
     {
-        retval = 2;
+        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
         goto done;
     }
 
@@ -727,12 +1028,12 @@ static int dataservice_block_make_update_prev_txn(
     lval.mv_data = rec; /* size remains the same. */
     if (0 != mdb_put(txn, txn_db, &lkey, &lval, 0))
     {
-        retval = 2;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
         goto free_rec;
     }
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
 
 free_rec:
     memset(rec, 0, lval.mv_size);
@@ -749,7 +1050,12 @@ done:
  * \param end_node              The optional end node from the database.
  * \param expected_block_height Pointer to block height field used by caller.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_BLOCK_HEIGHT if this block
+ *        certificate is missing a block height field.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_BLOCK_HEIGHT if this block
+ *        certificate has a block height that is not valid.
  */
 static int constraint_matching_block_height(
     vccert_parser_context_t* parser, const data_block_node_t* end_node,
@@ -774,7 +1080,7 @@ static int constraint_matching_block_height(
     size_t block_height_raw_size = 0;
     if (VCCERT_STATUS_SUCCESS != vccert_parser_find_short(parser, VCCERT_FIELD_TYPE_BLOCK_HEIGHT, &block_height_raw, &block_height_raw_size) || sizeof(uint64_t) != block_height_raw_size)
     {
-        return 1;
+        return AGENTD_ERROR_DATASERVICE_MISSING_BLOCK_HEIGHT;
     }
 
     /* verify the block height of this block last_block->height + 1. */
@@ -782,11 +1088,11 @@ static int constraint_matching_block_height(
     memcpy(&net_block_height, block_height_raw, sizeof(uint64_t));
     if (((uint64_t)ntohll(net_block_height)) != *expected_block_height)
     {
-        return 2;
+        return AGENTD_ERROR_DATASERVICE_INVALID_BLOCK_HEIGHT;
     }
 
     /* success */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }
 
 /**
@@ -797,7 +1103,13 @@ static int constraint_matching_block_height(
  * \param end_node          The optional end node from the database.
  * \param block_prev_uuid   Pointer to prev UUID field used by caller.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_MISSING_PREVIOUS_BLOCK_UUID if the previous
+ *        block uuid field is missing in this block certificate.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_PREVIOUS_BLOCK_UUID if the previous
+ *        block uuid field is invalid or does not match the expected previous
+ *        block uuid value.
  */
 static int constraint_matching_prev_uuid(
     vccert_parser_context_t* parser, const data_block_node_t* end_node,
@@ -824,17 +1136,17 @@ static int constraint_matching_prev_uuid(
     size_t block_prev_uuid_size = 0;
     if (VCCERT_STATUS_SUCCESS != vccert_parser_find_short(parser, VCCERT_FIELD_TYPE_PREVIOUS_BLOCK_UUID, block_prev_uuid, &block_prev_uuid_size) || 16 != block_prev_uuid_size)
     {
-        return 1;
+        return AGENTD_ERROR_DATASERVICE_MISSING_PREVIOUS_BLOCK_UUID;
     }
 
     /* verify the previous block ID is last_block->uuid. */
     if (0 != crypto_memcmp(*block_prev_uuid, expected_prev_block_id, 16))
     {
-        return 2;
+        return AGENTD_ERROR_DATASERVICE_INVALID_PREVIOUS_BLOCK_UUID;
     }
 
     /* success */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }
 
 /**
@@ -846,7 +1158,12 @@ static int constraint_matching_prev_uuid(
  * \param end_node          The pointer to the pointer to receive the end node.
  *                          Set to NULL if the end node is not found.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_INVALID_STORED_BLOCK_NODE if this function
+ *        encountered an invalid block node in the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function could not
+ *        read from the database.
  */
 static int query_end_node(
     MDB_txn* txn, MDB_dbi block_db, const data_block_node_t** end_node)
@@ -877,37 +1194,44 @@ static int query_end_node(
         /* verify that this block node is valid. */
         if (lval.mv_size < sizeof(data_block_node_t))
         {
-            return 1;
+            return AGENTD_ERROR_DATASERVICE_INVALID_STORED_BLOCK_NODE;
         }
     }
     else if (0 != retval)
     {
         /* some error has occurred. */
-        return 3;
+        return AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE;
     }
 
     /* success. */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }
 
 /**
  * \brief Insert a block into the blockchain database.
  *
  * \param block_db          The block database to update.
+ * \param height_db         The block height database to update.
  * \param txn               The database transaction under which this insert is
  *                          performed.
  * \param block_id          The block id to insert.
  * \param block_prev_id     The previous block id in the blockchain.
+ * \param first_child_txn_id The first child transaction ID.
  * \param block_height      The height of the blockchain with this block.
  * \param block_data        The raw certificate data for this block.
  * \param block_size        The size of this block certificate.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered while running this function.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if this function failed to
+ *        update the database.
  */
 static int dataservice_make_block_insert_block(
-    MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id,
-    const uint8_t* block_prev_id, uint64_t block_height,
-    const uint8_t* block_data, size_t block_size)
+    MDB_dbi block_db, MDB_dbi height_db, MDB_txn* txn, const uint8_t* block_id,
+    const uint8_t* block_prev_id, const uint8_t* first_child_txn_id,
+    uint64_t block_height, const uint8_t* block_data, size_t block_size)
 {
     int retval = 0;
 
@@ -917,7 +1241,7 @@ static int dataservice_make_block_insert_block(
         (data_block_node_t*)malloc(blocknode_size);
     if (NULL == blocknode)
     {
-        retval = 1;
+        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
         goto done;
     }
 
@@ -930,7 +1254,8 @@ static int dataservice_make_block_insert_block(
     memcpy(blocknode->key, block_id, sizeof(blocknode->key));
     memset(blocknode->next, 0xFF, sizeof(blocknode->next));
     memcpy(blocknode->prev, block_prev_id, sizeof(blocknode->prev));
-    /* TODO - fill out first and last txn IDs for iterating transactions in
+    memcpy(blocknode->first_transaction_id, first_child_txn_id, 16);
+    /* TODO - fill out last txn ID for iterating transactions in
        block. */
     blocknode->net_block_height = htonll(block_height);
     blocknode->net_block_cert_size = htonll(block_size);
@@ -944,12 +1269,23 @@ static int dataservice_make_block_insert_block(
     lval.mv_data = blocknode;
     if (0 != mdb_put(txn, block_db, &lkey, &lval, MDB_NOOVERWRITE))
     {
-        retval = 2;
+        retval = AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
+        goto cleanup_blocknode;
+    }
+
+    /* insert the block height mapping. */
+    lkey.mv_size = sizeof(blocknode->net_block_height);
+    lkey.mv_data = &blocknode->net_block_height;
+    lval.mv_size = sizeof(blocknode->key);
+    lval.mv_data = blocknode->key;
+    if (0 != mdb_put(txn, height_db, &lkey, &lval, MDB_NOOVERWRITE))
+    {
+        retval = AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE;
         goto cleanup_blocknode;
     }
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
 
 cleanup_blocknode:
     memset(blocknode, 0, blocknode_size);
@@ -968,7 +1304,10 @@ done:
  * \param txn               Pointer to the database transaction pointer to be
  *                          updated on success.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function
+ *        failed to begin a transaction.
  */
 static int dataservice_create_child_trasaction(
     MDB_env* env, dataservice_transaction_context_t* dtxn_ctx, MDB_txn** txn)
@@ -980,9 +1319,9 @@ static int dataservice_create_child_trasaction(
     if (0 != mdb_txn_begin(env, parent, 0, txn))
     {
         *txn = NULL;
-        return 1;
+        return AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE;
     }
 
     /* success */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }

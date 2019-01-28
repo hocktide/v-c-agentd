@@ -3,11 +3,12 @@
  *
  * \brief Decode requests and dispatch a child context close call.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/ipc.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -27,7 +28,12 @@
  * \param req           The request to be decoded and dispatched.
  * \param size          The size of the request.
  *
- * \returns 0 on success or non-fatal error.  Returns non-zero on fatal error.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_child_context_close(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
@@ -49,7 +55,7 @@ int dataservice_decode_and_dispatch_child_context_close(
     /* the payload size should be equal to the size of a child context index. */
     if (size != sizeof(uint32_t))
     {
-        retval = 1;
+        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
         goto done;
     }
 
@@ -63,22 +69,22 @@ int dataservice_decode_and_dispatch_child_context_close(
     /* check bounds. */
     if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
     {
-        retval = 2;
+        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX;
         goto done;
     }
 
     /* verify that this child context is open. */
     if (NULL == inst->children[child_index].hdr.dispose)
     {
-        retval = 3;
+        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID;
         goto done;
     }
 
     /* call the child context close method. */
     retval = dataservice_child_context_close(&inst->children[child_index].ctx);
-    if (0 != retval)
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = 4;
+        retval = AGENTD_ERROR_DATASERVICE_CHILD_DETAILS_DELETE_FAILURE;
         goto done;
     }
 

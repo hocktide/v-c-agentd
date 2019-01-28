@@ -3,10 +3,11 @@
  *
  * \brief Remove a non-blocking socket descriptor from an event loop.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/ipc.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <fcntl.h>
 #include <string.h>
@@ -26,9 +27,12 @@
  *                      removed.
  * \param sock          This socket context is removed from the event loop.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_INVALID_ARGUMENT if the socket context does not
+ *        belong to a loop.
  */
-ssize_t ipc_event_loop_remove(
+int ipc_event_loop_remove(
     ipc_event_loop_context_t* UNUSED(loop), ipc_socket_context_t* sock)
 {
     /* parameter sanity checking. */
@@ -41,7 +45,7 @@ ssize_t ipc_event_loop_remove(
     /* if the ev is not defined, then this socket was not assigned to a loop. */
     if (NULL == sock_impl->ev)
     {
-        return 1;
+        return AGENTD_ERROR_IPC_INVALID_ARGUMENT;
     }
 
     /* remove the event from the event loop. */
@@ -54,5 +58,5 @@ ssize_t ipc_event_loop_remove(
     sock_impl->readbuf = sock_impl->writebuf = NULL;
 
     /* success. */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }

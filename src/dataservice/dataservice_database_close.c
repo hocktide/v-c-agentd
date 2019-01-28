@@ -16,8 +16,6 @@
  * \brief Close the database.
  *
  * \param ctx       The root context with the opened database.
- *
- * \returns 0 on success and non-zero on failure.
  */
 void dataservice_database_close(
     dataservice_root_context_t* ctx)
@@ -37,6 +35,8 @@ void dataservice_database_close(
     mdb_dbi_close(details->env, details->block_db);
     mdb_dbi_close(details->env, details->txn_db);
     mdb_dbi_close(details->env, details->pq_db);
+    mdb_dbi_close(details->env, details->artifact_db);
+    mdb_dbi_close(details->env, details->height_db);
 
     /* close database environment. */
     mdb_env_close(details->env);

@@ -3,7 +3,7 @@
  *
  * \brief Spawn an unprivileged process to read and verify the config file.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/bootstrap_config.h>
@@ -11,6 +11,7 @@
 #include <agentd/fds.h>
 #include <agentd/ipc.h>
 #include <agentd/privsep.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -30,7 +31,34 @@
  *                      reader process.
  * \param conf          The config structure to populate.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_CONFIG_PROC_RUNSECURE_ROOT_USER_REQUIRED if spawning this
+ *        process failed because the user is not root and runsecure is true.
+ *      - AGENTD_ERROR_CONFIG_IPC_SOCKETPAIR_FAILURE if creating a socketpair
+ *        for the dataservice process failed.
+ *      - AGENTD_ERROR_CONFIG_FORK_FAILURE if forking the private process
+ *        failed.
+ *      - AGENTD_ERROR_CONFIG_PRIVSEP_LOOKUP_USERGROUP_FAILURE if there was a
+ *        failure looking up the configured user and group for the dataservice
+ *        process.
+ *      - AGENTD_ERROR_CONFIG_PRIVSEP_CHROOT_FAILURE if chrooting failed.
+ *      - AGENTD_ERROR_CONFIG_PRIVSEP_DROP_PRIVILEGES_FAILURE if dropping
+ *        privileges failed.
+ *      - AGENTD_ERROR_CONFIG_OPEN_CONFIG_FILE_FAILURE if opening the config
+ *        file failed.
+ *      - AGENTD_ERROR_CONFIG_PRIVSEP_SETFDS_FAILURE if setting file descriptors
+ *        failed.
+ *      - AGENTD_ERROR_CONFIG_PRIVSEP_EXEC_PRIVATE_FAILURE if executing the
+ *        private command failed.
+ *      - AGENTD_ERROR_CONFIG_PRIVSEP_EXEC_SURVIVAL_WEIRDNESS if the process
+ *        survived execution (weird!).      
+ *      - AGENTD_ERROR_CONFIG_IPC_READ_DATA_FAILURE if reading data from the
+ *        config stream failed.
+ *      - AGENTD_ERROR_CONFIG_PROC_EXIT_FAILURE if the config proc did not
+ *        properly exit.
+ *      - AGENTD_ERROR_CONFIG_DEFAULTS_SET_FAILURE if setting the config
+ *        defaults failed.
  */
 int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
 {
@@ -44,7 +72,7 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
     if (0 != geteuid())
     {
         fprintf(stderr, "agentd must be run as root.\n");
-        retval = 1;
+        retval = AGENTD_ERROR_CONFIG_PROC_RUNSECURE_ROOT_USER_REQUIRED;
         goto done;
     }
 
@@ -53,15 +81,16 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
     if (0 != retval)
     {
         perror("ipc_socketpair");
+        retval = AGENTD_ERROR_CONFIG_IPC_SOCKETPAIR_FAILURE;
         goto done;
     }
 
     /* fork the process into parent and child. */
     procid = fork();
-    if (0 > procid)
+    if (procid < 0)
     {
         perror("fork");
-        retval = procid;
+        retval = AGENTD_ERROR_CONFIG_FORK_FAILURE;
         goto done;
     }
 
@@ -77,6 +106,7 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
         if (0 != retval)
         {
             perror("privsep_lookup_usergroup");
+            retval = AGENTD_ERROR_CONFIG_PRIVSEP_LOOKUP_USERGROUP_FAILURE;
             goto done;
         }
 
@@ -85,6 +115,7 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
         if (0 != retval)
         {
             perror("privsep_chroot");
+            retval = AGENTD_ERROR_CONFIG_PRIVSEP_CHROOT_FAILURE;
             goto done;
         }
 
@@ -93,6 +124,7 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
         if (0 != retval)
         {
             perror("privsep_drop_privileges");
+            retval = AGENTD_ERROR_CONFIG_PRIVSEP_DROP_PRIVILEGES_FAILURE;
             goto done;
         }
 
@@ -101,7 +133,7 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
         if (0 > config_fd)
         {
             perror("config open");
-            retval = config_fd;
+            retval = AGENTD_ERROR_CONFIG_OPEN_CONFIG_FILE_FAILURE;
             goto done;
         }
 
@@ -114,6 +146,7 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
         if (0 != retval)
         {
             perror("privsep_setfds");
+            retval = AGENTD_ERROR_CONFIG_PRIVSEP_SETFDS_FAILURE;
             goto done;
         }
 
@@ -122,11 +155,12 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
         if (0 != retval)
         {
             perror("privsep_exec_private");
+            retval = AGENTD_ERROR_CONFIG_PRIVSEP_EXEC_PRIVATE_FAILURE;
             goto done;
         }
 
         printf("Should never get here.\n");
-        retval = 1;
+        retval = AGENTD_ERROR_CONFIG_PRIVSEP_EXEC_SURVIVAL_WEIRDNESS;
         goto done;
     }
     /* parent */
@@ -139,7 +173,7 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
         /* read the config data from the client socket. */
         if (0 != config_read_block(clientsock, conf))
         {
-            retval = 1;
+            retval = AGENTD_ERROR_CONFIG_IPC_READ_DATA_FAILURE;
             goto done;
         }
 
@@ -150,16 +184,20 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
         if (WIFEXITED(pidstatus))
         {
             retval = WEXITSTATUS(pidstatus);
+            if (0 != retval)
+            {
+                retval = AGENTD_ERROR_CONFIG_PROC_EXIT_FAILURE;
+            }
         }
         else
         {
-            retval = 1;
+            retval = AGENTD_ERROR_CONFIG_PROC_EXIT_FAILURE;
         }
 
         /* provide defaults for any config value not set. */
-        if (0 == retval && 0 != config_set_defaults(conf, bconf))
+        if (0 != config_set_defaults(conf, bconf))
         {
-            retval = 2;
+            retval = AGENTD_ERROR_CONFIG_DEFAULTS_SET_FAILURE;
             goto cleanup_config;
         }
 
@@ -171,11 +209,11 @@ cleanup_config:
 
 done:
     /* clean up clientsock. */
-    if (0 <= clientsock)
+    if (clientsock >= 0)
         close(clientsock);
 
     /* clean up serversock. */
-    if (0 <= serversock)
+    if (serversock >= 0)
         close(serversock);
 
     return retval;

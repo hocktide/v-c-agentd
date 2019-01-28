@@ -3,11 +3,12 @@
  *
  * \brief Non-blocking read of an int64 value.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/ipc.h>
 #include <agentd/inet.h>
+#include <agentd/status_codes.h>
 #include <arpa/inet.h>
 #include <cbmc/model_assert.h>
 #include <string.h>
@@ -24,9 +25,20 @@
  * \param sd            The socket descriptor to which the value is written.
  * \param val           Pointer to hold the value.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if the the operation was halted because
+ *        it would block this thread.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read was
+ *        unexpected.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if the data size read was
+ *        unexpected.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_DRAIN_FAILURE if draining the read buffer
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_REMOVE_FAILURE if removing the payload
+ *        from the read buffer failed.
  */
-ssize_t ipc_read_int64_noblock(ipc_socket_context_t* sock, int64_t* val)
+int ipc_read_int64_noblock(ipc_socket_context_t* sock, int64_t* val)
 {
     /* parameter sanity checks. */
     MODEL_ASSERT(NULL != sock);
@@ -44,13 +56,13 @@ ssize_t ipc_read_int64_noblock(ipc_socket_context_t* sock, int64_t* val)
     uint8_t* mem = (uint8_t*)evbuffer_pullup(sock_impl->readbuf, header_sz);
     if (NULL == mem)
     {
-        return IPC_ERROR_CODE_WOULD_BLOCK;
+        return AGENTD_ERROR_IPC_WOULD_BLOCK;
     }
 
     /* if the type does not match our expected type, return an error. */
     if (IPC_DATA_TYPE_INT64 != mem[0])
     {
-        return 1;
+        return AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE;
     }
 
     /* decode the size of this packet. */
@@ -59,30 +71,30 @@ ssize_t ipc_read_int64_noblock(ipc_socket_context_t* sock, int64_t* val)
 
     /* sanity check on size. */
     uint32_t size = ntohl(nsize);
-    if (size != sizeof(int64_t))
+    if (sizeof(int64_t) != size)
     {
-        return 2;
+        return AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE;
     }
 
     /* if the buffer size is less than this size, wait for more data to be
      * available. */
     if (evbuffer_get_length(sock_impl->readbuf) < (size + (size_t)header_sz))
     {
-        return IPC_ERROR_CODE_WOULD_BLOCK;
+        return AGENTD_ERROR_IPC_WOULD_BLOCK;
     }
 
     /* drain the header from the buffer. */
     if (header_sz != evbuffer_drain(sock_impl->readbuf, header_sz))
     {
-        return 3;
+        return AGENTD_ERROR_IPC_READ_BUFFER_DRAIN_FAILURE;
     }
 
     /* read the data from the buffer. */
     if (size != (size_t)evbuffer_remove(sock_impl->readbuf, val, size))
     {
-        return 4;
+        return AGENTD_ERROR_IPC_READ_BUFFER_REMOVE_FAILURE;
     }
 
     /* success. */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }

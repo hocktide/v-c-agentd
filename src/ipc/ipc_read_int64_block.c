@@ -3,11 +3,12 @@
  *
  * \brief Blocking read of a int64_t value.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/ipc.h>
 #include <agentd/inet.h>
+#include <agentd/status_codes.h>
 #include <arpa/inet.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
@@ -21,9 +22,16 @@
  * \param sd            The socket descriptor to which the value is written.
  * \param val           Pointer to hold the value.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_READ_BLOCK_FAILURE if a blocking read on the socket
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read from
+ *        the socket was unexpected.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if the data size read from
+ *        the socket was unexpected.
  */
-ssize_t ipc_read_int64_block(int sock, int64_t* val)
+int ipc_read_int64_block(int sock, int64_t* val)
 {
     uint8_t type = 0U;
     uint32_t nsize = 0U;
@@ -32,30 +40,30 @@ ssize_t ipc_read_int64_block(int sock, int64_t* val)
 
     /* attempt to read the type info. */
     if (sizeof(type) != read(sock, &type, sizeof(type)))
-        return 1;
+        return AGENTD_ERROR_IPC_READ_BLOCK_FAILURE;
 
     /* verify that the type is IPC_DATA_TYPE_INT64. */
     if (IPC_DATA_TYPE_INT64 != type)
-        return 2;
+        return AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE;
 
     /* attempt to read the size. */
     if (sizeof(nsize) != read(sock, &nsize, sizeof(nsize)))
-        return 3;
+        return AGENTD_ERROR_IPC_READ_BLOCK_FAILURE;
 
     /* convert the size to host byte order. */
     size = ntohl(nsize);
 
     /* verify the size. */
-    if (size != sizeof(int64_t))
-        return 4;
+    if (sizeof(int64_t) != size)
+        return AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE;
 
     /* attempt to read the value. */
     if (size != read(sock, &nval, sizeof(int64_t)))
-        return 5;
+        return AGENTD_ERROR_IPC_READ_BLOCK_FAILURE;
 
     /* convert this value to host byte order. */
     *val = ntohll(nval);
 
     /* success. */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }

@@ -3,10 +3,11 @@
  *
  * \brief Reduce the capabilities of the root context.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -21,7 +22,10 @@
  *                      structure must be the same size as the capabilities
  *                      structure defined in dataservice_root_context_t.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if the current context lacks
+ *        authorization to perform this operation.
  */
 int dataservice_root_context_reduce_capabilities(
     dataservice_root_context_t* ctx, uint32_t* caps)
@@ -33,11 +37,11 @@ int dataservice_root_context_reduce_capabilities(
     /* verify that we are allowed to reduce capabilities on the root context. */
     if (!BITCAP_ISSET(ctx->apicaps,
             DATASERVICE_API_CAP_LL_ROOT_CONTEXT_REDUCE_CAPS))
-        return 1;
+        return AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED;
 
     /* reduce the capabilities. */
     BITCAP_INTERSECT(ctx->apicaps, ctx->apicaps, caps);
 
     /* success. */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }

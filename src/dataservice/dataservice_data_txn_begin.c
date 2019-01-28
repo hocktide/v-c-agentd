@@ -3,11 +3,11 @@
  *
  * \brief Begin a transaction in the data service.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
-#include <agentd/inet.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -33,7 +33,10 @@
  *                      ignored when creating a child transaction; the parent
  *                      transaction's state overrides this one.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if the transaction
+ *        could not begin.
  */
 int dataservice_data_txn_begin(
     dataservice_child_context_t* child,
@@ -69,8 +72,18 @@ int dataservice_data_txn_begin(
         retval = mdb_txn_begin(details->env, ptxn, 0, &txn->txn);
     }
 
-    /* erase the structure if we fail. */
+    /* decode the result of this operation. */
     if (0 != retval)
+    {
+        retval = AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE;
+    }
+    else
+    {
+    }
+    retval = AGENTD_STATUS_SUCCESS;
+
+    /* erase the structure if we fail. */
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
         memset(txn, 0, sizeof(dataservice_transaction_context_t));
     }

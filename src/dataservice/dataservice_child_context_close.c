@@ -3,10 +3,11 @@
  *
  * \brief Attempt to close a child context.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -16,7 +17,10 @@
  *
  * \param child         The child context to close.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is not
+ *        authorized to close.
  */
 int dataservice_child_context_close(
     dataservice_child_context_t* child)
@@ -28,11 +32,11 @@ int dataservice_child_context_close(
     /* verify that we are allowed to close child contexts. */
     if (!BITCAP_ISSET(child->childcaps,
             DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE))
-        return 1;
+        return AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED;
 
     /* clear out the child context. */
     memset(child, 0, sizeof(dataservice_child_context_t));
 
     /* success. */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }

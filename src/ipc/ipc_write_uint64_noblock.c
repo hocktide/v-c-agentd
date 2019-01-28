@@ -3,11 +3,12 @@
  *
  * \brief Non-blocking write of a uint64 value.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/ipc.h>
 #include <agentd/inet.h>
+#include <agentd/status_codes.h>
 #include <arpa/inet.h>
 #include <cbmc/model_assert.h>
 #include <string.h>
@@ -17,16 +18,23 @@
 #include "ipc_internal.h"
 
 /**
- * \brief Write a uint64_t value to a non-blocking socket.
+ * \brief Read a uint64_t value from a non-blocking socket.
  *
- * On success, the value is written, along with type information and size.
+ * On success, the value is read, along with type information and size.
  *
  * \param sd            The socket descriptor to which the value is written.
- * \param val           The value to write.
+ * \param val           Pointer to hold the value.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_TYPE_ADD_FAILURE if adding the type
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_SIZE_ADD_FAILURE if adding the size
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_PAYLOAD_ADD_FAILURE if adding the
+ *        payload data to the write buffer failed.
  */
-ssize_t ipc_write_uint64_noblock(ipc_socket_context_t* sock, uint64_t val)
+int ipc_write_uint64_noblock(ipc_socket_context_t* sock, uint64_t val)
 {
     /* parameter sanity checks. */
     MODEL_ASSERT(NULL != sock);
@@ -40,23 +48,23 @@ ssize_t ipc_write_uint64_noblock(ipc_socket_context_t* sock, uint64_t val)
     uint8_t type = IPC_DATA_TYPE_UINT64;
     if (0 != evbuffer_add(sock_impl->writebuf, &type, sizeof(type)))
     {
-        return 1;
+        return AGENTD_ERROR_IPC_WRITE_BUFFER_TYPE_ADD_FAILURE;
     }
 
     /* attempt to write the size. */
     uint32_t nsize = htonl(sizeof(val));
     if (0 != evbuffer_add(sock_impl->writebuf, &nsize, sizeof(nsize)))
     {
-        return 2;
+        return AGENTD_ERROR_IPC_WRITE_BUFFER_SIZE_ADD_FAILURE;
     }
 
     /* attempt to write the data. */
     uint64_t oval = htonll(val);
     if (0 != evbuffer_add(sock_impl->writebuf, &oval, sizeof(oval)))
     {
-        return 3;
+        return AGENTD_ERROR_IPC_WRITE_BUFFER_PAYLOAD_ADD_FAILURE;
     }
 
     /* success. */
-    return 0;
+    return AGENTD_STATUS_SUCCESS;
 }

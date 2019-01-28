@@ -3,10 +3,11 @@
  *
  * \brief Create a child details structure.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/dataservice/private/dataservice.h>
+#include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
@@ -23,7 +24,10 @@ static void dataservice_child_context_dispose(void* disposable);
  * \param offset        Pointer to the offset that is updated with this child
  *                      context offset in the children array.
  *
- * \returns 0 on success, and non-zero on failure.
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_OUT_OF_CHILD_INSTANCES if no more child
+ *        instances are available.
  */
 int dataservice_child_details_create(dataservice_instance_t* inst, int* offset)
 {
@@ -33,15 +37,7 @@ int dataservice_child_details_create(dataservice_instance_t* inst, int* offset)
     /* if there is not an instance available, this operation fails. */
     if (NULL == inst->child_head)
     {
-        retval = 1;
-        goto done;
-    }
-
-    /* get a child instance and the offset. */
-    if (NULL == inst->child_head)
-    {
-        /* all children are allocated. */
-        retval = 2;
+        retval = AGENTD_ERROR_DATASERVICE_OUT_OF_CHILD_INSTANCES;
         goto done;
     }
 
@@ -57,7 +53,7 @@ int dataservice_child_details_create(dataservice_instance_t* inst, int* offset)
     child->hdr.dispose = &dataservice_child_context_dispose;
 
     /* success. */
-    retval = 0;
+    retval = AGENTD_STATUS_SUCCESS;
     goto done;
 
 done:
