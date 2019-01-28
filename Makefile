@@ -148,7 +148,7 @@ MODEL_MAKEFILES?= \
 
 ALL: agentd-build
 
-test: vcblockchain-test testreport.agentd
+test: vcblockchain-test test.agentd
 
 install: agentd-install
 
