@@ -45,10 +45,16 @@ FILE* config_set_input_filedescriptor(
     return IP;
 }
 
-([0-9])+ {
+-?([0-9])+ {
     /* a number token */
     yylval->number = atol(yytext);
     return NUMBER;
+}
+
+consensus {
+    /* consensus keyword */
+    yylval->string = "consensus";
+    return CONSENSUS;
 }
 
 logdir {
@@ -63,10 +69,28 @@ loglevel {
     return LOGLEVEL;
 }
 
+max {
+    /* max keyword */
+    yylval->string = "max";
+    return MAX;
+}
+
+seconds {
+    /* seconds keyword */
+    yylval->string = "seconds";
+    return SECONDS;
+}
+
 secret {
     /* secret keyword */
     yylval->string = "secret";
     return SECRET;
+}
+
+transactions {
+    /* transactions keyword */
+    yylval->string = "transactions";
+    return TRANSACTIONS;
 }
 
 rootblock {
@@ -97,6 +121,18 @@ usergroup {
     /* usergroup keyword */
     yylval->string = "usergroup";
     return USERGROUP;
+}
+
+[{] {
+    /* lbrace token */
+    yylval->string = "{";
+    return LBRACE;
+}
+
+[}] {
+    /* rbrace token */
+    yylval->string = "}";
+    return RBRACE;
 }
 
 (([^./[:space:]][^/[:space:]]*)|[.])([/][^./[:space:]][^/[:space:]]*)+ {

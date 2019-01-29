@@ -43,14 +43,14 @@ int config_set_defaults(agent_config_t* conf, bootstrap_config_t* bconf)
     }
 
     /* if block_max_seconds is not set, set it to 5. */
-    if (!conf->block_max_seconds_set || conf->block_max_seconds < 0 || conf->block_max_seconds > 43200 /* 12 hours in seconds. */)
+    if (!conf->block_max_seconds_set || conf->block_max_seconds < 0 || conf->block_max_seconds > BLOCK_SECONDS_MAXIMUM)
     {
         conf->block_max_seconds = 5;
         conf->block_max_seconds_set = true;
     }
 
     /* if block_max_transactions is not set, set it to 500. */
-    if (!conf->block_max_transactions_set || conf->block_max_transactions < 0 || conf->block_max_transactions > 100000 /* 100k is a lot! */)
+    if (!conf->block_max_transactions_set || conf->block_max_transactions < 0 || conf->block_max_transactions > BLOCK_TRANSACTIONS_MAXIMUM)
     {
         conf->block_max_transactions = 500;
         conf->block_max_transactions_set = true;

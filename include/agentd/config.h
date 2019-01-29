@@ -60,6 +60,18 @@ typedef struct config_user_group
     const char* group;
 } config_user_group_t;
 
+/**
+ * \brief Consensus data.
+ */
+typedef struct config_consensus
+{
+    disposable_t hdr;
+    bool block_max_seconds_set;
+    int64_t block_max_seconds;
+    bool block_max_transactions_set;
+    int64_t block_max_transactions;
+} config_consensus_t;
+
 #define CONFIG_STREAM_TYPE_BOM 0x00
 #define CONFIG_STREAM_TYPE_LOGDIR 0x01
 #define CONFIG_STREAM_TYPE_LOGLEVEL 0x02
@@ -69,9 +81,13 @@ typedef struct config_user_group
 #define CONFIG_STREAM_TYPE_LISTEN_ADDR 0x06
 #define CONFIG_STREAM_TYPE_CHROOT 0x07
 #define CONFIG_STREAM_TYPE_USERGROUP 0x08
+#define CONFIG_STREAM_TYPE_BLOCK_MAX_SECONDS 0x09
+#define CONFIG_STREAM_TYPE_BLOCK_MAX_TRANSACTIONS 0x0A
 #define CONFIG_STREAM_TYPE_EOM 0x80
 #define CONFIG_STREAM_TYPE_ERROR 0xFF
 
+#define BLOCK_SECONDS_MAXIMUM 43200
+#define BLOCK_TRANSACTIONS_MAXIMUM 100000
 /**
  * \brief Root of the agent configuration AST.
  */
@@ -104,6 +120,7 @@ typedef union config_val
     agent_config_t* config;
     config_user_group_t* usergroup;
     config_listen_address_t* listenaddr;
+    config_consensus_t* consensus;
 } config_val_t;
 
 /* forward decl for config_context. */
