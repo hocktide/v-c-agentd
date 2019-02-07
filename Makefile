@@ -176,7 +176,7 @@ test.agentd: vcblockchain-build $(TEST_DIRS) host.exe.checked $(TESTAGENTD)
 	find $(BUILD_DIR) -type f -name "*.gcda" -exec rm {} \; -print
 	TEST_BIN=$(realpath $(shell which cat)) \
 	LD_LIBRARY_PATH=$(TOOLCHAIN_DIR)/host/lib:$(TOOLCHAIN_DIR)/host/lib64:$(LD_LIBRARY_PATH) \
-	$(TESTAGENTD)
+	$(TESTAGENTD) $(TEST_AGENTD_FILTER)
 
 testreport.agentd: $(REPORT_FILES)
 
