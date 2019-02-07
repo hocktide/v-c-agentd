@@ -15,12 +15,14 @@
 #include <gtest/gtest.h>
 #include <vpr/disposable.h>
 
+#include "test_ipc.h"
+
 using namespace std;
 
 /**
  * \brief Calling ipc_make_block on a socket should make it blocking.
  */
-TEST(ipc, ipc_make_block)
+TEST_F(ipc_test, ipc_make_block)
 {
     int flags;
     int lhs, rhs;
@@ -55,7 +57,7 @@ TEST(ipc, ipc_make_block)
 /**
  * \brief It is possible to write a string value to a blocking socket.
  */
-TEST(ipc, ipc_write_string_block)
+TEST_F(ipc_test, ipc_write_string_block)
 {
     int lhs, rhs;
     const char TEST_STRING[] = "This is a test.";
@@ -99,7 +101,7 @@ TEST(ipc, ipc_write_string_block)
 /**
  * \brief It is possible to write a uint64_t value to a blocking socket.
  */
-TEST(ipc, ipc_write_uint64_block)
+TEST_F(ipc_test, ipc_write_uint64_block)
 {
     int lhs, rhs;
     const uint64_t TEST_VAL = 98872;
@@ -144,7 +146,7 @@ TEST(ipc, ipc_write_uint64_block)
 /**
  * \brief It is possible to write an int64_t value to a blocking socket.
  */
-TEST(ipc, ipc_write_int64_block)
+TEST_F(ipc_test, ipc_write_int64_block)
 {
     int lhs, rhs;
     const int64_t TEST_VAL = -98872;
@@ -189,7 +191,7 @@ TEST(ipc, ipc_write_int64_block)
 /**
  * \brief It is possible to write a uint8_t value to a blocking socket.
  */
-TEST(ipc, ipc_write_uint8_block)
+TEST_F(ipc_test, ipc_write_uint8_block)
 {
     int lhs, rhs;
     const uint8_t TEST_VAL = 76;
@@ -231,7 +233,7 @@ TEST(ipc, ipc_write_uint8_block)
 /**
  * \brief It is possible to write an int8_t value to a blocking socket.
  */
-TEST(ipc, ipc_write_int8_block)
+TEST_F(ipc_test, ipc_write_int8_block)
 {
     int lhs, rhs;
     const int8_t TEST_VAL = -76;
@@ -273,7 +275,7 @@ TEST(ipc, ipc_write_int8_block)
 /**
  * \brief It is possible to read a string value from a blocking socket.
  */
-TEST(ipc, ipc_read_string_block_success)
+TEST_F(ipc_test, ipc_read_string_block_success)
 {
     int lhs, rhs;
     const char TEST_STRING[] = "This is a test.";
@@ -303,7 +305,7 @@ TEST(ipc, ipc_read_string_block_success)
 /**
  * \brief If another value is seen instead of a string, fail.
  */
-TEST(ipc, ipc_read_string_block_bad_type)
+TEST_F(ipc_test, ipc_read_string_block_bad_type)
 {
     int lhs, rhs;
     uint64_t badval = 1;
@@ -329,7 +331,7 @@ TEST(ipc, ipc_read_string_block_bad_type)
 /**
  * \brief If the size is not read, fail.
  */
-TEST(ipc, ipc_read_string_block_bad_size)
+TEST_F(ipc_test, ipc_read_string_block_bad_size)
 {
     int lhs, rhs;
     char* str = nullptr;
@@ -357,7 +359,7 @@ TEST(ipc, ipc_read_string_block_bad_size)
 /**
  * \brief If the string is not read, fail.
  */
-TEST(ipc, ipc_read_string_block_bad_data)
+TEST_F(ipc_test, ipc_read_string_block_bad_data)
 {
     int lhs, rhs;
     char* str = nullptr;
@@ -389,7 +391,7 @@ TEST(ipc, ipc_read_string_block_bad_data)
 /**
  * \brief It is possible to read a uint64_t value from a blocking socket.
  */
-TEST(ipc, ipc_read_uint64_block_success)
+TEST_F(ipc_test, ipc_read_uint64_block_success)
 {
     int lhs, rhs;
     uint64_t val = 910028;
@@ -415,7 +417,7 @@ TEST(ipc, ipc_read_uint64_block_success)
 /**
  * \brief If another value is seen instead of a uint64_t, fail.
  */
-TEST(ipc, ipc_read_uint64_block_bad_type)
+TEST_F(ipc_test, ipc_read_uint64_block_bad_type)
 {
     int lhs, rhs;
     uint8_t badval = 1U;
@@ -438,7 +440,7 @@ TEST(ipc, ipc_read_uint64_block_bad_type)
 /**
  * \brief If the size is not read, fail.
  */
-TEST(ipc, ipc_read_uint64_block_bad_size)
+TEST_F(ipc_test, ipc_read_uint64_block_bad_size)
 {
     int lhs, rhs;
     uint64_t read_val = 0U;
@@ -463,7 +465,7 @@ TEST(ipc, ipc_read_uint64_block_bad_size)
 /**
  * \brief If the value is not read, fail.
  */
-TEST(ipc, ipc_read_uint64_block_bad_data)
+TEST_F(ipc_test, ipc_read_uint64_block_bad_data)
 {
     int lhs, rhs;
     uint64_t read_val = 0U;
@@ -492,7 +494,7 @@ TEST(ipc, ipc_read_uint64_block_bad_data)
 /**
  * \brief It is possible to read a int64_t value from a blocking socket.
  */
-TEST(ipc, ipc_read_int64_block_success)
+TEST_F(ipc_test, ipc_read_int64_block_success)
 {
     int lhs, rhs;
     int64_t val = -910028;
@@ -518,7 +520,7 @@ TEST(ipc, ipc_read_int64_block_success)
 /**
  * \brief If another value is seen instead of a int64_t, fail.
  */
-TEST(ipc, ipc_read_int64_block_bad_type)
+TEST_F(ipc_test, ipc_read_int64_block_bad_type)
 {
     int lhs, rhs;
     uint8_t badval = 1U;
@@ -541,7 +543,7 @@ TEST(ipc, ipc_read_int64_block_bad_type)
 /**
  * \brief If the size is not read, fail.
  */
-TEST(ipc, ipc_read_int64_block_bad_size)
+TEST_F(ipc_test, ipc_read_int64_block_bad_size)
 {
     int lhs, rhs;
     int64_t read_val = 0U;
@@ -566,7 +568,7 @@ TEST(ipc, ipc_read_int64_block_bad_size)
 /**
  * \brief If the value is not read, fail.
  */
-TEST(ipc, ipc_read_int64_block_bad_data)
+TEST_F(ipc_test, ipc_read_int64_block_bad_data)
 {
     int lhs, rhs;
     int64_t read_val = 0U;
@@ -595,7 +597,7 @@ TEST(ipc, ipc_read_int64_block_bad_data)
 /**
  * \brief It is possible to read a uint8_t value from a blocking socket.
  */
-TEST(ipc, ipc_read_uint8_block_success)
+TEST_F(ipc_test, ipc_read_uint8_block_success)
 {
     int lhs, rhs;
     uint8_t val = 28;
@@ -621,7 +623,7 @@ TEST(ipc, ipc_read_uint8_block_success)
 /**
  * \brief If another value is seen instead of a uint8_t, fail.
  */
-TEST(ipc, ipc_read_uint8_block_bad_type)
+TEST_F(ipc_test, ipc_read_uint8_block_bad_type)
 {
     int lhs, rhs;
     uint64_t badval = 1U;
@@ -644,7 +646,7 @@ TEST(ipc, ipc_read_uint8_block_bad_type)
 /**
  * \brief If the size is not read, fail.
  */
-TEST(ipc, ipc_read_uint8_block_bad_size)
+TEST_F(ipc_test, ipc_read_uint8_block_bad_size)
 {
     int lhs, rhs;
     uint8_t read_val = 0U;
@@ -669,7 +671,7 @@ TEST(ipc, ipc_read_uint8_block_bad_size)
 /**
  * \brief If the value is not read, fail.
  */
-TEST(ipc, ipc_read_uint8_block_bad_data)
+TEST_F(ipc_test, ipc_read_uint8_block_bad_data)
 {
     int lhs, rhs;
     uint8_t read_val = 0U;
@@ -698,7 +700,7 @@ TEST(ipc, ipc_read_uint8_block_bad_data)
 /**
  * \brief It is possible to read a int8_t value from a blocking socket.
  */
-TEST(ipc, ipc_read_int8_block_success)
+TEST_F(ipc_test, ipc_read_int8_block_success)
 {
     int lhs, rhs;
     int8_t val = 28;
@@ -724,7 +726,7 @@ TEST(ipc, ipc_read_int8_block_success)
 /**
  * \brief If another value is seen instead of a int8_t, fail.
  */
-TEST(ipc, ipc_read_int8_block_bad_type)
+TEST_F(ipc_test, ipc_read_int8_block_bad_type)
 {
     int lhs, rhs;
     uint64_t badval = 1U;
@@ -747,7 +749,7 @@ TEST(ipc, ipc_read_int8_block_bad_type)
 /**
  * \brief If the size is not read, fail.
  */
-TEST(ipc, ipc_read_int8_block_bad_size)
+TEST_F(ipc_test, ipc_read_int8_block_bad_size)
 {
     int lhs, rhs;
     int8_t read_val = 0U;
@@ -772,7 +774,7 @@ TEST(ipc, ipc_read_int8_block_bad_size)
 /**
  * \brief If the value is not read, fail.
  */
-TEST(ipc, ipc_read_int8_block_bad_data)
+TEST_F(ipc_test, ipc_read_int8_block_bad_data)
 {
     int lhs, rhs;
     int8_t read_val = 0U;
