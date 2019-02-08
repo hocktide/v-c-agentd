@@ -955,6 +955,28 @@ TEST_F(ipc_test, ipc_read_int8_block_success)
 }
 
 /**
+ * \brief If the peer connection is reset, the int8 read fails.
+ */
+TEST_F(ipc_test, ipc_read_int8_block_reset_connection_1)
+{
+    int lhs, rhs;
+    int8_t read_val = 0U;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* close the peer socket. */
+    close(lhs);
+
+    /* reading a int8 block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_int8_block(rhs, &read_val));
+
+    /* clean up. */
+    close(lhs);
+    close(rhs);
+}
+
+/**
  * \brief If another value is seen instead of a int8_t, fail.
  */
 TEST_F(ipc_test, ipc_read_int8_block_bad_type)
@@ -978,9 +1000,10 @@ TEST_F(ipc_test, ipc_read_int8_block_bad_type)
 }
 
 /**
- * \brief If the size is not read, fail.
+ * \brief If the peer connection is reset prior to writing size, an error code
+ * is returned.
  */
-TEST_F(ipc_test, ipc_read_int8_block_bad_size)
+TEST_F(ipc_test, ipc_read_int8_reset_connection_2)
 {
     int lhs, rhs;
     int8_t read_val = 0U;
@@ -1003,13 +1026,42 @@ TEST_F(ipc_test, ipc_read_int8_block_bad_size)
 }
 
 /**
+ * \brief If the size is invalid, return an error.
+ */
+TEST_F(ipc_test, ipc_read_int8_bad_size)
+{
+    int lhs, rhs;
+    int8_t read_val = 0U;
+    uint8_t type = IPC_DATA_TYPE_INT8;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write the int8 type to the lhs socket. */
+    ASSERT_EQ(sizeof(type), (size_t)write(lhs, &type, sizeof(type)));
+
+    /* write a bad size. */
+    uint32_t size = htonl(12);
+    ASSERT_EQ(sizeof(size), (size_t)write(lhs, &size, sizeof(size)));
+
+    /* close the lhs socket. */
+    close(lhs);
+
+    /* reading a int8_t block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_int8_block(rhs, &read_val));
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
  * \brief If the value is not read, fail.
  */
 TEST_F(ipc_test, ipc_read_int8_block_bad_data)
 {
     int lhs, rhs;
     int8_t read_val = 0U;
-    uint8_t type = IPC_DATA_TYPE_UINT8;
+    uint8_t type = IPC_DATA_TYPE_INT8;
     uint32_t size = htonl(sizeof(read_val));
 
     /* create a socket pair for testing. */
