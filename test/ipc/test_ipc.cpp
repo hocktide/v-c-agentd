@@ -516,9 +516,32 @@ TEST_F(ipc_test, ipc_read_uint64_block_bad_type)
 }
 
 /**
- * \brief If the size is not read, fail.
+ * \brief If the peer socket is reset before the type is written, return an
+ * error.
  */
-TEST_F(ipc_test, ipc_read_uint64_block_bad_size)
+TEST_F(ipc_test, ipc_read_uint64_reset_connection_1)
+{
+    int lhs, rhs;
+    uint64_t read_val = 0U;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* close the peer socket. */
+    close(lhs);
+
+    /* reading a uint64 block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_uint64_block(rhs, &read_val));
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
+ * \brief If the peer socket is reset before the size is written, return an
+ * error.
+ */
+TEST_F(ipc_test, ipc_read_uint64_reset_connection_2)
 {
     int lhs, rhs;
     uint64_t read_val = 0U;
@@ -529,6 +552,35 @@ TEST_F(ipc_test, ipc_read_uint64_block_bad_size)
 
     /* write the uint64 type to the lhs socket. */
     ASSERT_EQ(sizeof(type), (size_t)write(lhs, &type, sizeof(type)));
+
+    /* close the lhs socket. */
+    close(lhs);
+
+    /* reading a uint64_t block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_uint64_block(rhs, &read_val));
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
+ * \brief If the size is invalid, return an error.
+ */
+TEST_F(ipc_test, ipc_read_uint64_block_bad_size)
+{
+    int lhs, rhs;
+    uint64_t read_val = 0U;
+    uint8_t type = IPC_DATA_TYPE_UINT64;
+    uint32_t size = htonl(99);
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write the uint64_t type to the lhs socket. */
+    ASSERT_EQ(sizeof(type), (size_t)write(lhs, &type, sizeof(type)));
+
+    /* write the uint64_t size to the lhs socket. */
+    ASSERT_EQ(sizeof(size), (size_t)write(lhs, &size, sizeof(size)));
 
     /* close the lhs socket. */
     close(lhs);
