@@ -722,6 +722,28 @@ TEST_F(ipc_test, ipc_read_uint8_block_bad_type)
 }
 
 /**
+ * \brief If the socket connection is reset prior to reading the type, return an
+ * error.
+ */
+TEST_F(ipc_test, ipc_read_uint8_reset_connection_1)
+{
+    int lhs, rhs;
+    uint8_t read_val = 0U;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* close the peer socket. */
+    close(lhs);
+
+    /* reading a uint8 block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_uint8_block(rhs, &read_val));
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
  * \brief If the size is not read, fail.
  */
 TEST_F(ipc_test, ipc_read_uint8_block_bad_size)
@@ -740,6 +762,61 @@ TEST_F(ipc_test, ipc_read_uint8_block_bad_size)
     close(lhs);
 
     /* reading a uint8_t block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_uint8_block(rhs, &read_val));
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
+ * \brief If the socket connection is reset prior to reading the value, return
+ * an error.
+ */
+TEST_F(ipc_test, ipc_read_uint8_reset_connection_2)
+{
+    int lhs, rhs;
+    uint8_t read_val = 0U;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write the type. */
+    uint8_t type = IPC_DATA_TYPE_UINT8;
+    write(lhs, &type, sizeof(type));
+
+    /* close the peer socket. */
+    close(lhs);
+
+    /* reading a uint8 block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_uint8_block(rhs, &read_val));
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
+ * \brief If the size is invalid, return an error.
+ */
+TEST_F(ipc_test, ipc_read_uint8_bad_size)
+{
+    int lhs, rhs;
+    uint8_t read_val = 0U;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write the type. */
+    uint8_t type = IPC_DATA_TYPE_UINT8;
+    write(lhs, &type, sizeof(type));
+
+    /* write the size. */
+    uint32_t size = htonl(12);
+    write(lhs, &size, sizeof(size));
+
+    /* close the peer socket. */
+    close(lhs);
+
+    /* reading a uint8 block from the rhs socket fails. */
     ASSERT_NE(0, ipc_read_uint8_block(rhs, &read_val));
 
     /* clean up. */
