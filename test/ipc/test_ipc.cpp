@@ -373,6 +373,30 @@ TEST_F(ipc_test, ipc_read_string_block_bad_type)
 }
 
 /**
+ * \brief If the connection is reset before reading type, return an error.
+ */
+TEST_F(ipc_test, ipc_read_string_block_reset_connection_1)
+{
+    int lhs, rhs;
+    char* str = nullptr;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* reset the peer connection. */
+    close(lhs);
+
+    /* read a string block from the rhs socket fails. */
+    ASSERT_NE(0, ipc_read_string_block(rhs, &str));
+
+    /* the string is NULL. */
+    ASSERT_EQ(nullptr, str);
+
+    /* clean up. */
+    close(rhs);
+}
+
+/**
  * \brief If the size is not read, fail.
  */
 TEST_F(ipc_test, ipc_read_string_block_bad_size)
