@@ -38,7 +38,8 @@ SRCDIR=$(CURDIR)/src
 DIRS=$(SRCDIR) $(SRCDIR)/agentd $(SRCDIR)/bootstrap_config \
     $(SRCDIR)/command $(SRCDIR)/commandline $(SRCDIR)/config \
     $(SRCDIR)/dataservice $(SRCDIR)/inet $(SRCDIR)/ipc $(SRCDIR)/path \
-    $(SRCDIR)/privsep $(SRCDIR)/string $(SRCDIR)/supervisor
+    $(SRCDIR)/privsep $(SRCDIR)/protocolservice $(SRCDIR)/string \
+    $(SRCDIR)/supervisor
 SOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.c))
 YACCSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.y))
 LEXSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.l))

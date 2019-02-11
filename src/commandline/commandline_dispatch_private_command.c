@@ -36,6 +36,11 @@ void commandline_dispatch_private_command(
         bootstrap_config_set_private_command(
             bconf, private_command_dataservice);
     }
+    else if (!strcmp(command, "unauthorized_protocol_service"))
+    {
+        bootstrap_config_set_private_command(
+            bconf, private_command_protocolservice);
+    }
     /* is this the supervisor command? */
     else if (!strcmp(command, "supervisor"))
     {
