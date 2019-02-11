@@ -86,6 +86,14 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
         fprintf(fp, "%d", child_pid);
         fclose(fp);
 
+        /* close standard file descriptors */
+        retval = privsep_close_standard_fds();
+        if (0 != retval)
+        {
+            perror("privsep_close_standard_fds");
+            goto done;
+        }
+
         retval = privsep_setfds(
             pid_fd, /* ==> */ AGENTD_FD_PID,
             -1);

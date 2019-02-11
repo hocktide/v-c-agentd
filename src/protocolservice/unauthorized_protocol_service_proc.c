@@ -149,6 +149,15 @@ int unauthorized_protocol_proc(
             }
         }
 
+        /* close standard file descriptors */
+        retval = privsep_close_standard_fds();
+        if (0 != retval)
+        {
+            perror("privsep_close_standard_fds");
+            retval = AGENTD_ERROR_PROTOCOLSERVICE_PRIVSEP_SETFDS_FAILURE;
+            goto done;
+        }
+
         /* close standard file descriptors and set fds. */
         retval =
             privsep_setfds(

@@ -137,7 +137,16 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
             goto done;
         }
 
-        /* close standard file descriptors and reset config_fd. */
+        /* close standard file descriptors */
+        retval = privsep_close_standard_fds();
+        if (0 != retval)
+        {
+            perror("privsep_close_standard_fds");
+            retval = AGENTD_ERROR_CONFIG_PRIVSEP_SETFDS_FAILURE;
+            goto done;
+        }
+
+        /* reset config_fd. */
         retval =
             privsep_setfds(
                 config_fd, /* ==> */ AGENTD_FD_CONFIG_IN,
