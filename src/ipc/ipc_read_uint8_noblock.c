@@ -52,6 +52,13 @@ int ipc_read_uint8_noblock(ipc_socket_context_t* sock, uint8_t* val)
     /* compute the header size. */
     ssize_t header_sz = sizeof(uint8_t) + sizeof(uint32_t);
 
+    /* read data from the socket into our buffer. */
+    int retval = evbuffer_read(sock_impl->readbuf, sock->fd, -1);
+    if (retval < 0)
+    {
+        return AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE;
+    }
+
     /* we need the header data. */
     uint8_t* mem = (uint8_t*)evbuffer_pullup(sock_impl->readbuf, header_sz);
     if (NULL == mem)
@@ -84,7 +91,7 @@ int ipc_read_uint8_noblock(ipc_socket_context_t* sock, uint8_t* val)
     }
 
     /* drain the header from the buffer. */
-    if (header_sz != evbuffer_drain(sock_impl->readbuf, header_sz))
+    if (0 != evbuffer_drain(sock_impl->readbuf, header_sz))
     {
         return AGENTD_ERROR_IPC_READ_BUFFER_DRAIN_FAILURE;
     }
