@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <vccrypt/suite.h>
 #include <vpr/disposable.h>
 
 /* make this header C++ friendly. */
@@ -28,6 +29,7 @@ extern "C" {
 #define IPC_DATA_TYPE_INT64 0x0B
 #define IPC_DATA_TYPE_STRING 0x10
 #define IPC_DATA_TYPE_DATA_PACKET 0x20
+#define IPC_DATA_TYPE_AUTHED_PACKET 0x30
 #define IPC_DATA_TYPE_EOM 0xFF
 
 /* forward decl for ipc_socket_context. */
@@ -175,6 +177,30 @@ int ipc_make_noblock(
 int ipc_write_data_block(int sock, const void* val, uint32_t size);
 
 /**
+ * \brief Write an authenticated data packet.
+ *
+ * On success, the authenticated data packet value will be written, along with
+ * type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param iv            The 64-bit IV to use for this packet.
+ * \param val           The payload data to write.
+ * \param size          The size of the payload data to write.
+ * \param suite         The crypto suite to use for authenticating this packet.
+ * \param secret        The shared secret between the peer and host.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BLOCK_FAILURE if writing data failed.
+ *      - AGENTD_ERROR_IPC_AUTHED_INVALID_CRYPTO_SUITE if the crypto suite is
+ *        invalid.
+ *      - AGENTD_ERROR_IPC_AUTHED_INVALID_SECRET if the secret key is invalid.
+ */
+int ipc_write_authed_data_block(
+    int sock, uint64_t iv, const void* val, uint32_t size,
+    vccrypt_suite_options_t* suite, vccrypt_buffer_t* secret);
+
+/**
  * \brief Write a character string to the blocking socket.
  *
  * On success, the character string value is written, along with type
@@ -267,6 +293,39 @@ int ipc_write_int8_block(int sock, int8_t val);
  *        out-of-memory error.
  */
 int ipc_read_data_block(int sock, void** val, uint32_t* size);
+
+/**
+ * \brief Read an authenticated data packet from the blocking socket.
+ *
+ * On success, an authenticated data buffer is allocated and read, along with
+ * type information and size.  The caller owns this buffer and is responsible
+ * for freeing it when it is no longer in use.
+ *
+ * \param sd            The socket descriptor from which the value is read.
+ * \param iv            The 64-bit IV to expect for this packet.
+ * \param val           Pointer to the pointer of the raw data buffer.
+ * \param size          Pointer to the variable to receive the size of this
+ *                      packet.
+ * \param suite         The crypto suite to use for authenticating this packet.
+ * \param secret        The shared secret between the peer and host.
+ *
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_READ_BLOCK_FAILURE if a blocking read on the socket
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read from
+ *        the socket was unexpected.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error.
+ *      - AGENTD_ERROR_IPC_AUTHED_INVALID_CRYPTO_SUITE if the crypto suite is
+ *        invalid.
+ *      - AGENTD_ERROR_IPC_AUTHED_INVALID_SECRET if the secret key is invalid.
+ *      - AGENTD_ERROR_IPC_AUTHENTICATION_FAILURE if the packet could not be
+ *        authenticated.
+ */
+int ipc_read_authed_data_block(
+    int sock, uint64_t iv, void** val, uint32_t* size,
+    vccrypt_suite_options_t* suite, vccrypt_buffer_t* secret);
 
 /**
  * \brief Read a character string from the blocking socket.
@@ -573,6 +632,37 @@ int ipc_write_data_noblock(
     ipc_socket_context_t* sock, const void* val, uint32_t size);
 
 /**
+ * \brief Write an authenticated data packet to a non-blocking socket.
+ *
+ * On success, the authenticated data packet value will be written, along with
+ * type information and size.
+ *
+ * \param sd            The socket descriptor to which the value is written.
+ * \param iv            The 64-bit IV to use for this packet.
+ * \param val           The raw data to write.
+ * \param size          The size of the raw data to write.
+ * \param suite         The crypto suite to use for authenticating this packet.
+ * \param secret        The shared secret between the peer and host.
+ *
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_TYPE_ADD_FAILURE if adding the type
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_SIZE_ADD_FAILURE if adding the size
+ *        data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_BUFFER_PAYLOAD_ADD_FAILURE if adding the
+ *        payload data to the write buffer failed.
+ *      - AGENTD_ERROR_IPC_WRITE_NONBLOCK_FAILURE if a non-blocking write
+ *        failed.
+ *      - AGENTD_ERROR_IPC_AUTHED_INVALID_CRYPTO_SUITE if the crypto suite is
+ *        invalid.
+ *      - AGENTD_ERROR_IPC_AUTHED_INVALID_SECRET if the secret key is invalid.
+ */
+int ipc_write_authed_data_noblock(
+    ipc_socket_context_t* sock, uint64_t iv, const void* val, uint32_t size,
+    vccrypt_suite_options_t* suite, vccrypt_buffer_t* secret);
+
+/**
  * \brief Write a character string to a non-blocking socket.
  *
  * On success, the character string value is written, along with type
@@ -697,6 +787,45 @@ int ipc_write_int8_noblock(ipc_socket_context_t* sock, int8_t val);
  */
 int ipc_read_data_noblock(
     ipc_socket_context_t* sock, void** val, uint32_t* size);
+
+/**
+ * \brief Read an authenticated data packet from a non-blocking socket.
+ *
+ * On success, an authenticated data buffer is allocated and read, along with
+ * type information and size.  The caller owns this buffer and is responsible
+ * for freeing it when it is no longer in use.
+ *
+ * \param sd            The socket descriptor from which the value is read.
+ * \param iv            The 64-bit IV to expect for this packet.
+ * \param val           Pointer to the pointer of the raw data buffer.
+ * \param size          Pointer to the variable to receive the size of this
+ *                      packet.
+ * \param suite         The crypto suite to use for authenticating this packet.
+ * \param secret        The shared secret between the peer and host.
+ *
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if the the operation was halted because
+ *        it would block this thread.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if an unexpected data type
+ *        was encountered when attempting to read this value.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if an unexpected data size
+ *        was encountered when attempting to read this value.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error condition while executing.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_DRAIN_FAILURE if draining the read buffer
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_BUFFER_REMOVE_FAILURE if removing the payload
+ *        from the read buffer failed.
+ *      - AGENTD_ERROR_IPC_AUTHED_INVALID_CRYPTO_SUITE if the crypto suite is
+ *        invalid.
+ *      - AGENTD_ERROR_IPC_AUTHED_INVALID_SECRET if the secret key is invalid.
+ *      - AGENTD_ERROR_IPC_AUTHENTICATION_FAILURE if the packet could not be
+ *        authenticated.
+ */
+int ipc_read_authed_data_noblock(
+    ipc_socket_context_t* sock, uint64_t iv, void** val, uint32_t* size,
+    vccrypt_suite_options_t* suite, vccrypt_buffer_t* secret);
 
 /**
  * \brief Read a character string from a non-blocking socket.

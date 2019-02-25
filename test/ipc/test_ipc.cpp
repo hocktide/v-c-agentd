@@ -8,6 +8,7 @@
 
 #include <agentd/ipc.h>
 #include <agentd/inet.h>
+#include <agentd/status_codes.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <stdint.h>
@@ -1247,5 +1248,51 @@ TEST_F(ipc_test, ipc_read_data_block_connection_reset_3)
     ASSERT_EQ(nullptr, str);
 
     /* clean up. */
+    close(rhs);
+}
+
+/**
+ * \brief It is possible to read a uint8_t value from a non-blocking socket.
+ */
+TEST_F(ipc_test, ipc_read_uint8_noblock_success)
+{
+    int lhs, rhs;
+    uint8_t val = 28;
+    uint8_t read_val = 0;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write a uint8_t block to the lhs socket. */
+    ASSERT_EQ(0, ipc_write_uint8_block(lhs, val));
+
+    int read_resp = AGENTD_ERROR_IPC_WOULD_BLOCK;
+
+    nonblockmode(
+        rhs,
+        /* onRead */
+        [&]() {
+            if (AGENTD_ERROR_IPC_WOULD_BLOCK == read_resp)
+            {
+                read_resp =
+                    ipc_read_uint8_noblock(&nonblockdatasock, &read_val);
+
+                if (read_resp != AGENTD_ERROR_IPC_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite */
+        [&]() {
+        });
+
+    /* read should have succeeded. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS, read_resp);
+    /* we read a valid uint8_t. */
+    EXPECT_EQ(val, read_val);
+
+    /* clean up. */
+    close(lhs);
     close(rhs);
 }
