@@ -71,9 +71,9 @@ enum agentd_services
     AGENTD_SERVICE_PROTOCOL = 0x09U,
 
     /**
-     * \brief Listener Service.
+     * \brief Listen Service.
      */
-    AGENTD_SERVICE_LISTENER = 0x0AU,
+    AGENTD_SERVICE_LISTEN = 0x0AU,
 };
 
 /* make this header C++ friendly. */

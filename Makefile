@@ -37,9 +37,9 @@ LIBEVENT_CFLAGS=-I $(LIBEVENT_DIR)/include
 SRCDIR=$(CURDIR)/src
 DIRS=$(SRCDIR) $(SRCDIR)/agentd $(SRCDIR)/bootstrap_config \
     $(SRCDIR)/command $(SRCDIR)/commandline $(SRCDIR)/config \
-    $(SRCDIR)/dataservice $(SRCDIR)/inet $(SRCDIR)/ipc $(SRCDIR)/path \
-    $(SRCDIR)/privsep $(SRCDIR)/protocolservice $(SRCDIR)/string \
-    $(SRCDIR)/supervisor
+    $(SRCDIR)/dataservice $(SRCDIR)/listenservice $(SRCDIR)/inet $(SRCDIR)/ipc \
+    $(SRCDIR)/path $(SRCDIR)/privsep $(SRCDIR)/protocolservice \
+    $(SRCDIR)/string $(SRCDIR)/supervisor
 SOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.c))
 YACCSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.y))
 LEXSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.l))

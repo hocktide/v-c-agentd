@@ -43,6 +43,11 @@ void private_command_readconfig();
 void private_command_dataservice();
 
 /**
+ * \brief Run a listen service instance.
+ */
+void private_command_listenservice();
+
+/**
  * \brief Run an unauthorized protocol service instance.
  */
 void private_command_protocolservice();

@@ -14,6 +14,7 @@
 #include <agentd/status_codes/dataservice.h>
 #include <agentd/status_codes/general.h>
 #include <agentd/status_codes/ipc.h>
+#include <agentd/status_codes/listenservice.h>
 #include <agentd/status_codes/protocolservice.h>
 
 /* make this header C++ friendly. */

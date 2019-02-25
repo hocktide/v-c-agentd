@@ -52,6 +52,22 @@ extern "C" {
 #define AGENTD_FD_DATASERVICE_LOG ((int)1)
 
 /******************************************************************************/
+/* Listen Service                                                             */
+/******************************************************************************/
+
+/**
+ * \brief File descriptor for the listen service log socket.
+ * Used by the listen service private command.
+ */
+#define AGENTD_FD_LISTENSERVICE_LOG ((int)0)
+
+/**
+ * \brief File descriptor for the first listen socket for the listen service.
+ * Used by the listen service private command.
+ */
+#define AGENTD_FD_LISTENSERVICE_SOCK_START ((int)2)
+
+/******************************************************************************/
 /* Supervisor Service                                                         */
 /******************************************************************************/
 
