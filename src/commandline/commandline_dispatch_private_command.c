@@ -42,6 +42,12 @@ void commandline_dispatch_private_command(
         bootstrap_config_set_private_command(
             bconf, private_command_supervisor);
     }
+    /* is this the unauthorized protocol service private command? */
+    else if (!strcmp(command, "unauthorized_protocol_service"))
+    {
+        bootstrap_config_set_private_command(
+            bconf, private_command_protocolservice);
+    }
     else
     {
         /* indicate that there was an error, but -P is undocumented, so don't

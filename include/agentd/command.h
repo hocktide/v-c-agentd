@@ -3,7 +3,7 @@
  *
  * \brief Commands supported by agentd.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_COMMAND_HEADER_GUARD
@@ -41,6 +41,11 @@ void private_command_readconfig();
  * \brief Run a data service instance.
  */
 void private_command_dataservice();
+
+/**
+ * \brief Run an unauthorized protocol service instance.
+ */
+void private_command_protocolservice();
 
 /**
  * \brief Run the the supervisor.

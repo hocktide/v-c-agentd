@@ -19,6 +19,10 @@
 extern "C" {
 #endif  //__cplusplus
 
+/******************************************************************************/
+/* Config Reader                                                              */
+/******************************************************************************/
+
 /**
  * \brief File descriptor for the config input file.
  * Used by the readconfig private command.
@@ -30,6 +34,10 @@ extern "C" {
  * Used by the readconfig private command.
  */
 #define AGENTD_FD_CONFIG_OUT ((int)1)
+
+/******************************************************************************/
+/* Data Service                                                               */
+/******************************************************************************/
 
 /**
  * \brief File descriptor for the data service socket.
@@ -43,11 +51,31 @@ extern "C" {
  */
 #define AGENTD_FD_DATASERVICE_LOG ((int)1)
 
+/******************************************************************************/
+/* Supervisor Service                                                         */
+/******************************************************************************/
+
 /**
  * \brief File descriptor for the pid flocked file.
  * Used by the supervisor private command.
  */
 #define AGENTD_FD_PID ((int)2)
+
+/******************************************************************************/
+/* Unauthorized Protocol Service                                              */
+/******************************************************************************/
+
+/**
+ * \brief File descriptor for the unauthorized protocol service socket.
+ * Used by the unauthorized protocol service private command.
+ */
+#define AGENTD_FD_UNAUTHORIZED_PROTOCOLSERVICE_SOCK ((int)0)
+
+/**
+ * \brief File descriptor for the unauthorized protocol service log socket.
+ * Used by the unauthorized protocol service private command.
+ */
+#define AGENTD_FD_UNAUTHORIZED_PROTOCOLSERVICE_LOG ((int)1)
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
