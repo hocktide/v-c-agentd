@@ -1388,3 +1388,49 @@ TEST_F(ipc_test, ipc_read_uint64_noblock_success)
     close(lhs);
     close(rhs);
 }
+
+/**
+ * \brief It is possible to read a int64_t value from a non-blocking socket.
+ */
+TEST_F(ipc_test, ipc_read_int64_noblock_success)
+{
+    int lhs, rhs;
+    int64_t val = 28;
+    int64_t read_val = 0;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* write an int64_t block to the lhs socket. */
+    ASSERT_EQ(0, ipc_write_int64_block(lhs, val));
+
+    int read_resp = AGENTD_ERROR_IPC_WOULD_BLOCK;
+
+    nonblockmode(
+        rhs,
+        /* onRead */
+        [&]() {
+            if (AGENTD_ERROR_IPC_WOULD_BLOCK == read_resp)
+            {
+                read_resp =
+                    ipc_read_int64_noblock(&nonblockdatasock, &read_val);
+
+                if (read_resp != AGENTD_ERROR_IPC_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite */
+        [&]() {
+        });
+
+    /* read should have succeeded. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS, read_resp);
+    /* we read a valid uint8_t. */
+    EXPECT_EQ(val, read_val);
+
+    /* clean up. */
+    close(lhs);
+    close(rhs);
+}
