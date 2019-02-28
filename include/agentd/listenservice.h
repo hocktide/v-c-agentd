@@ -57,7 +57,7 @@ enum listenservice_api_method_enum
  * \returns a status code on service exit indicating a normal or abnormal exit.
  *          - AGENTD_STATUS_SUCCESS on normal exit.
  *          - AGENTD_ERROR_LISTENSERVICE_IPC_MAKE_NOBLOCK_FAILURE if
- *          attempting to make the process socket non-blocking failed.
+ *            attempting to make the process socket non-blocking failed.
  *          - AGENTD_ERROR_LISTENSERVICE_IPC_EVENT_LOOP_INIT_FAILURE if
  *            initializing the event loop failed.
  *          - AGENTD_ERROR_LISTENSERVICE_IPC_EVENT_LOOP_ADD_FAILURE if adding

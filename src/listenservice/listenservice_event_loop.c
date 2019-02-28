@@ -39,7 +39,7 @@ static void listenservice_ipc_write(
  * \returns a status code on service exit indicating a normal or abnormal exit.
  *          - AGENTD_STATUS_SUCCESS on normal exit.
  *          - AGENTD_ERROR_LISTENSERVICE_IPC_MAKE_NOBLOCK_FAILURE if
- *          attempting to make the process socket non-blocking failed.
+ *            attempting to make the process socket non-blocking failed.
  *          - AGENTD_ERROR_LISTENSERVICE_IPC_EVENT_LOOP_INIT_FAILURE if
  *            initializing the event loop failed.
  *          - AGENTD_ERROR_LISTENSERVICE_IPC_EVENT_LOOP_ADD_FAILURE if adding
@@ -87,7 +87,7 @@ int listenservice_event_loop(int UNUSED(logsock), int listenstart)
     ipc_exit_loop_on_signal(&loop, SIGTERM);
     ipc_exit_loop_on_signal(&loop, SIGQUIT);
 
-    /* iterate through all of the listen socktes. */
+    /* iterate through all of the listen sockets. */
     for (int i = 0; i < listensocket_count; ++i)
     {
         /* set the listen socket to non-blocking. */
