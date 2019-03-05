@@ -142,7 +142,7 @@ int listenservice_proc(
         /* spawn the child process (this does not return if successful). */
         if (runsecure)
         {
-            retval = privsep_exec_private("listenservice");
+            retval = privsep_exec_private(bconf, "listenservice");
         }
         else
         {

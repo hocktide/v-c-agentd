@@ -104,7 +104,7 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
         }
 
         /* If successful does _not_ return! */
-        retval = privsep_exec_private("supervisor");
+        retval = privsep_exec_private(bconf, "supervisor");
         if (0 != retval)
         {
             perror("privsep_exec_private");

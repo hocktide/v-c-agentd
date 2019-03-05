@@ -174,7 +174,8 @@ int unauthorized_protocol_proc(
         /* spawn the child process (this does not return if successful). */
         if (runsecure)
         {
-            retval = privsep_exec_private("unauthorized_protocol_service");
+            retval =
+                privsep_exec_private(bconf, "unauthorized_protocol_service");
         }
         else
         {

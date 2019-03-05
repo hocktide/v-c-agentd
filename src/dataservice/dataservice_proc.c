@@ -173,7 +173,7 @@ int dataservice_proc(
         /* spawn the child process (this does not return if successful). */
         if (runsecure)
         {
-            retval = privsep_exec_private("dataservice");
+            retval = privsep_exec_private(bconf, "dataservice");
         }
         else
         {

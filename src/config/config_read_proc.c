@@ -160,7 +160,7 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
         }
 
         /* spawn the child process (this does not return if successful. */
-        retval = privsep_exec_private("readconfig");
+        retval = privsep_exec_private(bconf, "readconfig");
         if (0 != retval)
         {
             perror("privsep_exec_private");

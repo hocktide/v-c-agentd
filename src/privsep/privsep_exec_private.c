@@ -14,17 +14,19 @@
 /**
  * \brief Execute a private command.
  *
+ * \param bconf         The bootstrap config for this process.
  * \param command       The private command to execute.
  *
- * \returns An error code on failure.  This method not return on success;
+ * \returns An error code on failure.  This method does not return on success;
  * instead, the process is replaced.
  *      - AGENTD_ERROR_GENERAL_PRIVSEP_EXEC_PRIVATE_SETENV_FAILURE is returned
  *        when attempting to set the PATH / LD_LIBRARY_PATH variables fails.
  *      - AGENTD_ERROR_GENERAL_PRIVSEP_EXEC_PRIVATE_EXECL_FAILURE is returned
  *        when the execl call fails to start the private command.
  */
-int privsep_exec_private(const char* command)
+int privsep_exec_private(const bootstrap_config_t* bconf, const char* command)
 {
+    MODEL_ASSERT(NULL != bconf);
     MODEL_ASSERT(NULL != command);
 
     /* set PATH */
@@ -40,9 +42,19 @@ int privsep_exec_private(const char* command)
     }
 
     /* spawn the child process (this does not return if successful. */
-    if (0 != execl("/bin/agentd", "agentd", "-P", command, NULL))
+    if (bconf->config_file_override)
     {
-        return AGENTD_ERROR_GENERAL_PRIVSEP_EXEC_PRIVATE_EXECL_FAILURE;
+        if (0 != execl("/bin/agentd", "agentd", "-c", bconf->config_file, "-P", command, NULL))
+        {
+            return AGENTD_ERROR_GENERAL_PRIVSEP_EXEC_PRIVATE_EXECL_FAILURE;
+        }
+    }
+    else
+    {
+        if (0 != execl("/bin/agentd", "agentd", "-P", command, NULL))
+        {
+            return AGENTD_ERROR_GENERAL_PRIVSEP_EXEC_PRIVATE_EXECL_FAILURE;
+        }
     }
 
     /* success. This line will never execute, but it is needed for compiler
