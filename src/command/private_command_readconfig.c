@@ -14,6 +14,7 @@
 #include <cbmc/model_assert.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <vpr/parameters.h>
 
 /**
  * \brief Config context.
@@ -35,7 +36,7 @@ static void private_config_callback(
 /**
  * \brief Read the config file from a stream.
  */
-void private_command_readconfig()
+void private_command_readconfig(bootstrap_config_t* UNUSED(bconf))
 {
     yyscan_t scanner;
     YY_BUFFER_STATE state;

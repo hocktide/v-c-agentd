@@ -35,27 +35,27 @@ int command_readconfig(struct bootstrap_config* bconf);
 /**
  * \brief Read the config file from a stream.
  */
-void private_command_readconfig();
+void private_command_readconfig(bootstrap_config_t* bconf);
 
 /**
  * \brief Run a data service instance.
  */
-void private_command_dataservice();
+void private_command_dataservice(bootstrap_config_t* bconf);
 
 /**
  * \brief Run a listen service instance.
  */
-void private_command_listenservice();
+void private_command_listenservice(bootstrap_config_t* bconf);
 
 /**
  * \brief Run an unauthorized protocol service instance.
  */
-void private_command_protocolservice();
+void private_command_protocolservice(bootstrap_config_t* bconf);
 
 /**
  * \brief Run the the supervisor.
  */
-void private_command_supervisor();
+void private_command_supervisor(bootstrap_config_t* bconf);
 
 /**
  * \brief Start the blockchain agent.

@@ -35,7 +35,7 @@ typedef int (*bootstrap_config_command_t)(struct bootstrap_config* bconf);
  * \brief Private commands are used to execute specific privilege separated
  * services in agentd.
  */
-typedef void (*bootstrap_config_private_command_t)();
+typedef void (*bootstrap_config_private_command_t)(struct bootstrap_config*);
 
 /**
  * \brief The \ref bootstrap_config_t type provides a structure for storing

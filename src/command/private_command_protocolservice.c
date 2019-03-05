@@ -11,11 +11,12 @@
 #include <agentd/fds.h>
 #include <cbmc/model_assert.h>
 #include <vccrypt/suite.h>
+#include <vpr/parameters.h>
 
 /**
  * \brief Run an unauthorized protocol service instance.
  */
-void private_command_protocolservice()
+void private_command_protocolservice(bootstrap_config_t* UNUSED(bconf))
 {
     /* register the Velo V1 crypto suite. */
     vccrypt_suite_register_velo_v1();

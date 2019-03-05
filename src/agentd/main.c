@@ -45,7 +45,7 @@ int main(int argc, char** argv)
     else if (NULL != bconf.private_command)
     {
         /* we don't return here. */
-        bconf.private_command();
+        bconf.private_command(&bconf);
 
         /* the compiler does not know this, so set a valid return value. */
         retval = 0;

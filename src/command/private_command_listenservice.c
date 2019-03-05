@@ -11,11 +11,12 @@
 #include <agentd/fds.h>
 #include <cbmc/model_assert.h>
 #include <vccrypt/suite.h>
+#include <vpr/parameters.h>
 
 /**
  * \brief Run a listen service instance.
  */
-void private_command_listenservice()
+void private_command_listenservice(bootstrap_config_t* UNUSED(bconf))
 {
     /* run the event loop for the listen service. */
     int retval =
