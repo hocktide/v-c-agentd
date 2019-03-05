@@ -60,7 +60,8 @@
  *      - AGENTD_ERROR_CONFIG_DEFAULTS_SET_FAILURE if setting the config
  *        defaults failed.
  */
-int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
+int config_read_proc(
+    const struct bootstrap_config* bconf, agent_config_t* conf)
 {
     int retval = 1;
     int clientsock = -1, serversock = -1;

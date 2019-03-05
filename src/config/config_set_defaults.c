@@ -18,7 +18,7 @@
  *
  * \returns 0 on success and non-zero on failure.
  */
-int config_set_defaults(agent_config_t* conf, bootstrap_config_t* bconf)
+int config_set_defaults(agent_config_t* conf, const bootstrap_config_t* bconf)
 {
     /* parameter sanity checks. */
     MODEL_ASSERT(NULL != conf);

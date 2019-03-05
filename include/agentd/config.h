@@ -218,7 +218,7 @@ int config_read_block(int s, agent_config_t* conf);
  *
  * \returns 0 on success and non-zero on failure.
  */
-int config_set_defaults(agent_config_t* conf, bootstrap_config_t* bconf);
+int config_set_defaults(agent_config_t* conf, const bootstrap_config_t* bconf);
 
 /**
  * \brief Spawn a process to read config data, populating the provided config
@@ -261,7 +261,8 @@ int config_set_defaults(agent_config_t* conf, bootstrap_config_t* bconf);
  *      - AGENTD_ERROR_CONFIG_DEFAULTS_SET_FAILURE if setting the config
  *        defaults failed.
  */
-int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf);
+int config_read_proc(
+    const struct bootstrap_config* bconf, agent_config_t* conf);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
