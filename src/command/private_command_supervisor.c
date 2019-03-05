@@ -6,12 +6,14 @@
  * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
+#include <agentd/command.h>
 #include <agentd/status_codes.h>
 #include <unistd.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/wait.h>
+#include <vpr/parameters.h>
 
 /* forward decls. */
 static int sighandler_install();
@@ -25,7 +27,7 @@ static bool keep_running = false;
 /**
  * \brief Run the the supervisor.
  */
-void private_command_supervisor()
+void private_command_supervisor(bootstrap_config_t* bconf)
 {
     /* install the signal handlers. */
     if (AGENTD_STATUS_SUCCESS != sighandler_install())
@@ -42,7 +44,7 @@ void private_command_supervisor()
     while (keep_running)
     {
         /* if supervisor_run fails, exit. */
-        if (AGENTD_STATUS_SUCCESS != supervisor_run())
+        if (AGENTD_STATUS_SUCCESS != supervisor_run(bconf))
         {
             keep_running = false;
         }
@@ -55,6 +57,8 @@ void private_command_supervisor()
 /**
  * \brief Run the supervisor.
  *
+ * \param bconf         The bootstrap config for the supervisor.
+ *
  * This function attempts to bootstrap all child services and then waits until
  * an appropriate signal is detected prior to exiting.
  *
@@ -64,7 +68,7 @@ void private_command_supervisor()
  * \returns a status code indicating success or failure.
  *          - AGENTD_STATUS_SUCCESS on success.
  */
-static int supervisor_run()
+static int supervisor_run(const bootstrap_config_t* UNUSED(bconf))
 {
     int retval = AGENTD_STATUS_SUCCESS;
 
