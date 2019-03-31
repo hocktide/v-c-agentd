@@ -154,7 +154,7 @@ test: vcblockchain-test test.agentd
 install: agentd-install
 
 agentd-install: ALL
-	@if [ "${PREFIX}" == "" ]; then echo "PREFIX must be set for install."; exit 1; fi
+	@if [ -z "${PREFIX}" ]; then echo "PREFIX must be set for install."; exit 1; fi
 	mkdir -p ${PREFIX}/bin ${PREFIX}/lib ${PREFIX}/etc ${PREFIX}/data
 	install ${HOST_RELEASE_EXE} ${PREFIX}/bin
 	ldd ${HOST_RELEASE_EXE} | egrep "[.]so" | grep -v ld.so | grep -v vdso.so \
@@ -170,6 +170,7 @@ agentd-install: ALL
 	    mkdir -p ${PREFIX}/lib64; \
 	    install /lib64/ld-linux-x86-64.so.2 ${PREFIX}/lib64; \
 	fi
+	mkdir -p ${PREFIX}/var/pid
 
 test.agentd: vcblockchain-build $(TEST_DIRS) host.exe.checked $(TESTAGENTD)
 	rm -rf $(HOST_CHECKED_BUILD_DIR)/databases
