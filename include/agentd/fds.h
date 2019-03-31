@@ -62,6 +62,12 @@ extern "C" {
 #define AGENTD_FD_LISTENSERVICE_LOG ((int)0)
 
 /**
+ * \brief File descriptor for the listen service accept socket.
+ * Used by the listen service private command.
+ */
+#define AGENTD_FD_LISTENSERVICE_ACCEPT ((int)1)
+
+/**
  * \brief File descriptor for the first listen socket for the listen service.
  * Used by the listen service private command.
  */
