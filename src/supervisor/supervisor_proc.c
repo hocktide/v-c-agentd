@@ -58,10 +58,10 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
         }
 
         /* change into the prefix directory. */
-        retval = privsep_chroot(bconf->prefix_dir);
+        retval = chdir(bconf->prefix_dir);
         if (0 != retval)
         {
-            perror("privsep_chroot");
+            perror("chdir");
             goto done;
         }
 
@@ -104,7 +104,7 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
         }
 
         /* If successful does _not_ return! */
-        retval = privsep_exec_private(bconf, "supervisor");
+        retval = execl(bconf->binary, bconf->binary, "-P", "supervisor", NULL);
         if (0 != retval)
         {
             perror("privsep_exec_private");
