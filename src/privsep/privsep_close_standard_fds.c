@@ -30,35 +30,15 @@
  */
 int privsep_close_standard_fds()
 {
-    int retval = 0;
-
     /* close standard in */
-    retval = close(STDIN_FILENO);
-    if (0 != retval)
-    {
-        retval = AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDIN_CLOSE;
-        goto done;
-    }
+    close(STDIN_FILENO);
 
     /* close standard out. */
-    retval = close(STDOUT_FILENO);
-    if (0 != retval)
-    {
-        retval = AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDOUT_CLOSE;
-        goto done;
-    }
+    close(STDOUT_FILENO);
 
     /* close standard error. */
-    retval = close(STDERR_FILENO);
-    if (0 != retval)
-    {
-        retval = AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDERR_CLOSE;
-        goto done;
-    }
+    close(STDERR_FILENO);
 
     /* success. */
-    retval = AGENTD_STATUS_SUCCESS;
-
-done:
-    return retval;
+    return AGENTD_STATUS_SUCCESS;
 }
