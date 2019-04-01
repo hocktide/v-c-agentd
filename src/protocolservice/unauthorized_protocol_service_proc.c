@@ -149,6 +149,14 @@ int unauthorized_protocol_proc(
             }
         }
 
+        /* move the fds out of the way. */
+        if (AGENTD_STATUS_SUCCESS !=
+            privsep_protect_descriptors(&serversock, &logsock, NULL))
+        {
+            retval = AGENTD_ERROR_CONFIG_PRIVSEP_SETFDS_FAILURE;
+            goto done;
+        }
+
         /* close standard file descriptors */
         retval = privsep_close_standard_fds();
         if (0 != retval)
