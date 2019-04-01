@@ -57,6 +57,8 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
             pid_t UNUSED(sid) = setsid();
         }
 
+        /* TODO - make it possible to chroot here by replicating user info for
+         * supervisor process. */
         /* change into the prefix directory. */
         retval = chdir(bconf->prefix_dir);
         if (0 != retval)
