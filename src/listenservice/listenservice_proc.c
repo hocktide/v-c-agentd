@@ -32,6 +32,7 @@
  *
  * \param bconf         The bootstrap configuration for this service.
  * \param conf          The configuration for this service.
+ * \param acceptsock    Socket used to pass accepted sockets.
  * \param logsock       Socket used to communicate with the logger.
  * \param listenpid     Pointer to the listen service pid, to be updated on
  *                      the successful completion of this function.
@@ -59,8 +60,8 @@
  *        process survived execution (weird!).      
  */
 int listenservice_proc(
-    const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,
-    pid_t* listenpid, bool runsecure)
+    const bootstrap_config_t* bconf, const agent_config_t* conf, int acceptsock,
+    int logsock, pid_t* listenpid, bool runsecure)
 {
     int retval = 1;
     uid_t uid;
@@ -131,6 +132,7 @@ int listenservice_proc(
         retval =
             privsep_setfds(
                 logsock, /* ==> */ AGENTD_FD_LISTENSERVICE_LOG,
+                acceptsock, /* ==> */ AGENTD_FD_LISTENSERVICE_ACCEPT,
                 -1);
         if (0 != retval)
         {
