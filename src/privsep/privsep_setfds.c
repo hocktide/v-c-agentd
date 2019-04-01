@@ -57,6 +57,9 @@ int privsep_setfds(int curr, int mapped, ...)
             goto done;
         }
 
+        /* close the old fd. */
+        close(curr);
+
         /* attempt to read the next descriptor. */
         curr = va_arg(fd_list, int);
         if (curr < 0)
