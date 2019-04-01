@@ -102,6 +102,24 @@ int privsep_exec_private(const bootstrap_config_t* bconf, const char* command);
 int privsep_close_standard_fds();
 
 /**
+ * \brief Make sure file descriptors aren't standard file descriptors; if they
+ * are, move them out of the way.
+ *
+ * This function takes pointers to descriptors and expects this list to be
+ * terminated by NULL.
+ *
+ * \param desc          Pointer to a descriptor to check and possibly move.
+ *
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_DUP2_FAILURE if setting a file
+ *            descriptor fails.
+ *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_BAD_ARGUMENT if a bad argument
+ *            is encountered.
+ */
+int privsep_protect_descriptors(int* desc, ...);
+
+/**
  * \brief Set file descriptors for a new process.
  *
  * Descriptors are described in pairs.  The first descriptor is the current
