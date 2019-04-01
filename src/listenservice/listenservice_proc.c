@@ -128,6 +128,23 @@ int listenservice_proc(
             }
         }
 
+        /* move the fds out of the way. */
+        if (AGENTD_STATUS_SUCCESS !=
+            privsep_protect_descriptors(&logsock, &acceptsock, NULL))
+        {
+            retval = AGENTD_ERROR_LISTENSERVICE_PRIVSEP_SETFDS_FAILURE;
+            goto done;
+        }
+
+        /* close standard file descriptors */
+        retval = privsep_close_standard_fds();
+        if (0 != retval)
+        {
+            perror("privsep_close_standard_fds");
+            retval = AGENTD_ERROR_LISTENSERVICE_PRIVSEP_SETFDS_FAILURE;
+            goto done;
+        }
+
         /* close standard file descriptors and set fds. */
         retval =
             privsep_setfds(
