@@ -88,16 +88,22 @@ extern "C" {
 /******************************************************************************/
 
 /**
- * \brief File descriptor for the unauthorized protocol service socket.
+ * \brief File descriptor for the unauthorized protocol service accept socket.
  * Used by the unauthorized protocol service private command.
  */
-#define AGENTD_FD_UNAUTHORIZED_PROTOCOLSERVICE_SOCK ((int)0)
+#define AGENTD_FD_UNAUTHORIZED_PROTOSVC_ACCEPT ((int)0)
 
 /**
  * \brief File descriptor for the unauthorized protocol service log socket.
  * Used by the unauthorized protocol service private command.
  */
-#define AGENTD_FD_UNAUTHORIZED_PROTOCOLSERVICE_LOG ((int)1)
+#define AGENTD_FD_UNAUTHORIZED_PROTOSVC_LOG ((int)1)
+
+/**
+ * \brief File descriptor for the unauthorized protocol service data socket.
+ * Used by the unauthorized protocol service private command.
+ */
+#define AGENTD_FD_UNAUTHORIZED_PROTOSVC_DATA ((int)2)
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

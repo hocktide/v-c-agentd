@@ -33,8 +33,8 @@
  * \param bconf         The bootstrap configuration for this service.
  * \param conf          The configuration for this service.
  * \param logsock       Socket used to communicate with the logger.
- * \param protosock     Pointer to the protocol service socket, to be updated on
- *                      successful completion of this function.
+ * \param acceptsock    Socket used to receive accepted peers.
+ * \param datasock      Socket used to communicate with the data service.
  * \param protopid      Pointer to the protocol service pid, to be updated on
  *                      the successful completion of this function.
  * \param runsecure     Set to false if we are not being run in secure mode.
@@ -64,37 +64,22 @@
  */
 int unauthorized_protocol_proc(
     const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,
-    int* protosock, pid_t* protopid, bool runsecure)
+    int acceptsock, int datasock, pid_t* protopid, bool runsecure)
 {
     int retval = 1;
-    int serversock = -1;
-    bool keep_protosock = false;
     uid_t uid;
     gid_t gid;
 
     /* parameter sanity checks. */
     MODEL_ASSERT(NULL != bconf);
     MODEL_ASSERT(NULL != conf);
-    MODEL_ASSERT(NULL != protosock);
     MODEL_ASSERT(NULL != protopid);
-
-    /* sentinel value for proto socket. */
-    *protosock = -1;
 
     /* verify that this process is running as root. */
     if (runsecure && 0 != geteuid())
     {
         fprintf(stderr, "agentd must be run as root.\n");
         retval = AGENTD_ERROR_PROTOCOLSERVICE_PROC_RUNSECURE_ROOT_USER_REQUIRED;
-        goto done;
-    }
-
-    /* create a socketpair for communication. */
-    retval = ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, protosock, &serversock);
-    if (0 != retval)
-    {
-        perror("ipc_socketpair");
-        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_SOCKETPAIR_FAILURE;
         goto done;
     }
 
@@ -110,10 +95,6 @@ int unauthorized_protocol_proc(
     /* child */
     if (0 == *protopid)
     {
-        /* close the parent's end of the socket pair. */
-        close(*protosock);
-        *protosock = -1;
-
         /* do secure operations if requested. */
         if (runsecure)
         {
@@ -151,7 +132,8 @@ int unauthorized_protocol_proc(
 
         /* move the fds out of the way. */
         if (AGENTD_STATUS_SUCCESS !=
-            privsep_protect_descriptors(&serversock, &logsock, NULL))
+            privsep_protect_descriptors(
+                &acceptsock, &logsock, &datasock, NULL))
         {
             retval = AGENTD_ERROR_CONFIG_PRIVSEP_SETFDS_FAILURE;
             goto done;
@@ -169,8 +151,9 @@ int unauthorized_protocol_proc(
         /* close standard file descriptors and set fds. */
         retval =
             privsep_setfds(
-                serversock, /* ==> */ AGENTD_FD_UNAUTHORIZED_PROTOCOLSERVICE_SOCK,
-                logsock, /* ==> */ AGENTD_FD_UNAUTHORIZED_PROTOCOLSERVICE_LOG,
+                acceptsock, /* ==> */ AGENTD_FD_UNAUTHORIZED_PROTOSVC_ACCEPT,
+                logsock, /* ==> */ AGENTD_FD_UNAUTHORIZED_PROTOSVC_LOG,
+                datasock, /* ==> */ AGENTD_FD_UNAUTHORIZED_PROTOSVC_DATA,
                 -1);
         if (0 != retval)
         {
@@ -209,30 +192,11 @@ int unauthorized_protocol_proc(
     /* parent */
     else
     {
-        /* close the child's end of the socket pair. */
-        close(serversock);
-        serversock = -1;
-
-        /* let the cleanup logic know that we want to preserve protosock. */
-        keep_protosock = true;
-
         /* success. */
         retval = AGENTD_STATUS_SUCCESS;
         goto done;
     }
 
 done:
-    /* clean up server socket. */
-    if (serversock >= 0)
-    {
-        close(serversock);
-    }
-
-    /* clean up proto socket. */
-    if (!keep_protosock && *protosock >= 0)
-    {
-        close(*protosock);
-    }
-
     return retval;
 }
