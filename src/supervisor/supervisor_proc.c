@@ -40,6 +40,7 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
         goto done;
     }
 
+    /* fork the process. */
     pid = fork();
     if (pid < 0)
     {
@@ -117,7 +118,7 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
     {
         if (bconf->foreground)
         {
-
+            /* install signal handlers. */
             signal(SIGHUP, private_signal_handler_forwarder);
             signal(SIGKILL, private_signal_handler_forwarder);
             signal(SIGTERM, private_signal_handler_forwarder);
@@ -142,6 +143,11 @@ done:
     return retval;
 }
 
+/**
+ * Forward signal to child process if running in the foreground.
+ *
+ * /param signal        The signal to forward.
+ */
 static void private_signal_handler_forwarder(int signal)
 {
     if (signal == SIGCHLD)
