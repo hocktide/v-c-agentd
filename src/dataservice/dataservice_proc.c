@@ -148,6 +148,23 @@ int dataservice_proc(
             }
         }
 
+        /* move the fds out of the way. */
+        if (AGENTD_STATUS_SUCCESS !=
+            privsep_protect_descriptors(&serversock, &logsock, NULL))
+        {
+            retval = AGENTD_ERROR_DATASERVICE_PRIVSEP_SETFDS_FAILURE;
+            goto done;
+        }
+
+        /* close standard file descriptors */
+        retval = privsep_close_standard_fds();
+        if (0 != retval)
+        {
+            perror("privsep_close_standard_fds");
+            retval = AGENTD_ERROR_DATASERVICE_PRIVSEP_SETFDS_FAILURE;
+            goto done;
+        }
+
         /* close standard file descriptors and set fds. */
         retval =
             privsep_setfds(
@@ -164,7 +181,7 @@ int dataservice_proc(
         /* spawn the child process (this does not return if successful). */
         if (runsecure)
         {
-            retval = privsep_exec_private("dataservice");
+            retval = privsep_exec_private(bconf, "dataservice");
         }
         else
         {

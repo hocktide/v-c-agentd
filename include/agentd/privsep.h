@@ -9,6 +9,7 @@
 #ifndef AGENTD_PRIVSEP_HEADER_GUARD
 #define AGENTD_PRIVSEP_HEADER_GUARD
 
+#include <agentd/bootstrap_config.h>
 #include <grp.h>
 #include <pwd.h>
 
@@ -71,16 +72,52 @@ int privsep_drop_privileges(uid_t user, gid_t gid);
 /**
  * \brief Execute a private command.
  *
+ * \param bconf         The bootstrap config for this process.
  * \param command       The private command to execute.
  *
- * \returns An error code on failure.  This method not return on success;
+ * \returns An error code on failure.  This method does not return on success;
  * instead, the process is replaced.
  *      - AGENTD_ERROR_GENERAL_PRIVSEP_EXEC_PRIVATE_SETENV_FAILURE is returned
  *        when attempting to set the PATH / LD_LIBRARY_PATH variables fails.
  *      - AGENTD_ERROR_GENERAL_PRIVSEP_EXEC_PRIVATE_EXECL_FAILURE is returned
  *        when the execl call fails to start the private command.
  */
-int privsep_exec_private(const char* command);
+int privsep_exec_private(const bootstrap_config_t* bconf, const char* command);
+
+/**
+ * \brief Close standard file descriptors.
+ *
+ * This method also closes all standard descriptors, such as standard in,
+ * standard out, and standard error.
+ *
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDIN_CLOSE if closing
+ *            standard input fails.
+ *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDOUT_CLOSE if closing
+ *            standard output fails.
+ *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDERR_CLOSE if closing
+ *            standard error fails.
+ */
+int privsep_close_standard_fds();
+
+/**
+ * \brief Make sure file descriptors aren't standard file descriptors; if they
+ * are, move them out of the way.
+ *
+ * This function takes pointers to descriptors and expects this list to be
+ * terminated by NULL.
+ *
+ * \param desc          Pointer to a descriptor to check and possibly move.
+ *
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_DUP2_FAILURE if setting a file
+ *            descriptor fails.
+ *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_BAD_ARGUMENT if a bad argument
+ *            is encountered.
+ */
+int privsep_protect_descriptors(int* desc, ...);
 
 /**
  * \brief Set file descriptors for a new process.
@@ -91,20 +128,11 @@ int privsep_exec_private(const char* command);
  * negative value must be the last value in this sequence to act as a sentry
  * value.
  *
- * This method also closes all standard descriptors, such as standard in,
- * standard out, and standard error.
- *
  * \param curr          The current descriptor.
  * \param mapped        The mapped descriptor.
  *
  * \returns a status code indicating success or failure.
  *          - AGENTD_STATUS_SUCCESS on success.
- *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDIN_CLOSE if closing
- *            standard input fails.
- *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDOUT_CLOSE if closing
- *            standard output fails.
- *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDERR_CLOSE if closing
- *            standard error fails.
  *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_DUP2_FAILURE if setting a file
  *            descriptor fails.
  *          - AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_BAD_ARGUMENT if a bad argument

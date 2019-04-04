@@ -22,9 +22,6 @@
  * negative value must be the last value in this sequence to act as a sentry
  * value.
  *
- * This method also closes all standard descriptors, such as standard in,
- * standard out, and standard error.
- *
  * \param curr          The current descriptor.
  * \param mapped        The mapped descriptor.
  *
@@ -49,30 +46,6 @@ int privsep_setfds(int curr, int mapped, ...)
     /* start the fd list. */
     va_start(fd_list, mapped);
 
-    /* close standard in */
-    retval = close(STDIN_FILENO);
-    if (0 != retval)
-    {
-        retval = AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDIN_CLOSE;
-        goto done;
-    }
-
-    /* close standard out. */
-    retval = close(STDOUT_FILENO);
-    if (0 != retval)
-    {
-        retval = AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDOUT_CLOSE;
-        goto done;
-    }
-
-    /* close standard error. */
-    retval = close(STDERR_FILENO);
-    if (0 != retval)
-    {
-        retval = AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_STDERR_CLOSE;
-        goto done;
-    }
-
     /* replace each descriptor. */
     for (;;)
     {
@@ -83,6 +56,9 @@ int privsep_setfds(int curr, int mapped, ...)
             retval = AGENTD_ERROR_GENERAL_PRIVSEP_SETFDS_DUP2_FAILURE;
             goto done;
         }
+
+        /* close the old fd. */
+        close(curr);
 
         /* attempt to read the next descriptor. */
         curr = va_arg(fd_list, int);

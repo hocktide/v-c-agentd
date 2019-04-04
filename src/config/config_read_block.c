@@ -18,6 +18,8 @@
 /* forward decls */
 static int config_read_logdir(int s, agent_config_t* conf);
 static int config_read_loglevel(int s, agent_config_t* conf);
+static int config_read_block_max_seconds(int s, agent_config_t* conf);
+static int config_read_block_max_transactions(int s, agent_config_t* conf);
 static int config_read_secret(int s, agent_config_t* conf);
 static int config_read_rootblock(int s, agent_config_t* conf);
 static int config_read_datastore(int s, agent_config_t* conf);
@@ -137,6 +139,22 @@ int config_read_block(int s, agent_config_t* conf)
                     return retval;
                 break;
 
+            /* block max seconds */
+            case CONFIG_STREAM_TYPE_BLOCK_MAX_SECONDS:
+                /* attempt to read the block max seconds from the stream. */
+                retval = config_read_block_max_seconds(s, conf);
+                if (AGENTD_STATUS_SUCCESS != retval)
+                    return retval;
+                break;
+
+            /* block max transactions */
+            case CONFIG_STREAM_TYPE_BLOCK_MAX_TRANSACTIONS:
+                /* attempt to read the block max txns from the stream. */
+                retval = config_read_block_max_transactions(s, conf);
+                if (AGENTD_STATUS_SUCCESS != retval)
+                    return retval;
+                break;
+
             /* unknown data */
             default:
                 /* return error. */
@@ -205,6 +223,76 @@ static int config_read_loglevel(int s, agent_config_t* conf)
 
     /* loglevel has been set. */
     conf->loglevel_set = true;
+
+    /* success. */
+    return AGENTD_STATUS_SUCCESS;
+}
+
+/**
+ * \brief Read the block max seconds from the config stream.
+ *
+ * \param s             The socket from which this value is read.
+ * \param conf          The config structure instance to write this value.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_CONFIG_IPC_READ_DATA_FAILURE if there was a failure
+ *        reading from the config socket.
+ *      - AGENTD_ERROR_CONFIG_INVALID_STREAM the stream data was corrupted or
+ *        invalid.
+ */
+static int config_read_block_max_seconds(int s, agent_config_t* conf)
+{
+    /* it's an error to set the block max seconds more than once. */
+    if (conf->block_max_seconds_set)
+        return AGENTD_ERROR_CONFIG_INVALID_STREAM;
+
+    /* attempt to read the value. */
+    if (AGENTD_STATUS_SUCCESS !=
+        ipc_read_int64_block(s, &conf->block_max_seconds))
+        return AGENTD_ERROR_CONFIG_IPC_READ_DATA_FAILURE;
+
+    /* block max seconds must be between 0 and BLOCK_SECONDS_MAXIMUM. */
+    if (conf->block_max_seconds < 0 || conf->block_max_seconds > BLOCK_SECONDS_MAXIMUM)
+        return AGENTD_ERROR_CONFIG_INVALID_STREAM;
+
+    /* loglevel has been set. */
+    conf->block_max_seconds_set = true;
+
+    /* success. */
+    return AGENTD_STATUS_SUCCESS;
+}
+
+/**
+ * \brief Read the block max transactions from the config stream.
+ *
+ * \param s             The socket from which this value is read.
+ * \param conf          The config structure instance to write this value.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_CONFIG_IPC_READ_DATA_FAILURE if there was a failure
+ *        reading from the config socket.
+ *      - AGENTD_ERROR_CONFIG_INVALID_STREAM the stream data was corrupted or
+ *        invalid.
+ */
+static int config_read_block_max_transactions(int s, agent_config_t* conf)
+{
+    /* it's an error to set the block max transactions more than once. */
+    if (conf->block_max_transactions_set)
+        return AGENTD_ERROR_CONFIG_INVALID_STREAM;
+
+    /* attempt to read the value. */
+    if (AGENTD_STATUS_SUCCESS !=
+        ipc_read_int64_block(s, &conf->block_max_transactions))
+        return AGENTD_ERROR_CONFIG_IPC_READ_DATA_FAILURE;
+
+    /* block max txns must be between 0 and BLOCK_TRANSACTIONS_MAXIMUM. */
+    if (conf->block_max_transactions < 0 || conf->block_max_transactions > BLOCK_TRANSACTIONS_MAXIMUM)
+        return AGENTD_ERROR_CONFIG_INVALID_STREAM;
+
+    /* block_max_transactions has been set. */
+    conf->block_max_transactions_set = true;
 
     /* success. */
     return AGENTD_STATUS_SUCCESS;

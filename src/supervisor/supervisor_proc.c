@@ -40,6 +40,7 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
         goto done;
     }
 
+    /* fork the process. */
     pid = fork();
     if (pid < 0)
     {
@@ -57,11 +58,13 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
             pid_t UNUSED(sid) = setsid();
         }
 
+        /* TODO - make it possible to chroot here by replicating user info for
+         * supervisor process. */
         /* change into the prefix directory. */
-        retval = privsep_chroot(bconf->prefix_dir);
+        retval = chdir(bconf->prefix_dir);
         if (0 != retval)
         {
-            perror("privsep_chroot");
+            perror("chdir");
             goto done;
         }
 
@@ -86,6 +89,14 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
         fprintf(fp, "%d", child_pid);
         fclose(fp);
 
+        /* close standard file descriptors */
+        retval = privsep_close_standard_fds();
+        if (0 != retval)
+        {
+            perror("privsep_close_standard_fds");
+            goto done;
+        }
+
         retval = privsep_setfds(
             pid_fd, /* ==> */ AGENTD_FD_PID,
             -1);
@@ -96,7 +107,7 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
         }
 
         /* If successful does _not_ return! */
-        retval = privsep_exec_private("supervisor");
+        retval = execl(bconf->binary, bconf->binary, "-P", "supervisor", NULL);
         if (0 != retval)
         {
             perror("privsep_exec_private");
@@ -107,7 +118,7 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
     {
         if (bconf->foreground)
         {
-
+            /* install signal handlers. */
             signal(SIGHUP, private_signal_handler_forwarder);
             signal(SIGKILL, private_signal_handler_forwarder);
             signal(SIGTERM, private_signal_handler_forwarder);
@@ -132,6 +143,11 @@ done:
     return retval;
 }
 
+/**
+ * Forward signal to child process if running in the foreground.
+ *
+ * /param signal        The signal to forward.
+ */
 static void private_signal_handler_forwarder(int signal)
 {
     if (signal == SIGCHLD)

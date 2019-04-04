@@ -54,7 +54,16 @@ static config_user_group_t* create_user_group(
     config_context_t*, const char*, const char*);
 static config_listen_address_t* create_listen_address(
     config_context_t*, struct in_addr*, int64_t);
+static config_consensus_t* new_consensus(
+    config_context_t*);
 void config_dispose(void* disp);
+static agent_config_t* fold_consensus(
+    config_context_t*, agent_config_t*, config_consensus_t*);
+static config_consensus_t* add_max_seconds(
+    config_context_t*, config_consensus_t*, int64_t);
+static config_consensus_t* add_max_transactions(
+    config_context_t*, config_consensus_t*, int64_t);
+void consensus_dispose(void* disp);
 %}
 
 /* use the full pure API for Bison. */
@@ -69,23 +78,31 @@ void config_dispose(void* disp);
 /* Tokens. */
 %token <string> CHROOT
 %token <string> COLON
+%token <string> CONSENSUS
 %token <string> DATASTORE
 %token <string> IDENTIFIER
 %token <addr> IP
 %token <string> INVALID
 %token <string> INVALID_IP
+%token <string> LBRACE
 %token <string> LISTEN
 %token <string> LOGDIR
 %token <string> LOGLEVEL
+%token <string> MAX
 %token <number> NUMBER
 %token <string> PATH
+%token <string> RBRACE
 %token <string> ROOTBLOCK
+%token <string> SECONDS
 %token <string> SECRET
+%token <string> TRANSACTIONS
 %token <string> USERGROUP
 
 /* Types for branch nodes.. */
 %type <config> conf
 %type <string> chroot
+%type <consensus> consensus
+%type <consensus> consensus_block
 %type <string> datastore
 %type <listenaddr> listen
 %type <string> logdir
@@ -125,6 +142,9 @@ conf : {
     | conf usergroup {
             /* fold in usergroup. */
             MAYBE_ASSIGN($$, add_usergroup(context, $1, $2)); }
+    | conf consensus {
+            /* fold in consensus data. */
+            MAYBE_ASSIGN($$, fold_consensus(context, $1, $2)); }
     ;
 
 /* Provide a log directory that is either a simple identifier or a path. */
@@ -192,6 +212,25 @@ usergroup
     : USERGROUP IDENTIFIER COLON IDENTIFIER {
             /* create usergroup param. */
             MAYBE_ASSIGN($$, create_user_group(context, $2, $4)); }
+    ;
+
+/* Provide a consensus block. */
+consensus
+    : CONSENSUS LBRACE consensus_block RBRACE {
+            /* ownership is forwarded. */
+            $$ = $3; }
+    ;
+
+consensus_block
+    : {
+            /* create a new consensus block. */
+            MAYBE_ASSIGN($$, new_consensus(context)); }
+    | consensus_block MAX SECONDS NUMBER {
+            /* override the max seconds. */
+            MAYBE_ASSIGN($$, add_max_seconds(context, $$, $4)); }
+    | consensus_block MAX TRANSACTIONS NUMBER {
+            /* override the max transactions. */
+            MAYBE_ASSIGN($$, add_max_transactions(context, $$, $4)); }
     ;
 
 %%
@@ -419,6 +458,123 @@ void config_dispose(void* disp)
         free((char*)cfg->usergroup->group);
         free(cfg->usergroup);
     }
+}
+
+/**
+ * \brief Create a new consensus structure.
+ */
+static config_consensus_t* new_consensus(config_context_t* context)
+{
+    config_consensus_t* ret =
+        (config_consensus_t*)malloc(sizeof(config_consensus_t));
+    if (NULL == ret)
+    {
+        CONFIG_ERROR("Out of memory in new_consensus().");
+    }
+
+    memset(ret, 0, sizeof(config_consensus_t));
+    ret->hdr.dispose = &consensus_dispose;
+
+    return ret;
+}
+
+/**
+ * \brief Add the maximum seconds to the consensus config.
+ */
+static config_consensus_t* add_max_seconds(
+    config_context_t* context, config_consensus_t* consensus,
+    int64_t seconds)
+{
+    if (consensus->block_max_seconds_set)
+    {
+        CONFIG_ERROR("Duplicate max seconds setting.");
+    }
+
+    if (seconds < 0 || seconds > BLOCK_SECONDS_MAXIMUM)
+    {
+        CONFIG_ERROR("Invalid seconds range.");
+    }
+
+    consensus->block_max_seconds_set = true;
+    consensus->block_max_seconds = seconds;
+
+    return consensus;
+}
+
+/**
+ * \brief Add the maximum transactions to the consensus config.
+ */
+static config_consensus_t* add_max_transactions(
+    config_context_t* context, config_consensus_t* consensus,
+    int64_t transactions)
+{
+    if (consensus->block_max_transactions_set)
+    {
+        CONFIG_ERROR("Duplicate max transactions setting.");
+    }
+
+    if (transactions < 0 || transactions > BLOCK_TRANSACTIONS_MAXIMUM)
+    {
+        CONFIG_ERROR("Invalid transactions range.");
+    }
+
+    consensus->block_max_transactions_set = true;
+    consensus->block_max_transactions = transactions;
+
+    return consensus;
+}
+
+/**
+ * \brief Fold consensus data into the config structure.
+ */
+static agent_config_t* fold_consensus(
+    config_context_t* context, agent_config_t* cfg,
+    config_consensus_t* consensus)
+{
+    /* only allow the max seconds to be set once. */
+    if (cfg->block_max_seconds_set && consensus->block_max_seconds_set)
+    {
+        CONFIG_ERROR("Duplicate consensus max seconds settings.");
+    }
+
+    /* assign max seconds if set. */
+    cfg->block_max_seconds_set = consensus->block_max_seconds_set;
+    if (consensus->block_max_seconds_set)
+    {
+        cfg->block_max_seconds = consensus->block_max_seconds;
+    }
+
+    /* only allow the max transactions to be set once. */
+    if (cfg->block_max_transactions_set
+     && consensus->block_max_transactions_set)
+    {
+        CONFIG_ERROR("Duplicate consensus max transactions settings.");
+    }
+
+    /* assign max transactions if set. */
+    cfg->block_max_transactions_set = consensus->block_max_transactions_set;
+    if (consensus->block_max_transactions_set)
+    {
+        cfg->block_max_transactions = consensus->block_max_transactions;
+    }
+
+    /* dispose of the consensus structure. */
+    dispose((disposable_t*)consensus);
+    /* free the consensus structure. */
+    free(consensus);
+
+    return cfg;
+}
+
+/**
+ * \brief dispose of a consensus structure.
+ */
+void consensus_dispose(void* disp)
+{
+    config_consensus_t* cfg = (config_consensus_t*)disp;
+
+    /* nothing to do here yet, as it currently contains just ints and bools.  */
+    (void)cfg;
 }
 
 /**

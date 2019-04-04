@@ -36,11 +36,23 @@ void commandline_dispatch_private_command(
         bootstrap_config_set_private_command(
             bconf, private_command_dataservice);
     }
+    /* is this the listen service private command? */
+    else if (!strcmp(command, "listenservice"))
+    {
+        bootstrap_config_set_private_command(
+            bconf, private_command_listenservice);
+    }
     /* is this the supervisor command? */
     else if (!strcmp(command, "supervisor"))
     {
         bootstrap_config_set_private_command(
             bconf, private_command_supervisor);
+    }
+    /* is this the unauthorized protocol service private command? */
+    else if (!strcmp(command, "unauthorized_protocol_service"))
+    {
+        bootstrap_config_set_private_command(
+            bconf, private_command_protocolservice);
     }
     else
     {

@@ -66,14 +66,18 @@ enum agentd_services
     AGENTD_SERVICE_APPLICATION = 0x08U,
 
     /**
+     * \brief Process pseudo-service.
+     */
+    AGENTD_SERVICE_PROCESS = 0x09U,
+    /**
      * \brief Protocol Service.
      */
-    AGENTD_SERVICE_PROTOCOL = 0x09U,
+    AGENTD_SERVICE_PROTOCOL = 0x0AU,
 
     /**
-     * \brief Listener Service.
+     * \brief Listen Service.
      */
-    AGENTD_SERVICE_LISTENER = 0x0AU,
+    AGENTD_SERVICE_LISTEN = 0x0BU,
 };
 
 /* make this header C++ friendly. */

@@ -37,8 +37,9 @@ LIBEVENT_CFLAGS=-I $(LIBEVENT_DIR)/include
 SRCDIR=$(CURDIR)/src
 DIRS=$(SRCDIR) $(SRCDIR)/agentd $(SRCDIR)/bootstrap_config \
     $(SRCDIR)/command $(SRCDIR)/commandline $(SRCDIR)/config \
-    $(SRCDIR)/dataservice $(SRCDIR)/inet $(SRCDIR)/ipc $(SRCDIR)/path \
-    $(SRCDIR)/privsep $(SRCDIR)/string $(SRCDIR)/supervisor
+    $(SRCDIR)/dataservice $(SRCDIR)/listenservice $(SRCDIR)/inet $(SRCDIR)/ipc \
+    $(SRCDIR)/path $(SRCDIR)/privsep $(SRCDIR)/process \
+    $(SRCDIR)/protocolservice $(SRCDIR)/string $(SRCDIR)/supervisor
 SOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.c))
 YACCSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.y))
 LEXSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.l))
@@ -153,7 +154,7 @@ test: vcblockchain-test test.agentd
 install: agentd-install
 
 agentd-install: ALL
-	@if [ "${PREFIX}" == "" ]; then echo "PREFIX must be set for install."; exit 1; fi
+	@if [ -z "${PREFIX}" ]; then echo "PREFIX must be set for install."; exit 1; fi
 	mkdir -p ${PREFIX}/bin ${PREFIX}/lib ${PREFIX}/etc ${PREFIX}/data
 	install ${HOST_RELEASE_EXE} ${PREFIX}/bin
 	ldd ${HOST_RELEASE_EXE} | egrep "[.]so" | grep -v ld.so | grep -v vdso.so \
@@ -169,6 +170,7 @@ agentd-install: ALL
 	    mkdir -p ${PREFIX}/lib64; \
 	    install /lib64/ld-linux-x86-64.so.2 ${PREFIX}/lib64; \
 	fi
+	mkdir -p ${PREFIX}/var/pid
 
 test.agentd: vcblockchain-build $(TEST_DIRS) host.exe.checked $(TESTAGENTD)
 	rm -rf $(HOST_CHECKED_BUILD_DIR)/databases
@@ -176,7 +178,7 @@ test.agentd: vcblockchain-build $(TEST_DIRS) host.exe.checked $(TESTAGENTD)
 	find $(BUILD_DIR) -type f -name "*.gcda" -exec rm {} \; -print
 	TEST_BIN=$(realpath $(shell which cat)) \
 	LD_LIBRARY_PATH=$(TOOLCHAIN_DIR)/host/lib:$(TOOLCHAIN_DIR)/host/lib64:$(LD_LIBRARY_PATH) \
-	$(TESTAGENTD)
+	$(TESTAGENTD) $(TEST_AGENTD_FILTER)
 
 testreport.agentd: $(REPORT_FILES)
 

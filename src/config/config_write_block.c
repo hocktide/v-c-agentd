@@ -16,6 +16,8 @@
 /* forward decls */
 static int config_write_logdir(int s, agent_config_t* conf);
 static int config_write_loglevel(int s, agent_config_t* conf);
+static int config_write_block_max_seconds(int s, agent_config_t* conf);
+static int config_write_block_max_transactions(int s, agent_config_t* conf);
 static int config_write_secret(int s, agent_config_t* conf);
 static int config_write_rootblock(int s, agent_config_t* conf);
 static int config_write_datastore(int s, agent_config_t* conf);
@@ -53,6 +55,16 @@ int config_write_block(int s, agent_config_t* conf)
 
     /* loglevel */
     retval = config_write_loglevel(s, conf);
+    if (AGENTD_STATUS_SUCCESS != retval)
+        return retval;
+
+    /* block max seconds */
+    retval = config_write_block_max_seconds(s, conf);
+    if (AGENTD_STATUS_SUCCESS != retval)
+        return retval;
+
+    /* block max transactions */
+    retval = config_write_block_max_transactions(s, conf);
     if (AGENTD_STATUS_SUCCESS != retval)
         return retval;
 
@@ -148,6 +160,68 @@ static int config_write_loglevel(int s, agent_config_t* conf)
 
         /* write the loglevel to the stream. */
         if (AGENTD_STATUS_SUCCESS != ipc_write_int64_block(s, conf->loglevel))
+            return AGENTD_ERROR_CONFIG_IPC_WRITE_DATA_FAILURE;
+    }
+
+    /* success. */
+    return AGENTD_STATUS_SUCCESS;
+}
+
+/**
+ * \brief Write the block max seconds to the config output stream.
+ *
+ * \param s             The config output stream.
+ * \param conf          The config structure from which this value is obtained.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_CONFIG_IPC_WRITE_DATA_FAILURE if writing data to the
+ *        socket failed.
+ */
+static int config_write_block_max_seconds(int s, agent_config_t* conf)
+{
+    /* write the block max seconds if set. */
+    if (conf->block_max_seconds_set)
+    {
+        /* write the block max seconds type to the stream. */
+        uint8_t type = CONFIG_STREAM_TYPE_BLOCK_MAX_SECONDS;
+        if (AGENTD_STATUS_SUCCESS != ipc_write_uint8_block(s, type))
+            return AGENTD_ERROR_CONFIG_IPC_WRITE_DATA_FAILURE;
+
+        /* write the block max seconds to the stream. */
+        if (AGENTD_STATUS_SUCCESS !=
+            ipc_write_int64_block(s, conf->block_max_seconds))
+            return AGENTD_ERROR_CONFIG_IPC_WRITE_DATA_FAILURE;
+    }
+
+    /* success. */
+    return AGENTD_STATUS_SUCCESS;
+}
+
+/**
+ * \brief Write the block max transactions to the config output stream.
+ *
+ * \param s             The config output stream.
+ * \param conf          The config structure from which this value is obtained.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_CONFIG_IPC_WRITE_DATA_FAILURE if writing data to the
+ *        socket failed.
+ */
+static int config_write_block_max_transactions(int s, agent_config_t* conf)
+{
+    /* write the block max transactions if set. */
+    if (conf->block_max_transactions_set)
+    {
+        /* write the block max transactions type to the stream. */
+        uint8_t type = CONFIG_STREAM_TYPE_BLOCK_MAX_TRANSACTIONS;
+        if (AGENTD_STATUS_SUCCESS != ipc_write_uint8_block(s, type))
+            return AGENTD_ERROR_CONFIG_IPC_WRITE_DATA_FAILURE;
+
+        /* write the block max transactions to the stream. */
+        if (AGENTD_STATUS_SUCCESS !=
+            ipc_write_int64_block(s, conf->block_max_transactions))
             return AGENTD_ERROR_CONFIG_IPC_WRITE_DATA_FAILURE;
     }
 

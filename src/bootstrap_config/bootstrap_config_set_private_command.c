@@ -20,6 +20,7 @@ void bootstrap_config_set_private_command(
     bootstrap_config_t* bconf, bootstrap_config_private_command_t command)
 {
     MODEL_ASSERT(NULL != bconf);
+    MODEL_ASSERT(NULL != command);
 
     bconf->private_command = command;
 }

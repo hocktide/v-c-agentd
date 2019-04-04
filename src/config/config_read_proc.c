@@ -13,6 +13,7 @@
 #include <agentd/privsep.h>
 #include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
@@ -60,7 +61,8 @@
  *      - AGENTD_ERROR_CONFIG_DEFAULTS_SET_FAILURE if setting the config
  *        defaults failed.
  */
-int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
+int config_read_proc(
+    const struct bootstrap_config* bconf, agent_config_t* conf)
 {
     int retval = 1;
     int clientsock = -1, serversock = -1;
@@ -128,8 +130,15 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
             goto done;
         }
 
+        /* if the config file is not set, default to /etc/agentd.conf */
+        const char* config_file = bconf->config_file;
+        if (NULL == config_file)
+        {
+            config_file = "/etc/agentd.conf";
+        }
+
         /* open config file. */
-        int config_fd = open(bconf->config_file, O_RDONLY);
+        int config_fd = open(config_file, O_RDONLY);
         if (0 > config_fd)
         {
             perror("config open");
@@ -137,7 +146,24 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
             goto done;
         }
 
-        /* close standard file descriptors and reset config_fd. */
+        /* move the fds out of the way. */
+        if (AGENTD_STATUS_SUCCESS !=
+            privsep_protect_descriptors(&config_fd, &serversock, NULL))
+        {
+            retval = AGENTD_ERROR_CONFIG_PRIVSEP_SETFDS_FAILURE;
+            goto done;
+        }
+
+        /* close standard file descriptors */
+        retval = privsep_close_standard_fds();
+        if (0 != retval)
+        {
+            perror("privsep_close_standard_fds");
+            retval = AGENTD_ERROR_CONFIG_PRIVSEP_SETFDS_FAILURE;
+            goto done;
+        }
+
+        /* reset config_fd. */
         retval =
             privsep_setfds(
                 config_fd, /* ==> */ AGENTD_FD_CONFIG_IN,
@@ -151,7 +177,7 @@ int config_read_proc(struct bootstrap_config* bconf, agent_config_t* conf)
         }
 
         /* spawn the child process (this does not return if successful. */
-        retval = privsep_exec_private("readconfig");
+        retval = privsep_exec_private(bconf, "readconfig");
         if (0 != retval)
         {
             perror("privsep_exec_private");
