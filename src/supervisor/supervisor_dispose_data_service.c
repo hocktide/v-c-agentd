@@ -19,18 +19,11 @@ void supervisor_dispose_data_service(void* disposable)
 {
     dataservice_process_t* data_proc = (dataservice_process_t*)disposable;
 
-    /* clean up the data socket if valid. */
-    if (data_proc->data_socket > 0)
-    {
-        close(data_proc->data_socket);
-        data_proc->data_socket = -1;
-    }
-
     /* clean up the supervisor socket if valid. */
     if (data_proc->supervisor_data_socket)
     {
-        close(data_proc->supervisor_data_socket);
-        data_proc->supervisor_data_socket = -1;
+        close(*data_proc->supervisor_data_socket);
+        *data_proc->supervisor_data_socket = -1;
     }
 
     /* clean up the log socket if valid. */
