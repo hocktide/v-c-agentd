@@ -182,13 +182,13 @@ static int count_listen_sockets(int listenstart)
  * \param user_context  The user context for this data socket.
  */
 static void listenservice_ipc_accept(
-    ipc_socket_context_t* UNUSED(ctx), int UNUSED(event_flags),
-    void* UNUSED(user_context))
+    ipc_socket_context_t* ctx, int UNUSED(event_flags),
+    void* user_context)
 {
-#if 0
     ssize_t retval = 0;
-    void* req;
-    uint32_t size = 0;
+    int sock = 0;
+    struct sockaddr_in peer;
+    socklen_t peersize = sizeof(peer);
     listenservice_instance_t* instance =
         (listenservice_instance_t*)user_context;
 
@@ -202,16 +202,16 @@ static void listenservice_ipc_accept(
         return;
 
     /* attempt to read a request. */
-    retval = ipc_accept_noblock(ctx, &req, &size);
-    switch (retval)
+    retval =
+        ipc_accept_noblock(ctx, &sock, (struct sockaddr*)&peer, &peersize);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        /* on success, dispatch the socket. */
-        case 0:
-            write(retval, "Hello\n", 6);
-            close(retval);
-            break;
+        return;
     }
-#endif
+
+    /* TODO - pass this socket to the unauthorized protocol service. */
+    write(sock, "Hello\n", 6);
+    close(sock);
 }
 
 /**

@@ -20,6 +20,10 @@
 #include <unistd.h>
 #include <vpr/parameters.h>
 
+/* forward decls */
+int listenservice_proc_open_listen_sockets(
+    const bootstrap_config_t* bconf, const agent_config_t* conf);
+
 /**
  * \brief Spawn an unauthorized listen service process using the provided
  * config structure and logger socket.
@@ -93,6 +97,45 @@ int listenservice_proc(
     /* child */
     if (0 == *listenpid)
     {
+        /* move the fds out of the way. */
+        if (AGENTD_STATUS_SUCCESS !=
+            privsep_protect_descriptors(&logsock, &acceptsock, NULL))
+        {
+            retval = AGENTD_ERROR_LISTENSERVICE_PRIVSEP_SETFDS_FAILURE;
+            goto done;
+        }
+
+        /* close standard file descriptors */
+        retval = privsep_close_standard_fds();
+        if (0 != retval)
+        {
+            perror("privsep_close_standard_fds");
+            retval = AGENTD_ERROR_LISTENSERVICE_PRIVSEP_SETFDS_FAILURE;
+            goto done;
+        }
+
+        /* close standard file descriptors and set fds. */
+        retval =
+            privsep_setfds(
+                logsock, /* ==> */ AGENTD_FD_LISTENSERVICE_LOG,
+                acceptsock, /* ==> */ AGENTD_FD_LISTENSERVICE_ACCEPT,
+                -1);
+        if (0 != retval)
+        {
+            perror("privsep_setfds");
+            retval = AGENTD_ERROR_LISTENSERVICE_PRIVSEP_SETFDS_FAILURE;
+            goto done;
+        }
+
+        /* open listen sockets. */
+        retval = listenservice_proc_open_listen_sockets(bconf, conf);
+        if (0 != retval)
+        {
+            retval =
+                AGENTD_ERROR_LISTENSERVICE_LISTENSOCKET_OPEN_FAILURE;
+            goto done;
+        }
+
         /* do secure operations if requested. */
         if (runsecure)
         {
@@ -126,42 +169,12 @@ int listenservice_proc(
                     AGENTD_ERROR_LISTENSERVICE_PRIVSEP_DROP_PRIVILEGES_FAILURE;
                 goto done;
             }
-        }
 
-        /* move the fds out of the way. */
-        if (AGENTD_STATUS_SUCCESS !=
-            privsep_protect_descriptors(&logsock, &acceptsock, NULL))
-        {
-            retval = AGENTD_ERROR_LISTENSERVICE_PRIVSEP_SETFDS_FAILURE;
-            goto done;
-        }
-
-        /* close standard file descriptors */
-        retval = privsep_close_standard_fds();
-        if (0 != retval)
-        {
-            perror("privsep_close_standard_fds");
-            retval = AGENTD_ERROR_LISTENSERVICE_PRIVSEP_SETFDS_FAILURE;
-            goto done;
-        }
-
-        /* close standard file descriptors and set fds. */
-        retval =
-            privsep_setfds(
-                logsock, /* ==> */ AGENTD_FD_LISTENSERVICE_LOG,
-                acceptsock, /* ==> */ AGENTD_FD_LISTENSERVICE_ACCEPT,
-                -1);
-        if (0 != retval)
-        {
-            perror("privsep_setfds");
-            retval = AGENTD_ERROR_LISTENSERVICE_PRIVSEP_SETFDS_FAILURE;
-            goto done;
-        }
-
-        /* spawn the child process (this does not return if successful). */
-        if (runsecure)
-        {
-            retval = privsep_exec_private(bconf, "listenservice");
+            /* spawn the child process (this does not return if successful). */
+            if (runsecure)
+            {
+                retval = privsep_exec_private(bconf, "listenservice");
+            }
         }
         else
         {
@@ -195,4 +208,72 @@ int listenservice_proc(
 done:
 
     return retval;
+}
+
+/**
+ * \brief Open the listen sockets for agentd.
+ *
+ * \param bconf         The bootstrap config for this process.
+ * \param conf          The config for this process.
+ *
+ * \returns AGENTD_STATUS_SUCCESS on success and a non-zero status on failure.
+ */
+int listenservice_proc_open_listen_sockets(
+    const bootstrap_config_t* UNUSED(bconf), const agent_config_t* conf)
+{
+    int retval = 0;
+    int setsock = AGENTD_FD_LISTENSERVICE_SOCK_START;
+    const config_listen_address_t* listen_head = conf->listen_head;
+
+    while (NULL != listen_head)
+    {
+        /* create a listen socket. */
+        int sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (sock < 0)
+        {
+            return AGENTD_ERROR_LISTENSERVICE_LISTENSOCKET_OPEN_FAILURE;
+        }
+
+        /* create a sockaddr_in entry. */
+        struct sockaddr_in saddr;
+        memset(&saddr, 0, sizeof(saddr));
+        saddr.sin_family = AF_INET;
+        saddr.sin_port = htons(listen_head->port);
+        memcpy(&saddr.sin_addr, listen_head->addr, sizeof(saddr.sin_addr));
+
+        /* bind this address to the address in listen_head. */
+        retval = bind(sock, (const struct sockaddr*)&saddr, sizeof(saddr));
+        if (retval < 0)
+        {
+            return AGENTD_ERROR_LISTENSERVICE_LISTENSOCKET_OPEN_FAILURE;
+        }
+
+        /* start listening on this socket. */
+        retval = listen(sock, 16);
+        if (retval < 0)
+        {
+            return AGENTD_ERROR_LISTENSERVICE_LISTENSOCKET_OPEN_FAILURE;
+        }
+
+        /* if the socket is not the next socket, dup2 it over. */
+        if (sock != setsock)
+        {
+            retval = dup2(sock, setsock);
+            if (retval < 0)
+            {
+                return AGENTD_ERROR_LISTENSERVICE_LISTENSOCKET_OPEN_FAILURE;
+            }
+
+            /* close the old socket. */
+            close(sock);
+        }
+
+        /* skip to the next listen address.*/
+        listen_head = (const config_listen_address_t*)listen_head->hdr.next;
+
+        /* skip to the next set socket. */
+        ++setsock;
+    }
+
+    return AGENTD_STATUS_SUCCESS;
 }

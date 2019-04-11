@@ -154,6 +154,12 @@ extern "C" {
 #define AGENTD_ERROR_IPC_SOCKETPAIR_FAILURE \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_IPC, 0x0017U)
 
+/**
+ * \brief An attempt to accept a socket failed.
+ */
+#define AGENTD_ERROR_IPC_ACCEPT_NOBLOCK_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_IPC, 0x0018U)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

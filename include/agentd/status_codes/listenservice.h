@@ -94,6 +94,12 @@ extern "C" {
 #define AGENTD_ERROR_LISTENSERVICE_PRIVSEP_EXEC_SURVIVAL_WEIRDNESS \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_LISTEN, 0x000DU)
 
+/**
+ * \brief We failed to open the listen sockets for this process.
+ */
+#define AGENTD_ERROR_LISTENSERVICE_LISTENSOCKET_OPEN_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_LISTEN, 0x000EU)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

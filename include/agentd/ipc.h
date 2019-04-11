@@ -11,6 +11,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <vccrypt/suite.h>
 #include <vpr/disposable.h>
@@ -606,6 +608,33 @@ void ipc_set_readcb_noblock(
  */
 void ipc_set_writecb_noblock(
     ipc_socket_context_t* sock, ipc_socket_event_cb_t cb);
+
+/**
+ * \brief Accept a connection from a listen socket.
+ *
+ * On success, the socket specified by sock contains a connection to a remote
+ * peer.  The address parameter contains data about the peer.
+ *
+ * \param ctx           The non-blocking socket context from which a connection
+ *                      is accepted.
+ * \param sock          A pointer to a socket descriptor that is populated with
+ *                      the socket connection to the remote peer on success.
+ * \param addr          A pointer to the buffer to hold the peer address.  This
+ *                      is populated with the peer address on success.
+ * \param addrsize      The value pointed to by addrsize should be set to the
+ *                      maximum value of this buffer.  It is set to the number
+ *                      of bytes used by the address on success.
+ *
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if this operation would cause the socket
+ *        to block.
+ *      - AGENTD_ERROR_IPC_ACCEPT_NOBLOCK_FAILURE if accepting this socket
+ *        failed.
+ */
+int ipc_accept_noblock(
+    ipc_socket_context_t* ctx, int* sock, struct sockaddr* addr,
+    socklen_t* addrsize);
 
 /**
  * \brief Write a raw data packet to a non-blocking socket.
