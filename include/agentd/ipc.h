@@ -637,6 +637,41 @@ int ipc_accept_noblock(
     socklen_t* addrsize);
 
 /**
+ * \brief Send a socket descriptor to the unix domain peer.
+ *
+ * On success, the socket sendsock is sent over the unix domain socket sock.
+ * The caller maintains the local socket handle, and this should be closed by
+ * the caller.
+ *
+ * \param sock          The unix domain socket through which sendsock should be
+ *                      sent.
+ * \param sendsock      The socket to send to the peer.
+ *
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BLOCK_FAILURE if this operation failed.
+ */
+int ipc_sendsocket_block(int sock, int sendsock);
+
+/**
+ * \brief Receive a socket descriptor from the unix domain peer.
+ *
+ * On success, the socket recvsock is received from the unix domain socket.
+ * The caller owns the local socket handle recvsock and must close it when no
+ * longer needed.
+ *
+ * \param ctx           The unix domain socket from which recvsock should be
+ *                      received.
+ * \param recvsock      The socket to receive from the peer.
+ *
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if this operation would block.
+ *      - AGENTD_ERROR_IPC_READ_BLOCK_FAILURE if this operation failed.
+ */
+int ipc_receivesocket_noblock(ipc_socket_context_t* ctx, int* recvsock);
+
+/**
  * \brief Write a raw data packet to a non-blocking socket.
  *
  * On success, the raw data packet value will be written, along with type

@@ -9,7 +9,9 @@
 #include <agentd/ipc.h>
 #include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
+#include <errno.h>
 #include <signal.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <vpr/parameters.h>
 
@@ -109,9 +111,26 @@ done:
  * \param user_context  The user context for this proto socket.
  */
 static void unauthorized_protocol_service_ipc_read(
-    ipc_socket_context_t* UNUSED(ctx), int UNUSED(event_flags),
+    ipc_socket_context_t* ctx, int UNUSED(event_flags),
     void* UNUSED(user_context))
 {
+    int recvsock;
+
+    /* TODO - This should be non-blocking on the listener and protocol side. */
+
+    /* attempt to receive a socket from the listen service. */
+    int retval = ipc_receivesocket_noblock(ctx, &recvsock);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        return;
+    }
+
+    /* if the socket was received successfully, write a test message to it. */
+    if (AGENTD_STATUS_SUCCESS == retval)
+    {
+        write(recvsock, "Hello, World!\n", 14);
+        close(recvsock);
+    }
 }
 
 /**

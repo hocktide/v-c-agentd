@@ -49,6 +49,7 @@ enum listenservice_api_method_enum
  *
  * \param logsock       The logging service socket.  The listen service logs
  *                      on this socket.
+ * \param acceptsock    The socket to which newly accepted sockets are sent.
  * \param listenstart   The first socket to which this service will listen.  The
  *                      listen service will iterate from this socket until it
  *                      encounters a closed descriptor and use each as a listen
@@ -65,7 +66,7 @@ enum listenservice_api_method_enum
  *          - AGENTD_ERROR_LISTENSERVICE_IPC_EVENT_LOOP_RUN_FAILURE if running
  *            the listen service event loop failed.
  */
-int listenservice_event_loop(int logsock, int listenstart);
+int listenservice_event_loop(int logsock, int acceptsock, int listenstart);
 
 /**
  * \brief Spawn an unauthorized listen service process using the provided
