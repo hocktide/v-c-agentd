@@ -58,7 +58,7 @@ int dataservice_decode_and_dispatch(
     /* get the method. */
     uint32_t nmethod = 0U;
     memcpy(&nmethod, breq, sizeof(uint32_t));
-    uint32_t method = htonl(nmethod);
+    uint32_t method = ntohl(nmethod);
 
     /* increment breq past command. */
     breq += sizeof(uint32_t);
