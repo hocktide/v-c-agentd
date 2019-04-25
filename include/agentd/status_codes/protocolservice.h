@@ -88,6 +88,12 @@ extern "C" {
 #define AGENTD_ERROR_PROTOCOLSERVICE_PRIVSEP_EXEC_SURVIVAL_WEIRDNESS \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_PROTOCOL, 0x000CU)
 
+/**
+ * \brief Initializing the event loop failed.
+ */
+#define AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_PROTOCOL, 0x000DU)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

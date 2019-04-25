@@ -14,6 +14,8 @@
 extern "C" {
 #endif /*__cplusplus*/
 
+#include <stdint.h>
+
 /* Forward decl for unauthorized protocol service data structure. */
 struct unauthorized_protocol_service_instance;
 
@@ -72,6 +74,11 @@ struct unauthorized_protocol_service_instance
     unauthorized_protocol_connection_t* used_connection_head;
     ipc_socket_context_t proto;
     ipc_event_loop_context_t loop;
+    uint8_t agent_id[16];
+    uint8_t agent_pubkey[32];
+    uint8_t agent_privkey[32];
+    uint8_t authorized_entity_id[16];
+    uint8_t authorized_entity_pubkey[32];
 };
 
 /**
