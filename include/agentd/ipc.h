@@ -450,6 +450,12 @@ int ipc_event_loop_init(ipc_event_loop_context_t* loop);
  * is the caller's responsibility to remove this socket from the event loop and
  * to dispose the socket.
  *
+ * If either the read or write callbacks are set when this method is called,
+ * they will be added as persistent callbacks.  If this is not desired behavior,
+ * wait to add the read or write callbacks until *AFTER* adding the socket to
+ * the event loop.  The persistent callback behavior is backwards compatible to
+ * other code in agentd expecting this behavior.
+ *
  * \param loop          The event loop context to which this socket is added.
  * \param sock          The socket context to add to the event loop.
  *
@@ -457,8 +463,6 @@ int ipc_event_loop_init(ipc_event_loop_context_t* loop);
  *      - AGENTD_STATUS_SUCCESS on success.
  *      - AGENTD_ERROR_IPC_INVALID_ARGUMENT if the socket context has already
  *        been added to an event loop.
- *      - AGENTD_ERROR_IPC_MISSING_CALLBACK if either a read or write callback
- *        has not been set.
  *      - AGENTD_ERROR_IPC_EVBUFFER_NEW_FAILURE if a new event buffer could not
  *        be created.
  *      - AGENTD_ERROR_IPC_EVENT_NEW_FAILURE if a new event could not be
@@ -593,6 +597,8 @@ ssize_t ipc_socket_read_to_buffer(ipc_socket_context_t* sock);
  *
  * \param sock          The socket to set.
  * \param cb            The callback to set.
+ * \param loop          Optional loop context.  If set, this callback will be
+ *                      added to the loop context.
  */
 void ipc_set_readcb_noblock(
     ipc_socket_context_t* sock, ipc_socket_event_cb_t cb);

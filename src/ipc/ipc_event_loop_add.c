@@ -27,10 +27,25 @@ static void ipc_event_loop_cb(evutil_socket_t, short, void*);
  * is the caller's responsibility to remove this socket from the event loop and
  * to dispose the socket.
  *
+ * If either the read or write callbacks are set when this method is called,
+ * they will be added as persistent callbacks.  If this is not desired behavior,
+ * wait to add the read or write callbacks until *AFTER* adding the socket to
+ * the event loop.  The persistent callback behavior is backwards compatible to
+ * other code in agentd expecting this behavior.
+ *
  * \param loop          The event loop context to which this socket is added.
  * \param sock          The socket context to add to the event loop.
  *
- * \returns 0 on success and non-zero on failure.
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_INVALID_ARGUMENT if the socket context has already
+ *        been added to an event loop.
+ *      - AGENTD_ERROR_IPC_EVBUFFER_NEW_FAILURE if a new event buffer could not
+ *        be created.
+ *      - AGENTD_ERROR_IPC_EVENT_NEW_FAILURE if a new event could not be
+ *        created.
+ *      - AGENTD_ERROR_IPC_EVENT_ADD_FAILURE if the event cannot be added to the
+ *        event loop.
  */
 int ipc_event_loop_add(
     ipc_event_loop_context_t* loop, ipc_socket_context_t* sock)
