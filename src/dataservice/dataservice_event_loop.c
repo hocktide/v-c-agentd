@@ -82,8 +82,8 @@ int dataservice_event_loop(int datasock, int UNUSED(logsock))
     instance->loop_context = &loop;
 
     /* set the read, write, and error callbacks for the data socket. */
-    ipc_set_readcb_noblock(&data, &dataservice_ipc_read);
-    ipc_set_writecb_noblock(&data, &dataservice_ipc_write);
+    ipc_set_readcb_noblock(&data, &dataservice_ipc_read, NULL);
+    ipc_set_writecb_noblock(&data, &dataservice_ipc_write, NULL);
 
     /* on these signals, leave the event loop and shut down gracefully. */
     ipc_exit_loop_on_signal(&loop, SIGHUP);

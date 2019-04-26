@@ -102,8 +102,10 @@ int listenservice_event_loop(
         }
 
         /* set the read, write, and error callbacks for the data socket. */
-        ipc_set_readcb_noblock(listensockets + i, &listenservice_ipc_accept);
-        ipc_set_writecb_noblock(listensockets + i, &listenservice_ipc_write);
+        ipc_set_readcb_noblock(
+            listensockets + i, &listenservice_ipc_accept, NULL);
+        ipc_set_writecb_noblock(
+            listensockets + i, &listenservice_ipc_write, NULL);
 
         /* add the listen socket to the event loop. */
         if (AGENTD_STATUS_SUCCESS !=

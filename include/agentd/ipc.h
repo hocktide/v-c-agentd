@@ -592,28 +592,34 @@ ssize_t ipc_socket_read_to_buffer(ipc_socket_context_t* sock);
 /**
  * \brief Set the read event callback for a non-blocking socket.
  *
- * \note This method can only be called BEFORE a socket has been added to the
- * event loop.  Otherwise, the callback will not be properly set.
+ * \note If this method is called BEFORE the socket is added to the event loop,
+ * it will be added as a persistent callback.  Otherwise, it is a one-shot
+ * callback.
+ *
+ * \param sock          The socket to set.
+ * \param cb            The callback to set.  Set to NULL to disable callback.
+ * \param loop          Optional loop context.  If set, this callback will be
+ *                      added to the loop context.
+ */
+void ipc_set_readcb_noblock(
+    ipc_socket_context_t* sock, ipc_socket_event_cb_t cb,
+    ipc_event_loop_context_t* loop);
+
+/**
+ * \brief Set the write event callback for a non-blocking socket.
+ *
+ * \note If this method is called BEFORE the socket is added to the event loop,
+ * it will be added as a persistent callback.  Otherwise, it is a one-shot
+ * callback.
  *
  * \param sock          The socket to set.
  * \param cb            The callback to set.
  * \param loop          Optional loop context.  If set, this callback will be
  *                      added to the loop context.
  */
-void ipc_set_readcb_noblock(
-    ipc_socket_context_t* sock, ipc_socket_event_cb_t cb);
-
-/**
- * \brief Set the write event callback for a non-blocking socket.
- *
- * \note This method can only be called BEFORE a socket has been added to the
- * event loop.  Otherwise, the callback will not be properly set.
- *
- * \param sock          The socket to set.
- * \param cb            The callback to set.
- */
 void ipc_set_writecb_noblock(
-    ipc_socket_context_t* sock, ipc_socket_event_cb_t cb);
+    ipc_socket_context_t* sock, ipc_socket_event_cb_t cb,
+    ipc_event_loop_context_t* loop);
 
 /**
  * \brief Accept a connection from a listen socket.

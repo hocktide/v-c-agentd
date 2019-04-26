@@ -16,9 +16,6 @@
 
 #include "ipc_internal.h"
 
-/* forward decls */
-static void ipc_event_loop_cb(evutil_socket_t, short, void*);
-
 /**
  * \brief Add a non-blocking socket to the event loop.
  *
@@ -168,30 +165,4 @@ cleanup_readbuf:
 
 done:
     return retval;
-}
-
-/**
- * \brief Event loop callback.  Decode an event and send it to the ipc callback.
- *
- * \param fd        The socket file descriptor for this callback.
- * \param what      The flags for this event.
- * \param ctx       The user context for this event.
- */
-static void ipc_event_loop_cb(
-    evutil_socket_t UNUSED(fd), short what, void* ctx)
-{
-    /* get the socket context. */
-    ipc_socket_context_t* sock = (ipc_socket_context_t*)ctx;
-
-    /* dispatch read event. */
-    if ((what & EV_READ) && sock->read)
-    {
-        sock->read(sock, IPC_SOCKET_EVENT_READ, sock->user_context);
-    }
-
-    /* dispatch write event. */
-    if ((what & EV_WRITE) && sock->write)
-    {
-        sock->write(sock, IPC_SOCKET_EVENT_WRITE, sock->user_context);
-    }
 }

@@ -64,7 +64,7 @@ int unauthorized_protocol_service_event_loop(
 
     /* set the read callback for the protocol socket. */
     ipc_set_readcb_noblock(
-        &inst.proto, &unauthorized_protocol_service_ipc_read);
+        &inst.proto, &unauthorized_protocol_service_ipc_read, NULL);
 
     /* add the protocol socket to the event loop. */
     if (AGENTD_STATUS_SUCCESS != ipc_event_loop_add(&inst.loop, &inst.proto))
@@ -139,7 +139,7 @@ static void unauthorized_protocol_service_ipc_read(
 
     /* set the write callback for this connection. */
     ipc_set_writecb_noblock(
-        &conn->ctx, &unauthorized_protocol_service_dummy_write);
+        &conn->ctx, &unauthorized_protocol_service_dummy_write, NULL);
 
     /* add the socket to the event loop. */
     if (AGENTD_STATUS_SUCCESS != ipc_event_loop_add(&inst->loop, &conn->ctx))

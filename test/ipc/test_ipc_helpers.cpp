@@ -58,8 +58,8 @@ void ipc_test::nonblockmode(
         ipc_event_loop_init(&loop);
     }
 
-    ipc_set_readcb_noblock(&nonblockdatasock, &nonblock_read);
-    ipc_set_writecb_noblock(&nonblockdatasock, &nonblock_write);
+    ipc_set_readcb_noblock(&nonblockdatasock, &nonblock_read, NULL);
+    ipc_set_writecb_noblock(&nonblockdatasock, &nonblock_write, NULL);
     ipc_event_loop_add(&loop, &nonblockdatasock);
     ipc_event_loop_run(&loop);
 }

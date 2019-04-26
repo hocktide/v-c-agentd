@@ -48,6 +48,16 @@ typedef struct ipc_event_loop_impl
     ipc_signal_event_impl_t* sig_head;
 } ipc_event_loop_impl_t;
 
+/**
+ * \brief Event loop callback.  Decode an event and send it to the ipc callback.
+ *
+ * \param fd        The socket file descriptor for this callback.
+ * \param what      The flags for this event.
+ * \param ctx       The user context for this event.
+ */
+void ipc_event_loop_cb(
+    evutil_socket_t UNUSED(fd), short what, void* ctx);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
