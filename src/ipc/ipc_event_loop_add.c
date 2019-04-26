@@ -45,72 +45,103 @@ int ipc_event_loop_add(
     ipc_event_loop_impl_t* loop_impl = (ipc_event_loop_impl_t*)loop->impl;
     ipc_socket_impl_t* sock_impl = (ipc_socket_impl_t*)sock->impl;
 
-    /* if ev is already defined, then this socket has already been assigned. */
-    if (NULL != sock_impl->ev)
-    {
-        retval = AGENTD_ERROR_IPC_INVALID_ARGUMENT;
-        goto done;
-    }
-
-    /* determine which callbacks are registered for this event. */
-    short callbacks = 0;
-    if (sock->read)
-    {
-        callbacks |= EV_READ;
-    }
-    if (sock->write)
-    {
-        callbacks |= EV_WRITE;
-    }
-
-    /* at least a read or write callback needs to be set. */
-    if (0 == callbacks)
-    {
-        retval = AGENTD_ERROR_IPC_MISSING_CALLBACK;
-        goto done;
-    }
-
     /* create the read buffer. */
-    sock_impl->readbuf = evbuffer_new();
     if (NULL == sock_impl->readbuf)
     {
-        retval = AGENTD_ERROR_IPC_EVBUFFER_NEW_FAILURE;
-        goto done;
+        sock_impl->readbuf = evbuffer_new();
+        if (NULL == sock_impl->readbuf)
+        {
+            retval = AGENTD_ERROR_IPC_EVBUFFER_NEW_FAILURE;
+            goto done;
+        }
     }
 
     /* create the write buffer. */
-    sock_impl->writebuf = evbuffer_new();
     if (NULL == sock_impl->writebuf)
     {
-        retval = AGENTD_ERROR_IPC_EVBUFFER_NEW_FAILURE;
-        goto cleanup_readbuf;
+        sock_impl->writebuf = evbuffer_new();
+        if (NULL == sock_impl->writebuf)
+        {
+            retval = AGENTD_ERROR_IPC_EVBUFFER_NEW_FAILURE;
+            goto cleanup_readbuf;
+        }
     }
 
-    /* create an event. */
-    sock_impl->ev =
-        event_new(
-            loop_impl->evb, sock->fd, callbacks | EV_PERSIST, ipc_event_loop_cb,
-            sock);
-    if (NULL == sock_impl->ev)
+    /* maybe create a read event. */
+    if (sock->read)
     {
-        retval = AGENTD_ERROR_IPC_EVENT_NEW_FAILURE;
-        goto cleanup_writebuf;
+        /* clean up the read event if already set. */
+        if (NULL != sock_impl->read_ev)
+        {
+            event_free(sock_impl->read_ev);
+            sock_impl->read_ev = NULL;
+        }
+
+        /* create the read event. */
+        sock_impl->read_ev =
+            event_new(
+                loop_impl->evb, sock->fd, EV_READ | EV_PERSIST,
+                &ipc_event_loop_cb, sock);
+        if (NULL == sock_impl->read_ev)
+        {
+            retval = AGENTD_ERROR_IPC_EVENT_NEW_FAILURE;
+            goto cleanup_writebuf;
+        }
+
+        /* add the event to the event base. */
+        if (0 != event_add(sock_impl->read_ev, NULL))
+        {
+            retval = AGENTD_ERROR_IPC_EVENT_ADD_FAILURE;
+            goto cleanup_read_ev;
+        }
     }
 
-    /* add the event to the event base. */
-    if (0 != event_add(sock_impl->ev, NULL))
+    /* maybe create a write event. */
+    if (sock->write)
     {
-        retval = AGENTD_ERROR_IPC_EVENT_ADD_FAILURE;
-        goto cleanup_event;
+        /* clean up the write event if already set. */
+        if (NULL != sock_impl->write_ev)
+        {
+            event_free(sock_impl->write_ev);
+            sock_impl->write_ev = NULL;
+        }
+
+        /* create the write event. */
+        sock_impl->write_ev =
+            event_new(
+                loop_impl->evb, sock->fd, EV_WRITE | EV_PERSIST,
+                &ipc_event_loop_cb, sock);
+        if (NULL == sock_impl->write_ev)
+        {
+            retval = AGENTD_ERROR_IPC_EVENT_NEW_FAILURE;
+            goto cleanup_read_ev;
+        }
+
+        /* add the event to the event base. */
+        if (0 != event_add(sock_impl->write_ev, NULL))
+        {
+            retval = AGENTD_ERROR_IPC_EVENT_ADD_FAILURE;
+            goto cleanup_write_ev;
+        }
     }
 
     /* success. */
     retval = AGENTD_STATUS_SUCCESS;
     goto done;
 
-cleanup_event:
-    event_free(sock_impl->ev);
-    sock_impl->ev = NULL;
+cleanup_write_ev:
+    if (NULL != sock_impl->write_ev)
+    {
+        event_free(sock_impl->write_ev);
+        sock_impl->write_ev = NULL;
+    }
+
+cleanup_read_ev:
+    if (NULL != sock_impl->read_ev)
+    {
+        event_free(sock_impl->read_ev);
+        sock_impl->read_ev = NULL;
+    }
 
 cleanup_writebuf:
     evbuffer_free(sock_impl->writebuf);

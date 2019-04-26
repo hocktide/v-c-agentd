@@ -24,7 +24,8 @@ extern "C" {
  */
 typedef struct ipc_socket_impl
 {
-    struct event* ev;
+    struct event* read_ev;
+    struct event* write_ev;
     struct evbuffer* readbuf;
     struct evbuffer* writebuf;
 } ipc_socket_impl_t;

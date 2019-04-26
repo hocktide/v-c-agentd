@@ -42,19 +42,25 @@ int ipc_event_loop_remove(
     /* get the impls. */
     ipc_socket_impl_t* sock_impl = (ipc_socket_impl_t*)sock->impl;
 
-    /* if the ev is not defined, then this socket was not assigned to a loop. */
-    if (NULL == sock_impl->ev)
+    /* remove the read event from the event loop if set. */
+    if (NULL != sock_impl->read_ev)
     {
-        return AGENTD_ERROR_IPC_INVALID_ARGUMENT;
+        event_free(sock_impl->read_ev);
+        sock_impl->read_ev = NULL;
     }
 
-    /* remove the event from the event loop. */
-    event_free(sock_impl->ev);
-    sock_impl->ev = NULL;
+    /* remove the write event from the event loop if set. */
+    if (NULL != sock_impl->write_ev)
+    {
+        event_free(sock_impl->write_ev);
+        sock_impl->write_ev = NULL;
+    }
 
-    /* free the buffers. */
-    evbuffer_free(sock_impl->readbuf);
-    evbuffer_free(sock_impl->writebuf);
+    /* free the buffers if set. */
+    if (NULL != sock_impl->readbuf)
+        evbuffer_free(sock_impl->readbuf);
+    if (NULL != sock_impl->writebuf)
+        evbuffer_free(sock_impl->writebuf);
     sock_impl->readbuf = sock_impl->writebuf = NULL;
 
     /* success. */

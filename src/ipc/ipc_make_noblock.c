@@ -119,11 +119,29 @@ static void ipc_socket_context_dispose(void* disposable)
     MODEL_ASSERT(NULL != ctx);
     MODEL_ASSERT(NULL != impl);
 
-    /* if an event is set for this socket, free it and the read/write buffers */
-    if (impl->ev)
+    /* if the read event is set for this socket, free it. */
+    if (NULL != impl->read_ev)
     {
-        event_free(impl->ev);
+        event_free(impl->read_ev);
+        impl->read_ev = NULL;
+    }
+
+    /* if the write event is set for this socket, free it. */
+    if (NULL != impl->write_ev)
+    {
+        event_free(impl->write_ev);
+        impl->write_ev = NULL;
+    }
+
+    /* if the readbuf is set for this socket, free it. */
+    if (NULL != impl->readbuf)
+    {
         evbuffer_free(impl->readbuf);
+    }
+
+    /* if the writebuf is set for this socket, free it. */
+    if (NULL != impl->writebuf)
+    {
         evbuffer_free(impl->writebuf);
     }
 
