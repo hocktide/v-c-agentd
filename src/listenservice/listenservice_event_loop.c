@@ -21,8 +21,6 @@
 static int count_listen_sockets(int listenstart);
 static void listenservice_ipc_accept(
     ipc_socket_context_t* ctx, int event_flags, void* user_context);
-static void listenservice_ipc_write(
-    ipc_socket_context_t* ctx, int event_flags, void* user_context);
 
 /**
  * \brief Event loop for the unauthorized listen service.  This is the entry
@@ -104,8 +102,6 @@ int listenservice_event_loop(
         /* set the read, write, and error callbacks for the data socket. */
         ipc_set_readcb_noblock(
             listensockets + i, &listenservice_ipc_accept, NULL);
-        ipc_set_writecb_noblock(
-            listensockets + i, &listenservice_ipc_write, NULL);
 
         /* add the listen socket to the event loop. */
         if (AGENTD_STATUS_SUCCESS !=
@@ -224,17 +220,4 @@ static void listenservice_ipc_accept(
 
 cleanup_socket:
     close(sock);
-}
-
-/**
- * \brief Handle write events on the listen socket.
- *
- * \param ctx           The non-blocking socket context.
- * \param event_flags   The event that triggered this callback.
- * \param user_context  The user context for this data socket.
- */
-static void listenservice_ipc_write(
-    ipc_socket_context_t* UNUSED(ctx), int UNUSED(event_flags),
-    void* UNUSED(user_context))
-{
 }
