@@ -132,16 +132,24 @@ TEST_F(unauthorized_protocol_service_isolation_test, handshake_req_bad_reqid)
 
     uint32_t bad_request_id = htonl(0x01U);
     uint32_t request_offset = htonl(0x00U);
+    uint32_t protocol_version_requested = htonl(0x01U);
+    uint32_t crypto_suite_version_requested = htonl(VCCRYPT_SUITE_VELO_V1);
     uint8_t entity_uuid[16];
     memset(entity_uuid, 0, sizeof(entity_uuid));
 
-    uint8_t payload[88];
+    uint8_t payload[96];
     uint8_t* breq = payload;
 
     memcpy(breq, &bad_request_id, sizeof(bad_request_id));
     breq += sizeof(bad_request_id);
     memcpy(breq, &request_offset, sizeof(request_offset));
     breq += sizeof(request_offset);
+    memcpy(breq, &protocol_version_requested,
+        sizeof(protocol_version_requested));
+    breq += sizeof(protocol_version_requested);
+    memcpy(breq, &crypto_suite_version_requested,
+        sizeof(crypto_suite_version_requested));
+    breq += sizeof(crypto_suite_version_requested);
     memcpy(breq, entity_uuid, sizeof(entity_uuid));
     breq += sizeof(entity_uuid);
     memcpy(breq, client_key_nonce.data, client_key_nonce.size);
@@ -195,16 +203,24 @@ TEST_F(unauthorized_protocol_service_isolation_test, handshake_req_bad_offset)
 
     uint32_t request_id = htonl(0x00U);
     uint32_t bad_request_offset = htonl(0x01U);
+    uint32_t protocol_version_requested = htonl(0x01U);
+    uint32_t crypto_suite_version_requested = htonl(VCCRYPT_SUITE_VELO_V1);
     uint8_t entity_uuid[16];
     memset(entity_uuid, 0, sizeof(entity_uuid));
 
-    uint8_t payload[88];
+    uint8_t payload[96];
     uint8_t* breq = payload;
 
     memcpy(breq, &request_id, sizeof(request_id));
     breq += sizeof(request_id);
     memcpy(breq, &bad_request_offset, sizeof(bad_request_offset));
     breq += sizeof(bad_request_offset);
+    memcpy(breq, &protocol_version_requested,
+        sizeof(protocol_version_requested));
+    breq += sizeof(protocol_version_requested);
+    memcpy(breq, &crypto_suite_version_requested,
+        sizeof(crypto_suite_version_requested));
+    breq += sizeof(crypto_suite_version_requested);
     memcpy(breq, entity_uuid, sizeof(entity_uuid));
     breq += sizeof(entity_uuid);
     memcpy(breq, client_key_nonce.data, client_key_nonce.size);
@@ -258,16 +274,24 @@ TEST_F(unauthorized_protocol_service_isolation_test, handshake_req_bad_entity)
 
     uint32_t request_id = htonl(0x00U);
     uint32_t request_offset = htonl(0x00U);
+    uint32_t protocol_version_requested = htonl(0x01);
+    uint32_t crypto_suite_version_requested = htonl(VCCRYPT_SUITE_VELO_V1);
     uint8_t entity_uuid[16];
     memset(entity_uuid, 0, sizeof(entity_uuid));
 
-    uint8_t payload[88];
+    uint8_t payload[96];
     uint8_t* breq = payload;
 
     memcpy(breq, &request_id, sizeof(request_id));
     breq += sizeof(request_id);
     memcpy(breq, &request_offset, sizeof(request_offset));
     breq += sizeof(request_offset);
+    memcpy(breq, &protocol_version_requested,
+        sizeof(protocol_version_requested));
+    breq += sizeof(protocol_version_requested);
+    memcpy(breq, &crypto_suite_version_requested,
+        sizeof(crypto_suite_version_requested));
+    breq += sizeof(crypto_suite_version_requested);
     memcpy(breq, entity_uuid, sizeof(entity_uuid));
     breq += sizeof(entity_uuid);
     memcpy(breq, client_key_nonce.data, client_key_nonce.size);

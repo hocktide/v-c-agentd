@@ -61,7 +61,9 @@ int protocolservice_api_sendreq_handshake_request_block(
     /* | --------------------------------------------------- | ------------ | */
     /* | UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE           |  4 bytes     | */
     /* | offset                                              |  4 bytes     | */
-    /* | record:                                             | 68 bytes     | */
+    /* | record:                                             | 88 bytes     | */
+    /* |    protocol_version                                 |  4 bytes     | */
+    /* |    crypto_suite                                     |  4 bytes     | */
     /* |    entity_id                                        | 16 bytes     | */
     /* |    client key nonce                                 | 32 bytes     | */
     /* |    client challenge nonce                           | 32 bytes     | */
@@ -110,8 +112,10 @@ int protocolservice_api_sendreq_handshake_request_block(
     /* compute the payload size. */
     uint32_t request = htonl(UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE);
     uint32_t offset = htonl(0);
+    uint32_t protocol_version = htonl(0x01);
+    uint32_t crypto_suite = htonl(VCCRYPT_SUITE_VELO_V1);
     size_t payload_size =
-        sizeof(request) + sizeof(offset) + 16 /* entity_id */
+        sizeof(request) + sizeof(offset) + sizeof(protocol_version) + sizeof(crypto_suite) + 16 /* entity_id */
         + key_nonce->size + challenge_nonce->size;
 
     /* create handshake request payload buffer. */
@@ -130,6 +134,14 @@ int protocolservice_api_sendreq_handshake_request_block(
     /* write offset value to payload buffer. */
     memcpy(pbuf, &offset, sizeof(offset));
     pbuf += sizeof(offset);
+
+    /* write the protocol version to the payload buffer. */
+    memcpy(pbuf, &protocol_version, sizeof(protocol_version));
+    pbuf += sizeof(protocol_version);
+
+    /* write the crypto suite to the payload buffer. */
+    memcpy(pbuf, &crypto_suite, sizeof(crypto_suite));
+    pbuf += sizeof(crypto_suite);
 
     /* write entity id to payload buffer. */
     memcpy(pbuf, entity_id, 16);

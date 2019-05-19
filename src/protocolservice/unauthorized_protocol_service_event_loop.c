@@ -191,6 +191,8 @@ static void unauthorized_protocol_service_handshake_req_read(
     uint32_t size = 0U;
     uint32_t request_id;
     uint32_t request_offset;
+    uint32_t protocol_version;
+    uint32_t crypto_suite;
 
     /* attempt to read the request packet. */
     int retval = ipc_read_data_noblock(ctx, &req, &size);
@@ -213,9 +215,11 @@ static void unauthorized_protocol_service_handshake_req_read(
     /* verify that the size matches what we expect. */
     const size_t request_id_size = sizeof(request_id);
     const size_t request_offset_size = sizeof(request_offset);
+    const size_t protocol_version_size = sizeof(protocol_version);
+    const size_t crypto_suite_size = sizeof(crypto_suite);
     const size_t entity_uuid_size = sizeof(conn->entity_uuid);
     const size_t expected_size =
-        request_id_size + request_offset_size + entity_uuid_size + conn->client_key_nonce.size + conn->client_challenge_nonce.size;
+        request_id_size + request_offset_size + protocol_version_size + crypto_suite_size + entity_uuid_size + conn->client_key_nonce.size + conn->client_challenge_nonce.size;
     if (size != expected_size)
     {
         unauthorized_protocol_service_error_response(
@@ -239,6 +243,30 @@ static void unauthorized_protocol_service_handshake_req_read(
     breq += request_offset_size;
     request_offset = ntohl(request_offset);
     if (0x00000000 != request_offset)
+    {
+        unauthorized_protocol_service_error_response(
+            conn, UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE,
+            AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST, 0);
+        goto cleanup_data;
+    }
+
+    /* read the protocol verson.  It should be 0x00000001. */
+    memcpy(&protocol_version, breq, protocol_version_size);
+    breq += protocol_version_size;
+    protocol_version = ntohl(protocol_version);
+    if (0x00000001 != protocol_version)
+    {
+        unauthorized_protocol_service_error_response(
+            conn, UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE,
+            AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST, 0);
+        goto cleanup_data;
+    }
+
+    /* read the crypto suite verson.  It should be VCCRYPT_SUITE_VELO_V1. */
+    memcpy(&crypto_suite, breq, crypto_suite_size);
+    breq += crypto_suite_size;
+    crypto_suite = ntohl(crypto_suite);
+    if (VCCRYPT_SUITE_VELO_V1 != crypto_suite)
     {
         unauthorized_protocol_service_error_response(
             conn, UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE,
@@ -356,7 +384,9 @@ static int unauthorized_protocol_service_write_handshake_request_response(
     /* | UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE           |   4 bytes    | */
     /* | offset                                              |   4 bytes    | */
     /* | status                                              |   4 bytes    | */
-    /* | record:                                             | 144 bytes    | */
+    /* | record:                                             | 152 bytes    | */
+    /* |    protocol_version                                 |   4 bytes    | */
+    /* |    crypto_suite                                     |   4 bytes    | */
     /* |    agent_id                                         |  16 bytes    | */
     /* |    agent public key                                 |  32 bytes    | */
     /* |    server key nonce                                 |  32 bytes    | */
@@ -408,9 +438,11 @@ static int unauthorized_protocol_service_write_handshake_request_response(
     /* Compute the response packet payload size. */
     uint32_t request_id = htonl(UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE);
     uint32_t offset = htonl(0x00U);
+    uint32_t protocol_version = htonl(0x00000001);
+    uint32_t crypto_suite = htonl(VCCRYPT_SUITE_VELO_V1);
     int32_t status = htonl(AGENTD_STATUS_SUCCESS);
     size_t payload_size =
-        sizeof(request_id) + sizeof(offset) + sizeof(status) + 16 /* agent id */
+        sizeof(request_id) + sizeof(offset) + sizeof(status) + sizeof(protocol_version) + sizeof(crypto_suite) + 16 /* agent id */
         + conn->svc->agent_pubkey.size + conn->server_key_nonce.size + conn->server_challenge_nonce.size + conn->svc->short_hmac.mac_size;
 
     /* Create the response packet payload buffer. */
@@ -433,6 +465,10 @@ static int unauthorized_protocol_service_write_handshake_request_response(
     pbuf += sizeof(offset);
     memcpy(pbuf, &status, sizeof(status));
     pbuf += sizeof(status);
+    memcpy(pbuf, &protocol_version, sizeof(protocol_version));
+    pbuf += sizeof(protocol_version);
+    memcpy(pbuf, &crypto_suite, sizeof(crypto_suite));
+    pbuf += sizeof(crypto_suite);
     memcpy(pbuf, conn->svc->agent_id, 16);
     pbuf += 16;
     memcpy(pbuf, conn->svc->agent_pubkey.data, conn->svc->agent_pubkey.size);

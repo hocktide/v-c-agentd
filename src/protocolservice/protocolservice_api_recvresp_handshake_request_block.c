@@ -96,7 +96,9 @@ int protocolservice_api_recvresp_handshake_request_block(
     /* | UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE           |   4 bytes    | */
     /* | offset                                              |   4 bytes    | */
     /* | status                                              |   4 bytes    | */
-    /* | record:                                             | 144 bytes    | */
+    /* | record:                                             | 152 bytes    | */
+    /* |    protocol_version                                 |   4 bytes    | */
+    /* |    crypto_suite                                     |   4 bytes    | */
     /* |    agent_id                                         |  16 bytes    | */
     /* |    server public key                                |  32 bytes    | */
     /* |    server key nonce                                 |  32 bytes    | */
@@ -152,11 +154,29 @@ int protocolservice_api_recvresp_handshake_request_block(
         4 /* request_id */
         + 4 /* offset */
         + 4 /* status */
+        + 4 /* protocol_version */
+        + 4 /* crypto_suite */
         + 16 /* agent id */
         + suite->key_cipher_opts.public_key_size + suite->key_cipher_opts.minimum_nonce_size + suite->key_cipher_opts.minimum_nonce_size + mac_options.mac_size;
 
     /* verify the payload size. */
     if (size != payload_size)
+    {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_RESPONSE;
+        goto cleanup_mac_options;
+    }
+
+    /* verify the protocol version. */
+    uint32_t protocol_version = ntohl(val[3]);
+    if (0x00000001 != protocol_version)
+    {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_RESPONSE;
+        goto cleanup_mac_options;
+    }
+
+    /* verify the crypto suite. */
+    uint32_t crypto_suite = ntohl(val[4]);
+    if (VCCRYPT_SUITE_VELO_V1 != crypto_suite)
     {
         retval = AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_RESPONSE;
         goto cleanup_mac_options;
@@ -170,7 +190,7 @@ int protocolservice_api_recvresp_handshake_request_block(
     }
 
     /* copy the server id. */
-    memcpy(server_id->data, vbuf + 12, server_id->size);
+    memcpy(server_id->data, vbuf + 20, server_id->size);
 
     /* create buffer for agent public key. */
     retval =
@@ -184,7 +204,7 @@ int protocolservice_api_recvresp_handshake_request_block(
     /* copy the server public key from the message. */
     /* TODO - replace this with a proper attestation process for the server
      * certificate. */
-    memcpy(server_public_key->data, vbuf + 28, server_public_key->size);
+    memcpy(server_public_key->data, vbuf + 36, server_public_key->size);
 
     /* create buffer for server key nonce. */
     vccrypt_buffer_t server_key_nonce;
@@ -197,7 +217,7 @@ int protocolservice_api_recvresp_handshake_request_block(
     }
 
     /* copy the server key nonce from the message. */
-    memcpy(server_key_nonce.data, vbuf + 60, server_key_nonce.size);
+    memcpy(server_key_nonce.data, vbuf + 68, server_key_nonce.size);
 
     /* create buffer for server challenge nonce. */
     retval =
@@ -210,7 +230,7 @@ int protocolservice_api_recvresp_handshake_request_block(
 
     /* copy the server challenge nonce from the message. */
     memcpy(
-        server_challenge_nonce->data, vbuf + 92, server_challenge_nonce->size);
+        server_challenge_nonce->data, vbuf + 100, server_challenge_nonce->size);
 
     /* create buffer for shared secret. */
     retval =
