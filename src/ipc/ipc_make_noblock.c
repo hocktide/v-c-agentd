@@ -145,6 +145,9 @@ static void ipc_socket_context_dispose(void* disposable)
         evbuffer_free(impl->writebuf);
     }
 
+    /* close the socket. */
+    close(ctx->fd);
+
     /* free the impl. */
     free(impl);
 

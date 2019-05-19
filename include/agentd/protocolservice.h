@@ -11,6 +11,7 @@
 
 #include <agentd/bootstrap_config.h>
 #include <agentd/config.h>
+#include <agentd/protocolservice/api.h>
 #include <vpr/disposable.h>
 
 /* make this header C++ friendly. */

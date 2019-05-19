@@ -39,15 +39,34 @@ typedef struct unauthorized_protocol_connection
  */
 typedef enum unauthorized_protocol_connection_state
 {
+    /** \brief Start by reading a handshake request from the client. */
     UPCS_READ_HANDSHAKE_REQ_FROM_CLIENT,
+
+    /** \brief Then write a handshake response to the client. */
     UPCS_WRITE_HANDSHAKE_RESP_TO_CLIENT,
+
+    /** \brief Read a handshake acknowledge from the client. */
     UPCS_READ_HANDSHAKE_ACK_FROM_CLIENT,
+
+    /** \brief Write the handshake acknowledge to the client. */
     UPCS_WRITE_HANDSHAKE_ACK_TO_CLIENT,
+
+    /** \brief The client connection is closing due to an unauthorized state. */
     UPCS_UNAUTHORIZED,
+
+    /** \brief Read a command from the client. */
     APCS_READ_COMMAND_REQ_FROM_CLIENT,
+
+    /** \brief Write the command request to the application service. */
     APCS_WRITE_COMMAND_REQ_TO_APP,
+
+    /** \brief Read the command response from the application service. */
     APCS_READ_COMMAND_RESP_FROM_APP,
+
+    /** \brief Write the command response to the client. */
     APCS_WRITE_COMMAND_RESP_TO_CLIENT,
+
+    /** \brief This connection is quiescing. */
     APCS_QUIESCING,
 } unauthorized_protocol_connection_state_t;
 
@@ -62,6 +81,14 @@ typedef struct unauthorized_protocol_connection
     ipc_socket_context_t ctx;
     unauthorized_protocol_connection_state_t state;
     unauthorized_protocol_service_instance_t* svc;
+    bool key_found;
+    uint8_t entity_uuid[16];
+    vccrypt_buffer_t entity_public_key;
+    vccrypt_buffer_t client_key_nonce;
+    vccrypt_buffer_t client_challenge_nonce;
+    vccrypt_buffer_t server_key_nonce;
+    vccrypt_buffer_t server_challenge_nonce;
+    vccrypt_buffer_t shared_secret; /* TODO - move to auth service. */
 } unauthorized_protocol_connection_t;
 
 /**
@@ -74,11 +101,15 @@ struct unauthorized_protocol_service_instance
     unauthorized_protocol_connection_t* used_connection_head;
     ipc_socket_context_t proto;
     ipc_event_loop_context_t loop;
+    allocator_options_t alloc_opts;
+    vccrypt_suite_options_t suite;
+    vccrypt_prng_context_t prng;
+    vccrypt_mac_options_t short_hmac; /* XXX - eliminate with suite feature. */
+    vccrypt_buffer_t agent_pubkey;
+    vccrypt_buffer_t agent_privkey;
+    vccrypt_buffer_t authorized_entity_pubkey;
     uint8_t agent_id[16];
-    uint8_t agent_pubkey[32];
-    uint8_t agent_privkey[32];
     uint8_t authorized_entity_id[16];
-    uint8_t authorized_entity_pubkey[32];
 };
 
 /**

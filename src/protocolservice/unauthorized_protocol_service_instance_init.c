@@ -50,20 +50,79 @@ int unauthorized_protocol_service_instance_init(
     memset(inst, 0, sizeof(unauthorized_protocol_service_instance_t));
     inst->hdr.dispose = &unauthorized_protocol_service_instance_dispose;
 
+    /* create the allocator for this instance. */
+    malloc_allocator_options_init(&inst->alloc_opts);
+
+    /* create the crypto suite for this instance. */
+    if (VCCRYPT_STATUS_SUCCESS !=
+        vccrypt_suite_options_init(
+            &inst->suite, &inst->alloc_opts, VCCRYPT_SUITE_VELO_V1))
+    {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
+        goto done;
+    }
+
+    /* create the prng for this instance. */
+    if (VCCRYPT_STATUS_SUCCESS !=
+        vccrypt_suite_prng_init(&inst->suite, &inst->prng))
+    {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
+        goto cleanup_suite;
+    }
+
+    /* create the short hmac options for this instance. */
+    /* TODO - eliminate with suite feature. */
+    if (VCCRYPT_STATUS_SUCCESS !=
+        vccrypt_mac_options_init(
+            &inst->short_hmac, inst->suite.alloc_opts,
+            VCCRYPT_MAC_ALGORITHM_SHA_2_512_256_HMAC))
+    {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
+        goto cleanup_prng;
+    }
+
+    /* create agent pubkey buffer. */
+    if (VCCRYPT_STATUS_SUCCESS !=
+        vccrypt_suite_buffer_init_for_auth_key_agreement_public_key(
+            &inst->suite, &inst->agent_pubkey))
+    {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
+        goto cleanup_short_hmac;
+    }
+
+    /* create agent privkey buffer. */
+    if (VCCRYPT_STATUS_SUCCESS !=
+        vccrypt_suite_buffer_init_for_auth_key_agreement_private_key(
+            &inst->suite, &inst->agent_privkey))
+    {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
+        goto cleanup_agent_pubkey_buffer;
+    }
+
+    /* create authorized entity pubkey. */
+    if (VCCRYPT_STATUS_SUCCESS !=
+        vccrypt_suite_buffer_init_for_auth_key_agreement_public_key(
+            &inst->suite, &inst->authorized_entity_pubkey))
+    {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
+        goto cleanup_agent_privkey_buffer;
+    }
+
+    /* read environment data as a temporary hack. */
     /* TODO - replace with config when we can integrate with block tool. */
     if (AGENTD_STATUS_SUCCESS !=
         unauthorized_protocol_service_instance_init_read_environment(
             inst))
     {
         retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
-        goto done;
+        goto cleanup_authorized_entity_pubkey_buffer;
     }
 
     /* set the protocol socket to non-blocking. */
     if (AGENTD_STATUS_SUCCESS != ipc_make_noblock(proto, &inst->proto, inst))
     {
         retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_MAKE_NOBLOCK_FAILURE;
-        goto done;
+        goto cleanup_authorized_entity_pubkey_buffer;
     }
 
     /* initialize the IPC event loop instance. */
@@ -118,6 +177,24 @@ cleanup_connections:
 cleanup_proto:
     dispose((disposable_t*)&inst->proto);
 
+cleanup_authorized_entity_pubkey_buffer:
+    dispose((disposable_t*)&inst->authorized_entity_pubkey);
+
+cleanup_agent_privkey_buffer:
+    dispose((disposable_t*)&inst->agent_privkey);
+
+cleanup_agent_pubkey_buffer:
+    dispose((disposable_t*)&inst->agent_pubkey);
+
+cleanup_short_hmac:
+    dispose((disposable_t*)&inst->short_hmac);
+
+cleanup_prng:
+    dispose((disposable_t*)&inst->prng);
+
+cleanup_suite:
+    dispose((disposable_t*)&inst->suite);
+
 done:
     return retval;
 }
@@ -159,6 +236,24 @@ static void unauthorized_protocol_service_instance_dispose(void* disposable)
 
     /* dispose of the loop. */
     dispose((disposable_t*)&inst->loop);
+
+    /* dispose of crypto buffers. */
+    dispose((disposable_t*)&inst->authorized_entity_pubkey);
+    dispose((disposable_t*)&inst->agent_privkey);
+    dispose((disposable_t*)&inst->agent_pubkey);
+
+    /* dispose of the short hmac options. */
+    /* TODO - eliminate with suite feature. */
+    dispose((disposable_t*)&inst->short_hmac);
+
+    /* dispose of the prng. */
+    dispose((disposable_t*)&inst->prng);
+
+    /* dispose of the crypto suite. */
+    dispose((disposable_t*)&inst->suite);
+
+    /* dispose of the allocator. */
+    dispose((disposable_t*)&inst->alloc_opts);
 
     /* clear this instance. */
     memset(inst, 0, sizeof(unauthorized_protocol_service_instance_t));
@@ -284,16 +379,26 @@ static int unauthorized_protocol_service_instance_init_read_environment(
     memcpy(inst->agent_id, agent_id_buffer.data, sizeof(inst->agent_id));
 
     /* Copy the agent public key. */
-    MODEL_ASSERT(agent_pubkey_buffer.size >= sizeof(inst->agent_pubkey));
+    if (agent_pubkey_buffer.size != inst->agent_pubkey.size)
+    {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
+        goto cleanup_authorized_entity_pubkey_buffer;
+    }
+    MODEL_ASSERT(agent_pubkey_buffer.size == inst->agent_pubkey.size);
     memcpy(
-        inst->agent_pubkey, agent_pubkey_buffer.data,
-        sizeof(inst->agent_pubkey));
+        inst->agent_pubkey.data, agent_pubkey_buffer.data,
+        inst->agent_pubkey.size);
 
     /* Copy the agent private key. */
-    MODEL_ASSERT(agent_privkey_buffer.size >= sizeof(inst->agent_privkey));
+    if (agent_privkey_buffer.size != inst->agent_privkey.size)
+    {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
+        goto cleanup_authorized_entity_pubkey_buffer;
+    }
+    MODEL_ASSERT(agent_privkey_buffer.size == inst->agent_privkey.size);
     memcpy(
-        inst->agent_privkey, agent_privkey_buffer.data,
-        sizeof(inst->agent_privkey));
+        inst->agent_privkey.data, agent_privkey_buffer.data,
+        inst->agent_privkey.size);
 
     /* Copy the authorized entity id. */
     MODEL_ASSERT(authorized_entity_id_buffer.size >= sizeof(inst->authorized_entity_id));
@@ -301,14 +406,20 @@ static int unauthorized_protocol_service_instance_init_read_environment(
         sizeof(inst->authorized_entity_id));
 
     /* Copy the authorized entity public key. */
-    MODEL_ASSERT(authorized_entity_pubkey_buffer.size >= sizeof(inst->authorized_entity_pubkey));
-    memcpy(inst->authorized_entity_pubkey, authorized_entity_pubkey_buffer.data,
-        sizeof(inst->authorized_entity_pubkey));
+    if (authorized_entity_pubkey_buffer.size != inst->authorized_entity_pubkey.size)
+    {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
+        goto cleanup_authorized_entity_pubkey_buffer;
+    }
+    MODEL_ASSERT(authorized_entity_pubkey_buffer.size == inst->authorized_entity_pubkey.size);
+    memcpy(inst->authorized_entity_pubkey.data,
+        authorized_entity_pubkey_buffer.data,
+        inst->authorized_entity_pubkey.size);
 
     /* success */
     retval = AGENTD_STATUS_SUCCESS;
 
-    /* cleanup authorized entity pubkey. */
+cleanup_authorized_entity_pubkey_buffer:
     dispose((disposable_t*)&authorized_entity_pubkey_buffer);
 
 cleanup_authorized_entity_id_buffer:

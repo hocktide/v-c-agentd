@@ -55,11 +55,85 @@ int unauthorized_protocol_connection_init(
     retval = ipc_make_noblock(sock, &conn->ctx, conn);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        return AGENTD_ERROR_PROTOCOLSERVICE_IPC_MAKE_NOBLOCK_FAILURE;
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_MAKE_NOBLOCK_FAILURE;
+        goto done;
+    }
+
+    /* create buffer for the entity public key. */
+    retval =
+        vccrypt_suite_buffer_init_for_cipher_key_agreement_public_key(
+            &conn->svc->suite, &conn->entity_public_key);
+    if (VCCRYPT_STATUS_SUCCESS != retval)
+    {
+        goto done;
+    }
+
+    /* create buffer for client key nonce. */
+    retval =
+        vccrypt_suite_buffer_init_for_cipher_key_agreement_nonce(
+            &conn->svc->suite, &conn->client_key_nonce);
+    if (VCCRYPT_STATUS_SUCCESS != retval)
+    {
+        goto cleanup_public_key_buffer;
+    }
+
+    /* create buffer for client challenge nonce. */
+    retval =
+        vccrypt_suite_buffer_init_for_cipher_key_agreement_nonce(
+            &conn->svc->suite, &conn->client_challenge_nonce);
+    if (VCCRYPT_STATUS_SUCCESS != retval)
+    {
+        goto cleanup_key_nonce_buffer;
+    }
+
+    /* create buffer for server key nonce. */
+    retval =
+        vccrypt_suite_buffer_init_for_cipher_key_agreement_nonce(
+            &conn->svc->suite, &conn->server_key_nonce);
+    if (VCCRYPT_STATUS_SUCCESS != retval)
+    {
+        goto cleanup_challenge_nonce_buffer;
+    }
+
+    /* create buffer for server challenge nonce. */
+    retval =
+        vccrypt_suite_buffer_init_for_cipher_key_agreement_nonce(
+            &conn->svc->suite, &conn->server_challenge_nonce);
+    if (VCCRYPT_STATUS_SUCCESS != retval)
+    {
+        goto cleanup_server_key_nonce_buffer;
+    }
+
+    /* create buffer for shared secret. */
+    retval =
+        vccrypt_suite_buffer_init_for_cipher_key_agreement_shared_secret(
+            &conn->svc->suite, &conn->shared_secret);
+    if (VCCRYPT_STATUS_SUCCESS != retval)
+    {
+        goto cleanup_server_challenge_nonce_buffer;
     }
 
     /* success */
-    return AGENTD_STATUS_SUCCESS;
+    retval = AGENTD_STATUS_SUCCESS;
+    goto done;
+
+cleanup_server_challenge_nonce_buffer:
+    dispose((disposable_t*)&conn->server_challenge_nonce);
+
+cleanup_server_key_nonce_buffer:
+    dispose((disposable_t*)&conn->server_key_nonce);
+
+cleanup_challenge_nonce_buffer:
+    dispose((disposable_t*)&conn->client_challenge_nonce);
+
+cleanup_key_nonce_buffer:
+    dispose((disposable_t*)&conn->client_key_nonce);
+
+cleanup_public_key_buffer:
+    dispose((disposable_t*)&conn->entity_public_key);
+
+done:
+    return retval;
 }
 
 /**
@@ -75,14 +149,16 @@ static void unauthorized_protocol_connection_dispose(void* disposable)
     /* parameter sanity checking. */
     MODEL_ASSERT(NULL != conn);
 
-    /* keep a copy of the socket. */
-    int sock = conn->ctx.fd;
-
     /* dispose of the socket context. */
     dispose((disposable_t*)&conn->ctx);
 
-    /* close the socket. */
-    close(sock);
+    /* dispose of the crypto buffers. */
+    dispose((disposable_t*)&conn->shared_secret);
+    dispose((disposable_t*)&conn->server_challenge_nonce);
+    dispose((disposable_t*)&conn->server_key_nonce);
+    dispose((disposable_t*)&conn->client_challenge_nonce);
+    dispose((disposable_t*)&conn->client_key_nonce);
+    dispose((disposable_t*)&conn->entity_public_key);
 
     /* clean up the instance. */
     memset(conn, 0, sizeof(unauthorized_protocol_connection_t));
