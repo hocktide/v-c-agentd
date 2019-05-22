@@ -395,6 +395,8 @@ static int unauthorized_protocol_service_write_handshake_request_response(
     /* | --------------------------------------------------- | ------------ | */
 
     /* Generate the server key nonce for this connection. */
+    /* TODO - replace with random service. */
+#if 0
     retval =
         vccrypt_prng_read(
             &conn->svc->prng, &conn->server_key_nonce,
@@ -403,8 +405,13 @@ static int unauthorized_protocol_service_write_handshake_request_response(
     {
         goto done;
     }
+#else
+    memset(conn->server_key_nonce.data, 0, conn->server_key_nonce.size);
+#endif
 
     /* Generate the server challenge nonce for this connection. */
+    /* TODO - replace with random service. */
+#if 0
     retval =
         vccrypt_prng_read(
             &conn->svc->prng, &conn->server_challenge_nonce,
@@ -413,6 +420,11 @@ static int unauthorized_protocol_service_write_handshake_request_response(
     {
         goto done;
     }
+#else
+    memset(
+        conn->server_challenge_nonce.data, 0,
+        conn->server_challenge_nonce.size);
+#endif
 
     /* create key agreement instance. */
     vccrypt_key_agreement_context_t agreement;

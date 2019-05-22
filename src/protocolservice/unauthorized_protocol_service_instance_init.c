@@ -63,12 +63,15 @@ int unauthorized_protocol_service_instance_init(
     }
 
     /* create the prng for this instance. */
+    /* TODO - replace with random service. */
+#if 0
     if (VCCRYPT_STATUS_SUCCESS !=
-        vccrypt_suite_prng_init(&inst->suite, &inst->prng))
+            vccrypt_suite_prng_init(&inst->suite, &inst->prng))
     {
         retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
         goto cleanup_suite;
     }
+#endif
 
     /* create the short hmac options for this instance. */
     /* TODO - eliminate with suite feature. */
@@ -192,7 +195,7 @@ cleanup_short_hmac:
 cleanup_prng:
     dispose((disposable_t*)&inst->prng);
 
-cleanup_suite:
+    /*cleanup_suite:*/
     dispose((disposable_t*)&inst->suite);
 
 done:
