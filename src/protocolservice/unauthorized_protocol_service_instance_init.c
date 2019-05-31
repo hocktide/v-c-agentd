@@ -30,13 +30,14 @@ static int convert_hexstring(
  * \brief Create the unauthorized protocol service instance.
  *
  * \param inst          The service instance to initialize.
+ * \param random        The random socket to use for this instance.
  * \param proto         The protocol socket to use for this instance.
  * \param max_socks     The maximum number of socket connections to accept.
  *
  * \returns a status code indicating success or failure.
  */
 int unauthorized_protocol_service_instance_init(
-    unauthorized_protocol_service_instance_t* inst, int proto,
+    unauthorized_protocol_service_instance_t* inst, int random, int proto,
     size_t max_socks)
 {
     int retval = AGENTD_STATUS_SUCCESS;
@@ -62,14 +63,6 @@ int unauthorized_protocol_service_instance_init(
         goto done;
     }
 
-    /* create the prng for this instance. */
-    if (VCCRYPT_STATUS_SUCCESS !=
-        vccrypt_suite_prng_init(&inst->suite, &inst->prng))
-    {
-        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
-        goto cleanup_suite;
-    }
-
     /* create the short hmac options for this instance. */
     /* TODO - eliminate with suite feature. */
     if (VCCRYPT_STATUS_SUCCESS !=
@@ -78,7 +71,7 @@ int unauthorized_protocol_service_instance_init(
             VCCRYPT_MAC_ALGORITHM_SHA_2_512_256_HMAC))
     {
         retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
-        goto cleanup_prng;
+        goto cleanup_suite;
     }
 
     /* create agent pubkey buffer. */
@@ -125,11 +118,18 @@ int unauthorized_protocol_service_instance_init(
         goto cleanup_authorized_entity_pubkey_buffer;
     }
 
+    /* set the random socket to non-blocking. */
+    if (AGENTD_STATUS_SUCCESS != ipc_make_noblock(random, &inst->random, inst))
+    {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_MAKE_NOBLOCK_FAILURE;
+        goto cleanup_proto;
+    }
+
     /* initialize the IPC event loop instance. */
     if (AGENTD_STATUS_SUCCESS != ipc_event_loop_init(&inst->loop))
     {
         retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_MAKE_NOBLOCK_FAILURE;
-        goto cleanup_proto;
+        goto cleanup_random;
     }
 
     /* on these signals, leave the event loop and shut down gracefully. */
@@ -137,42 +137,43 @@ int unauthorized_protocol_service_instance_init(
     ipc_exit_loop_on_signal(&inst->loop, SIGTERM);
     ipc_exit_loop_on_signal(&inst->loop, SIGQUIT);
 
-    /* create connections. */
+    /* create a single dynamic array and size for all connections so that
+     * we can reference them by offset in constant time.
+     */
+    inst->num_connections = max_socks;
+    inst->connections = (unauthorized_protocol_connection_t*)
+        malloc(max_socks * sizeof(unauthorized_protocol_connection_t));
+    if (NULL == inst->connections)
+    {
+        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
+        goto cleanup_loop;
+    }
+
+    /* clear all connections */
+    memset(
+        inst->connections, 0,
+        max_socks * sizeof(unauthorized_protocol_connection_t));
+
+    /* move connections to free list. */
     for (size_t i = 0; i < max_socks; ++i)
     {
-        /* attempt to create a connection. */
-        unauthorized_protocol_connection_t* conn =
-            (unauthorized_protocol_connection_t*)
-                malloc(sizeof(unauthorized_protocol_connection_t));
-        if (NULL == conn)
-        {
-            retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
-            goto cleanup_connections;
-        }
-
-        /* clear this connection. */
-        memset(conn, 0, sizeof(unauthorized_protocol_connection_t));
-
         /* add this connection to the free list. */
         unauthorized_protocol_connection_push_front(
-            &inst->free_connection_head, conn);
+            &inst->free_connection_head, inst->connections + i);
     }
 
     /* success. */
     retval = AGENTD_STATUS_SUCCESS;
     goto done;
 
-cleanup_connections:
-    for (unauthorized_protocol_connection_t* i = inst->free_connection_head;
-         i != NULL;)
-    {
-        unauthorized_protocol_connection_t* next = i->next;
-        free(i);
-        i = next;
-    }
+    /*cleanup_connections:
+    free(inst->connections); */
 
-    /*cleanup_loop:*/
+cleanup_loop:
     dispose((disposable_t*)&inst->loop);
+
+cleanup_random:
+    dispose((disposable_t*)&inst->random);
 
 cleanup_proto:
     dispose((disposable_t*)&inst->proto);
@@ -188,9 +189,6 @@ cleanup_agent_pubkey_buffer:
 
 cleanup_short_hmac:
     dispose((disposable_t*)&inst->short_hmac);
-
-cleanup_prng:
-    dispose((disposable_t*)&inst->prng);
 
 cleanup_suite:
     dispose((disposable_t*)&inst->suite);
@@ -216,23 +214,20 @@ static void unauthorized_protocol_service_instance_dispose(void* disposable)
     {
         unauthorized_protocol_connection_t* next = i->next;
         dispose((disposable_t*)i);
-        free(i);
         i = next;
     }
 
-    /* dispose of free connections. */
-    for (unauthorized_protocol_connection_t* i = inst->free_connection_head;
-         i != NULL;)
-    {
-        unauthorized_protocol_connection_t* next = i->next;
-        free(i);
-        i = next;
-    }
+    /* free connection array. */
+    memset(
+        inst->connections, 0,
+        inst->num_connections * sizeof(unauthorized_protocol_connection_t));
+    free(inst->connections);
 
     /* dispose of the proto socket. */
-    int protosock = inst->proto.fd;
     dispose((disposable_t*)&inst->proto);
-    close(protosock);
+
+    /* dispose of the random socket. */
+    dispose((disposable_t*)&inst->random);
 
     /* dispose of the loop. */
     dispose((disposable_t*)&inst->loop);
@@ -245,9 +240,6 @@ static void unauthorized_protocol_service_instance_dispose(void* disposable)
     /* dispose of the short hmac options. */
     /* TODO - eliminate with suite feature. */
     dispose((disposable_t*)&inst->short_hmac);
-
-    /* dispose of the prng. */
-    dispose((disposable_t*)&inst->prng);
 
     /* dispose of the crypto suite. */
     dispose((disposable_t*)&inst->suite);

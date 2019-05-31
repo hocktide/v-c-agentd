@@ -48,8 +48,12 @@ protected:
     int datasock;
     int logsock;
     int protosock;
+    int rlogsock;
+    int rprotosock;
     pid_t protopid;
+    pid_t randompid;
     int proto_proc_status;
+    int random_proc_status;
     char* path;
     char wd[16384];
     const char* oldpath;

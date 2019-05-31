@@ -39,8 +39,17 @@ typedef struct unauthorized_protocol_connection
  */
 typedef enum unauthorized_protocol_connection_state
 {
+    /** \brief Connection is closed. */
+    UPCS_CLOSED,
+
     /** \brief Start by reading a handshake request from the client. */
     UPCS_READ_HANDSHAKE_REQ_FROM_CLIENT,
+
+    /** \brief Gather entropy for the handshake process. */
+    UPCS_HANDSHAKE_GATHER_ENTROPY,
+
+    /** \brief Wait for entropy, but the connection has closed. */
+    UPCS_HANDSHAKE_GATHER_ENTROPY_CLOSED,
 
     /** \brief Then write a handshake response to the client. */
     UPCS_WRITE_HANDSHAKE_RESP_TO_CLIENT,
@@ -97,13 +106,15 @@ typedef struct unauthorized_protocol_connection
 struct unauthorized_protocol_service_instance
 {
     disposable_t hdr;
+    unauthorized_protocol_connection_t* connections;
+    size_t num_connections;
     unauthorized_protocol_connection_t* free_connection_head;
     unauthorized_protocol_connection_t* used_connection_head;
+    ipc_socket_context_t random;
     ipc_socket_context_t proto;
     ipc_event_loop_context_t loop;
     allocator_options_t alloc_opts;
     vccrypt_suite_options_t suite;
-    vccrypt_prng_context_t prng;
     vccrypt_mac_options_t short_hmac; /* XXX - eliminate with suite feature. */
     vccrypt_buffer_t agent_pubkey;
     vccrypt_buffer_t agent_privkey;
@@ -156,13 +167,14 @@ void unauthorized_protocol_connection_push_front(
  * \brief Create the unauthorized protocol service instance.
  *
  * \param inst          The service instance to initialize.
+ * \param random        The random socket to use for this instance.
  * \param proto         The protocol socket to use for this instance.
  * \param max_socks     The maximum number of socket connections to accept.
  *
  * \returns a status code indicating success or failure.
  */
 int unauthorized_protocol_service_instance_init(
-    unauthorized_protocol_service_instance_t* inst, int proto,
+    unauthorized_protocol_service_instance_t* inst, int random, int proto,
     size_t max_socks);
 
 /* make this header C++ friendly. */

@@ -48,6 +48,7 @@ enum protocolservice_api_method_enum
  * point for the protocol service.  It handles the details of reacting to events
  * sent over the protocol service socket.
  *
+ * \param randomsock    The socket to the RNG service.
  * \param protosock     The protocol service socket.  The protocol service
  *                      listens for connections on this socket.
  * \param logsock       The logging service socket.  The protocol service logs
@@ -64,7 +65,8 @@ enum protocolservice_api_method_enum
  *          - AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_RUN_FAILURE if running
  *            the protocol service event loop failed.
  */
-int unauthorized_protocol_service_event_loop(int protosock, int logsock);
+int unauthorized_protocol_service_event_loop(
+    int randomsock, int protosock, int logsock);
 
 /**
  * \brief Spawn an unauthorized protocol service process using the provided
@@ -78,6 +80,7 @@ int unauthorized_protocol_service_event_loop(int protosock, int logsock);
  *
  * \param bconf         The bootstrap configuration for this service.
  * \param conf          The configuration for this service.
+ * \param randomsock    Socket used to communicate with the random service.
  * \param logsock       Socket used to communicate with the logger.
  * \param acceptsock    Socket used to receive accepted peers.
  * \param datasock      Socket used to communicate with the data service.
@@ -109,8 +112,8 @@ int unauthorized_protocol_service_event_loop(int protosock, int logsock);
  *        process survived execution (weird!).      
  */
 int unauthorized_protocol_proc(
-    const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,
-    int acceptsock, int datasock, pid_t* protopid, bool runsecure);
+    const bootstrap_config_t* bconf, const agent_config_t* conf, int randomsock,
+    int logsock, int acceptsock, int datasock, pid_t* protopid, bool runsecure);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

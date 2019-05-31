@@ -19,6 +19,7 @@ typedef struct protocol_process
     process_t hdr;
     const bootstrap_config_t* bconf;
     const agent_config_t* conf;
+    int* random_socket;
     int* accept_socket;
     int* data_socket;
     int* log_socket;
@@ -37,6 +38,7 @@ static int supervisor_start_protocol_service(process_t* proc);
  * \param conf                  Agentd configuration to be used to build the
  *                              protocol service.  This configuration must be
  *                              valid for the lifetime of the service.
+ * \param random_socket         The random socket descriptor.
  * \param accept_socket         The accept socket descriptor.
  * \param data_socket           The data socket descriptor.
  * \param log_socket            The log socket descriptor.
@@ -47,8 +49,8 @@ static int supervisor_start_protocol_service(process_t* proc);
  */
 int supervisor_create_protocol_service(
     process_t** svc, const bootstrap_config_t* bconf,
-    const agent_config_t* conf, int* accept_socket, int* data_socket,
-    int* log_socket)
+    const agent_config_t* conf, int* random_socket, int* accept_socket,
+    int* data_socket, int* log_socket)
 {
     int retval;
 
@@ -67,6 +69,7 @@ int supervisor_create_protocol_service(
     protocol_proc->hdr.init_method = &supervisor_start_protocol_service;
     protocol_proc->bconf = bconf;
     protocol_proc->conf = conf;
+    protocol_proc->random_socket = random_socket;
     protocol_proc->accept_socket = accept_socket;
     protocol_proc->data_socket = data_socket;
     protocol_proc->log_socket = log_socket;
@@ -97,12 +100,13 @@ static int supervisor_start_protocol_service(process_t* proc)
     TRY_OR_FAIL(
         unauthorized_protocol_proc(
             protocol_proc->bconf, protocol_proc->conf,
-            *protocol_proc->log_socket, *protocol_proc->accept_socket,
-            *protocol_proc->data_socket,
+            *protocol_proc->random_socket, *protocol_proc->log_socket,
+            *protocol_proc->accept_socket, *protocol_proc->data_socket,
             &protocol_proc->hdr.process_id, true),
         done);
 
     /* if successful, the child process owns the sockets. */
+    *protocol_proc->random_socket = -1;
     *protocol_proc->log_socket = -1;
     *protocol_proc->accept_socket = -1;
     *protocol_proc->data_socket = -1;
@@ -120,6 +124,13 @@ done:
 static void supervisor_dispose_protocol_service(void* disposable)
 {
     protocol_process_t* protocol_proc = (protocol_process_t*)disposable;
+
+    /* clean up the random socket if valid. */
+    if (*protocol_proc->random_socket > 0)
+    {
+        close(*protocol_proc->random_socket);
+        *protocol_proc->random_socket = -1;
+    }
 
     /* clean up the accept socket if valid. */
     if (*protocol_proc->accept_socket > 0)

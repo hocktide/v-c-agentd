@@ -112,6 +112,12 @@ extern "C" {
 #define AGENTD_ERROR_PROTOCOLSERVICE_UNAUTHORIZED \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_PROTOCOL, 0x0010U)
 
+/**
+ * \brief An error occurred when attempting to get random data.
+ */
+#define AGENTD_ERROR_PROTOCOLSERVICE_PRNG_REQUEST_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_PROTOCOL, 0x0011U)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

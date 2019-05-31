@@ -18,6 +18,26 @@ extern "C" {
 #include <agentd/process.h>
 
 /**
+ * \brief Create the random service as a process that can be started.
+ *
+ * \param svc                   Pointer to the pointer to receive the process
+ *                              descriptor for the protocol service.
+ * \param bconf                 Agentd bootstrap config for this service.
+ * \param conf                  Agentd configuration to be used to build the
+ *                              protocol service.  This configuration must be
+ *                              valid for the lifetime of the service.
+ * \param log_socket            The log socket descriptor.
+ * \param proto_random_socket   The random socket descriptor for the proto svc.
+ *
+ * \returns a status indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - a non-zero error code on failure.
+ */
+int supervisor_create_random_service(
+    process_t** svc, const bootstrap_config_t* bconf,
+    const agent_config_t* conf, int* log_socket, int* proto_random_socket);
+
+/**
  * \brief Create the listener service as a process that can be started.
  *
  * \param svc                   Pointer to the pointer to receive the process
@@ -94,6 +114,7 @@ int supervisor_create_data_service_for_consensus_service(
  * \param conf                  Agentd configuration to be used to build the
  *                              protocol service.  This configuration must be
  *                              valid for the lifetime of the service.
+ * \param random_socket         The random socket descriptor.
  * \param accept_socket         The accept socket descriptor.
  * \param data_socket           The data socket descriptor.
  * \param log_socket            The log socket descriptor.
@@ -104,8 +125,8 @@ int supervisor_create_data_service_for_consensus_service(
  */
 int supervisor_create_protocol_service(
     process_t** svc, const bootstrap_config_t* bconf,
-    const agent_config_t* conf, int* accept_socket, int* data_socket,
-    int* log_socket);
+    const agent_config_t* conf, int* random_socket, int* accept_socket,
+    int* data_socket, int* log_socket);
 
 /**
  * \brief Create the consensus service as a process that can be started.

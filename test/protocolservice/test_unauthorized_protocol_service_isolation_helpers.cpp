@@ -7,6 +7,7 @@
  */
 
 #include <agentd/protocolservice.h>
+#include <agentd/randomservice.h>
 #include <vpr/allocator/malloc_allocator.h>
 
 #include "test_unauthorized_protocol_service_isolation.h"
@@ -140,6 +141,7 @@ void unauthorized_protocol_service_isolation_test::SetUp()
 
     /* log to standard error. */
     logsock = dup(STDERR_FILENO);
+    rlogsock = dup(STDERR_FILENO);
 
     /* create the socket pair for the datasock. */
     int datasock_srv;
@@ -156,10 +158,15 @@ void unauthorized_protocol_service_isolation_test::SetUp()
     memset(&conf, 0, sizeof(conf));
     conf.hdr.dispose = &config_dispose;
 
+    /* spawn the random service process. */
+    random_proc_status =
+        randomservice_proc(
+            &bconf, &conf, rlogsock, &rprotosock, &randompid, false);
+
     /* spawn the unauthorized protocol service process. */
     proto_proc_status =
         unauthorized_protocol_proc(
-            &bconf, &conf, logsock, acceptsock_srv, datasock_srv,
+            &bconf, &conf, rprotosock, logsock, acceptsock_srv, datasock_srv,
             &protopid, false);
 
     /* if the spawn is successful, send the service the other half of a protocol
@@ -182,6 +189,14 @@ void unauthorized_protocol_service_isolation_test::TearDown()
 {
     directory_test_helper::TearDown();
 
+    /* terminate the random service. */
+    if (0 == random_proc_status)
+    {
+        int status = 0;
+        kill(randompid, SIGTERM);
+        waitpid(randompid, &status, 0);
+    }
+
     /* terminate the unauthorized protocol service process. */
     if (0 == proto_proc_status)
     {
@@ -198,6 +213,7 @@ void unauthorized_protocol_service_isolation_test::TearDown()
     dispose((disposable_t*)&conf);
     dispose((disposable_t*)&bconf);
     close(logsock);
+    close(rlogsock);
     close(datasock);
     close(acceptsock);
     free(path);

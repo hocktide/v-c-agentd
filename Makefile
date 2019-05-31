@@ -39,7 +39,8 @@ DIRS=$(SRCDIR) $(SRCDIR)/agentd $(SRCDIR)/bootstrap_config \
     $(SRCDIR)/command $(SRCDIR)/commandline $(SRCDIR)/config \
     $(SRCDIR)/dataservice $(SRCDIR)/listenservice $(SRCDIR)/inet $(SRCDIR)/ipc \
     $(SRCDIR)/path $(SRCDIR)/privsep $(SRCDIR)/process \
-    $(SRCDIR)/protocolservice $(SRCDIR)/string $(SRCDIR)/supervisor
+    $(SRCDIR)/protocolservice $(SRCDIR)/randomservice $(SRCDIR)/string \
+    $(SRCDIR)/supervisor
 SOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.c))
 YACCSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.y))
 LEXSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.l))
@@ -52,7 +53,7 @@ TESTDIR=$(CURDIR)/test
 TESTDIRS=$(TESTDIR) $(TESTDIR)/bitcap $(TESTDIR)/bootstrap_config \
     $(TESTDIR)/commandline $(TESTDIR)/config $(TESTDIR)/dataservice \
     $(TESTDIR)/ipc $(TESTDIR)/path $(TESTDIR)/protocolservice \
-    $(TESTDIR)/status_codes $(TESTDIR)/string
+    $(TESTDIR)/randomservice $(TESTDIR)/status_codes $(TESTDIR)/string
 TEST_BUILD_DIR=$(HOST_CHECKED_BUILD_DIR)/test
 TEST_DIRS=$(filter-out $(TESTDIR), \
     $(patsubst $(TESTDIR)/%,$(TEST_BUILD_DIR)/%,$(TESTDIRS)))
