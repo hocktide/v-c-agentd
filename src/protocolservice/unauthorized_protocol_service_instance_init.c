@@ -63,24 +63,13 @@ int unauthorized_protocol_service_instance_init(
         goto done;
     }
 
-    /* create the short hmac options for this instance. */
-    /* TODO - eliminate with suite feature. */
-    if (VCCRYPT_STATUS_SUCCESS !=
-        vccrypt_mac_options_init(
-            &inst->short_hmac, inst->suite.alloc_opts,
-            VCCRYPT_MAC_ALGORITHM_SHA_2_512_256_HMAC))
-    {
-        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
-        goto cleanup_suite;
-    }
-
     /* create agent pubkey buffer. */
     if (VCCRYPT_STATUS_SUCCESS !=
         vccrypt_suite_buffer_init_for_auth_key_agreement_public_key(
             &inst->suite, &inst->agent_pubkey))
     {
         retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
-        goto cleanup_short_hmac;
+        goto cleanup_suite;
     }
 
     /* create agent privkey buffer. */
@@ -187,9 +176,6 @@ cleanup_agent_privkey_buffer:
 cleanup_agent_pubkey_buffer:
     dispose((disposable_t*)&inst->agent_pubkey);
 
-cleanup_short_hmac:
-    dispose((disposable_t*)&inst->short_hmac);
-
 cleanup_suite:
     dispose((disposable_t*)&inst->suite);
 
@@ -236,10 +222,6 @@ static void unauthorized_protocol_service_instance_dispose(void* disposable)
     dispose((disposable_t*)&inst->authorized_entity_pubkey);
     dispose((disposable_t*)&inst->agent_privkey);
     dispose((disposable_t*)&inst->agent_pubkey);
-
-    /* dispose of the short hmac options. */
-    /* TODO - eliminate with suite feature. */
-    dispose((disposable_t*)&inst->short_hmac);
 
     /* dispose of the crypto suite. */
     dispose((disposable_t*)&inst->suite);

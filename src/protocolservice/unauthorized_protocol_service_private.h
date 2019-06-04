@@ -115,7 +115,6 @@ struct unauthorized_protocol_service_instance
     ipc_event_loop_context_t loop;
     allocator_options_t alloc_opts;
     vccrypt_suite_options_t suite;
-    vccrypt_mac_options_t short_hmac; /* XXX - eliminate with suite feature. */
     vccrypt_buffer_t agent_pubkey;
     vccrypt_buffer_t agent_privkey;
     vccrypt_buffer_t authorized_entity_pubkey;

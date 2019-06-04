@@ -20,9 +20,6 @@ void private_command_protocolservice(bootstrap_config_t* UNUSED(bconf))
 {
     /* register the Velo V1 crypto suite. */
     vccrypt_suite_register_velo_v1();
-    /* TODO - register sha-512/256 until the short hmac suite feature can be
-     * merged into agentd. */
-    vccrypt_mac_register_SHA_2_512_256_HMAC();
 
     /* run the event loop for the protocol service. */
     int retval =

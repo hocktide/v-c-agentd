@@ -484,7 +484,7 @@ static int unauthorized_protocol_service_write_handshake_request_response(
     int32_t status = htonl(AGENTD_STATUS_SUCCESS);
     size_t payload_size =
         sizeof(request_id) + sizeof(offset) + sizeof(status) + sizeof(protocol_version) + sizeof(crypto_suite) + 16 /* agent id */
-        + conn->svc->agent_pubkey.size + conn->server_key_nonce.size + conn->server_challenge_nonce.size + conn->svc->short_hmac.mac_size;
+        + conn->svc->agent_pubkey.size + conn->server_key_nonce.size + conn->server_challenge_nonce.size + conn->svc->suite.mac_short_opts.mac_size;
 
     /* Create the response packet payload buffer. */
     vccrypt_buffer_t payload;
@@ -524,7 +524,8 @@ static int unauthorized_protocol_service_write_handshake_request_response(
     /* create an HMAC instance. */
     vccrypt_mac_context_t mac;
     retval =
-        vccrypt_mac_init(&conn->svc->short_hmac, &mac, &conn->shared_secret);
+        vccrypt_suite_mac_short_init(
+            &conn->svc->suite, &mac, &conn->shared_secret);
     if (VCCRYPT_STATUS_SUCCESS != retval)
     {
         goto cleanup_payload;
@@ -548,11 +549,12 @@ static int unauthorized_protocol_service_write_handshake_request_response(
     }
 
     /* create buffer for holding mac output. */
+    /* TODO - there should be a suite buffer init method for this. */
     vccrypt_buffer_t mac_buffer;
     retval =
         vccrypt_buffer_init(
             &mac_buffer, &conn->svc->alloc_opts,
-            conn->svc->short_hmac.mac_size);
+            conn->svc->suite.mac_short_opts.mac_size);
     if (VCCRYPT_STATUS_SUCCESS != retval)
     {
         goto cleanup_mac;
