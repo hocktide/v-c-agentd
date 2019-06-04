@@ -6,6 +6,8 @@
  * \copyright 2019 Velo-Payments, Inc.  All rights reserved.
  */
 
+#include <vpr/allocator/malloc_allocator.h>
+
 #include "test_ipc.h"
 
 using namespace std;
@@ -15,6 +17,20 @@ using namespace std;
  */
 void ipc_test::SetUp()
 {
+    /* register the Velo V1 crypto suite. */
+    vccrypt_suite_register_velo_v1();
+
+    /* initialize the malloc allocator. */
+    malloc_allocator_options_init(&alloc_opts);
+
+    /* initialize the crypto suite. */
+    int retval =
+        vccrypt_suite_options_init(&suite, &alloc_opts, VCCRYPT_SUITE_VELO_V1);
+    if (0 == retval)
+    {
+        suite_configured = true;
+    }
+
     /* by default, we run in blocking mode. */
     nonblockdatasock_configured = false;
 }
@@ -29,6 +45,14 @@ void ipc_test::TearDown()
         dispose((disposable_t*)&nonblockdatasock);
         nonblockdatasock_configured = false;
     }
+
+    if (suite_configured)
+    {
+        dispose((disposable_t*)&suite);
+        suite_configured = false;
+    }
+
+    dispose((disposable_t*)&alloc_opts);
 }
 
 /**

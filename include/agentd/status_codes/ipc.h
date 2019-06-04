@@ -160,6 +160,18 @@ extern "C" {
 #define AGENTD_ERROR_IPC_ACCEPT_NOBLOCK_FAILURE \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_IPC, 0x0018U)
 
+/**
+ * \brief General crypto failure in IPC request.
+ */
+#define AGENTD_ERROR_IPC_CRYPTO_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_IPC, 0x0019U)
+
+/**
+ * \brief An auth packet could not be authorized.
+ */
+#define AGENTD_ERROR_IPC_UNAUTHORIZED_PACKET \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_IPC, 0x001AU)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

@@ -41,6 +41,9 @@ protected:
     ipc_event_loop_context_t loop;
     std::function<void()> onRead;
     std::function<void()> onWrite;
+    allocator_options_t alloc_opts;
+    vccrypt_suite_options_t suite;
+    bool suite_configured;
 };
 
 #endif /*TEST_IPC_HEADER_GUARD*/

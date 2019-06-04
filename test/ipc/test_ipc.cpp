@@ -1434,3 +1434,120 @@ TEST_F(ipc_test, ipc_read_int64_noblock_success)
     close(lhs);
     close(rhs);
 }
+
+/**
+ * \brief It is possible to read an authed packet from a blocking socket.
+ */
+TEST_F(ipc_test, ipc_read_authed_block_success)
+{
+    int lhs, rhs;
+    const char TEST_STRING[] = "This is a test.";
+    void* str = nullptr;
+    uint32_t str_size = 0;
+    constexpr size_t ENC_PAYLOAD_SIZE =
+        sizeof(uint8_t) +  //type
+        sizeof(uint32_t) +  //size
+        32 +  //hmac
+        15;  //string length
+    char TEST_PAYLOAD[ENC_PAYLOAD_SIZE] = { 0 };
+    uint64_t iv = 12345;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* create key for stream cipher. */
+    /* TODO - there should be a suite method for this. */
+    vccrypt_buffer_t key;
+    ASSERT_EQ(
+        0,
+        vccrypt_buffer_init(
+            &key, &alloc_opts, suite.stream_cipher_opts.key_size));
+
+    /* set a null key. */
+    memset(key.data, 0, key.size);
+
+    /* create a stream cipher instance. */
+    vccrypt_stream_context_t stream;
+    ASSERT_EQ(0, vccrypt_suite_stream_init(&suite, &stream, &key));
+
+    /* create a MAC instance. */
+    vccrypt_mac_context_t mac;
+    ASSERT_EQ(0, vccrypt_suite_mac_short_init(&suite, &mac, &key));
+
+    /* create a MAC digest buffer. */
+    /* TODO - there should be a suite method for this. */
+    vccrypt_buffer_t digest;
+    ASSERT_EQ(0,
+        vccrypt_buffer_init(
+            &digest, &alloc_opts, suite.mac_short_opts.mac_size));
+
+    /* continue encryption from the current iv, offset 0. */
+    ASSERT_EQ(
+        0,
+        vccrypt_stream_continue_encryption(&stream, &iv, sizeof(iv), 0));
+
+    /* write the packet type to the buffer. */
+    uint8_t type = IPC_DATA_TYPE_AUTHED_PACKET;
+    size_t offset = 0;
+    ASSERT_EQ(0,
+        vccrypt_stream_encrypt(
+            &stream, &type, sizeof(type), TEST_PAYLOAD, &offset));
+    /* digest the packet type. */
+    ASSERT_EQ(0,
+        vccrypt_mac_digest(
+            &mac, (const uint8_t*)TEST_PAYLOAD + offset - sizeof(type),
+            sizeof(type)));
+
+    /* write the payload size to the buffer. */
+    uint32_t payload_size = htonl(15);
+    ASSERT_EQ(0,
+        vccrypt_stream_encrypt(
+            &stream, &payload_size, sizeof(payload_size), TEST_PAYLOAD,
+            &offset));
+    /* digest the payload size. */
+    ASSERT_EQ(0,
+        vccrypt_mac_digest(
+            &mac, (const uint8_t*)TEST_PAYLOAD + offset - sizeof(payload_size),
+            sizeof(payload_size)));
+
+    /* write the payload to the buffer, skipping the hmac. */
+    ASSERT_EQ(0,
+        vccrypt_stream_encrypt(
+            &stream, TEST_STRING, 15, TEST_PAYLOAD + 32, &offset));
+    /* digest the payload. */
+    ASSERT_EQ(0,
+        vccrypt_mac_digest(
+            &mac, (const uint8_t*)TEST_PAYLOAD + 32 + offset - 15, 15));
+
+    /* finalize the mac to the test payload. */
+    ASSERT_EQ(0, vccrypt_mac_finalize(&mac, &digest));
+    memcpy(
+        TEST_PAYLOAD + sizeof(uint8_t) + sizeof(uint32_t), digest.data,
+        digest.size);
+
+    /* write the payload to the lhs socket. */
+    ASSERT_EQ((ssize_t)sizeof(TEST_PAYLOAD),
+        write(lhs, TEST_PAYLOAD, sizeof(TEST_PAYLOAD)));
+
+    /* read an authed packet from the rhs socket. */
+    ASSERT_EQ(0,
+        ipc_read_authed_data_block(rhs, iv, &str, &str_size, &suite, &key));
+
+    /* the data is valid. */
+    ASSERT_NE(nullptr, str);
+
+    /* the string size is the length of our string. */
+    ASSERT_EQ(strlen(TEST_STRING), str_size);
+
+    /* the data is a copy of the test string. */
+    EXPECT_EQ(0, memcmp(TEST_STRING, str, str_size));
+
+    /* clean up. */
+    free(str);
+    close(lhs);
+    close(rhs);
+    dispose((disposable_t*)&key);
+    dispose((disposable_t*)&stream);
+    dispose((disposable_t*)&mac);
+    dispose((disposable_t*)&digest);
+}
