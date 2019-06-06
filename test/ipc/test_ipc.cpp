@@ -1603,3 +1603,76 @@ TEST_F(ipc_test, ipc_write_authed_block_success)
     close(rhs);
     dispose((disposable_t*)&key);
 }
+
+/**
+ * \brief It is possible to read an authed packet from a non-blocking socket
+ * that was written by ipc_write_authed_block.
+ */
+TEST_F(ipc_test, ipc_read_authed_noblock_success)
+{
+    int lhs, rhs;
+    const char TEST_STRING[] = "This is a test.";
+    void* str = nullptr;
+    uint32_t str_size = 0;
+    uint64_t iv = 12345;
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* create key for stream cipher. */
+    /* TODO - there should be a suite method for this. */
+    vccrypt_buffer_t key;
+    ASSERT_EQ(
+        0,
+        vccrypt_buffer_init(
+            &key, &alloc_opts, suite.stream_cipher_opts.key_size));
+
+    /* set a null key. */
+    memset(key.data, 0, key.size);
+
+    /* writing to the socket should succeed. */
+    ASSERT_EQ(
+        0,
+        ipc_write_authed_data_block(
+            lhs, iv, TEST_STRING, strlen(TEST_STRING), &suite, &key));
+
+    int read_resp = AGENTD_ERROR_IPC_WOULD_BLOCK;
+
+    /* read an authed packet from the rhs socket. */
+    nonblockmode(
+        rhs,
+        /* onRead */
+        [&]() {
+            if (AGENTD_ERROR_IPC_WOULD_BLOCK == read_resp)
+            {
+                read_resp =
+                    ipc_read_authed_data_noblock(
+                        &nonblockdatasock, iv, &str, &str_size, &suite, &key);
+
+                if (read_resp != AGENTD_ERROR_IPC_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite */
+        [&]() {
+        });
+
+    /* read should have succeeded. */
+    ASSERT_EQ(0, read_resp);
+    /* the data is valid. */
+    ASSERT_NE(nullptr, str);
+
+    /* the string size is the length of our string. */
+    ASSERT_EQ(strlen(TEST_STRING), str_size);
+
+    /* the data is a copy of the test string. */
+    EXPECT_EQ(0, memcmp(TEST_STRING, str, str_size));
+
+    /* clean up. */
+    free(str);
+    close(lhs);
+    close(rhs);
+    dispose((disposable_t*)&key);
+}
