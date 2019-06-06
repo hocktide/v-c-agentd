@@ -279,6 +279,13 @@ int ipc_read_authed_data_noblock(
         goto cleanup_val;
     }
 
+    /* finally, drain the packet from this buffer. */
+    if (0 != evbuffer_drain(sock_impl->readbuf, packet_size))
+    {
+        retval = AGENTD_ERROR_IPC_READ_BUFFER_DRAIN_FAILURE;
+        goto cleanup_val;
+    }
+
     /* success. */
     retval = AGENTD_STATUS_SUCCESS;
     goto cleanup_digest;
