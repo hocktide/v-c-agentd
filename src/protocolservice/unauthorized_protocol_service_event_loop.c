@@ -26,10 +26,12 @@ static void unauthorized_protocol_service_ipc_read(
     ipc_socket_context_t* ctx, int event_flags, void* user_context);
 static void unauthorized_protocol_service_close_connection(
     unauthorized_protocol_connection_t* conn);
-static void unauthorized_protocol_service_protosock_cb_write(
+static void unauthorized_protocol_service_connection_write(
     ipc_socket_context_t* ctx, int event_flags, void* user_context);
-static void unauthorized_protocol_service_handshake_req_read(
+static void unauthorized_protocol_service_connection_read(
     ipc_socket_context_t* ctx, int event_flags, void* user_context);
+static void unauthorized_protocol_service_connection_handshake_req_read(
+    unauthorized_protocol_connection_t* conn);
 static void unauthorized_protocol_service_random_read(
     ipc_socket_context_t* ctx, int event_flags, void* user_context);
 static void unauthorized_protocol_service_random_write(
@@ -184,7 +186,7 @@ static void unauthorized_protocol_service_ipc_read(
 
     /* set the read callback for this connection. */
     ipc_set_readcb_noblock(
-        &conn->ctx, &unauthorized_protocol_service_handshake_req_read,
+        &conn->ctx, &unauthorized_protocol_service_connection_read,
         &conn->svc->loop);
 
     /* this is now a used connection. */
@@ -193,20 +195,42 @@ static void unauthorized_protocol_service_ipc_read(
 }
 
 /**
- * \brief Read the initial handshake request.
+ * \brief Read data from the connection
  *
  * \param ctx           The non-blocking socket context.
  * \param event_flags   The event that triggered this callback.
  * \param user_context  The user context for this proto socket.
  */
-static void unauthorized_protocol_service_handshake_req_read(
-    ipc_socket_context_t* ctx, int UNUSED(event_flags),
+static void unauthorized_protocol_service_connection_read(
+    ipc_socket_context_t* UNUSED(ctx), int UNUSED(event_flags),
     void* user_context)
 {
     /* get the instance from the user context. */
     unauthorized_protocol_connection_t* conn =
         (unauthorized_protocol_connection_t*)user_context;
 
+    /* dispatch based on the current connection state. */
+    switch (conn->state)
+    {
+        case UPCS_READ_HANDSHAKE_REQ_FROM_CLIENT:
+            unauthorized_protocol_service_connection_handshake_req_read(conn);
+            break;
+
+        default:
+            /* TODO - handle dispatch for other states. */
+            break;
+    }
+}
+
+/**
+ * \brief Attempt to read a handshake request from the client.
+ *
+ * \param conn      The connection from which this handshake request should be
+ *                  read.
+ */
+static void unauthorized_protocol_service_connection_handshake_req_read(
+    unauthorized_protocol_connection_t* conn)
+{
     void* req = NULL;
     uint32_t size = 0U;
     uint32_t request_id;
@@ -215,7 +239,7 @@ static void unauthorized_protocol_service_handshake_req_read(
     uint32_t crypto_suite;
 
     /* attempt to read the request packet. */
-    int retval = ipc_read_data_noblock(ctx, &req, &size);
+    int retval = ipc_read_data_noblock(&conn->ctx, &req, &size);
     if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
     {
         return;
@@ -583,7 +607,7 @@ static int unauthorized_protocol_service_write_handshake_request_response(
 
     /* set the write callback. */
     ipc_set_writecb_noblock(
-        &conn->ctx, &unauthorized_protocol_service_protosock_cb_write,
+        &conn->ctx, &unauthorized_protocol_service_connection_write,
         &conn->svc->loop);
 
     /* success. */
@@ -638,7 +662,7 @@ static void unauthorized_protocol_service_error_response(
 
     /* set the write callback for the protocol socket. */
     ipc_set_writecb_noblock(
-        &conn->ctx, &unauthorized_protocol_service_protosock_cb_write,
+        &conn->ctx, &unauthorized_protocol_service_connection_write,
         &conn->svc->loop);
 }
 
@@ -651,7 +675,7 @@ static void unauthorized_protocol_service_error_response(
  * \param user_context  The user context for this callback (expected: a protocol
  *                      connection).
  */
-static void unauthorized_protocol_service_protosock_cb_write(
+static void unauthorized_protocol_service_connection_write(
     ipc_socket_context_t* ctx, int UNUSED(event_flags), void* user_context)
 {
     /* get the instance from the user context. */
