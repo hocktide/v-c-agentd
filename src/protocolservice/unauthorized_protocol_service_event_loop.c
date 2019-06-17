@@ -32,6 +32,8 @@ static void unauthorized_protocol_service_connection_read(
     ipc_socket_context_t* ctx, int event_flags, void* user_context);
 static void unauthorized_protocol_service_connection_handshake_req_read(
     unauthorized_protocol_connection_t* conn);
+static void unauthorized_protocol_service_connection_handshake_ack_read(
+    unauthorized_protocol_connection_t* conn);
 static void unauthorized_protocol_service_random_read(
     ipc_socket_context_t* ctx, int event_flags, void* user_context);
 static void unauthorized_protocol_service_random_write(
@@ -44,7 +46,7 @@ static int unauthorized_protocol_service_write_handshake_request_response(
     unauthorized_protocol_connection_t* conn);
 static void unauthorized_protocol_service_error_response(
     unauthorized_protocol_connection_t* conn, int request_id, int status,
-    uint32_t offset);
+    uint32_t offset, bool encrypted);
 
 /**
  * \brief Event loop for the unauthorized protocol service.  This is the entry
@@ -212,8 +214,14 @@ static void unauthorized_protocol_service_connection_read(
     /* dispatch based on the current connection state. */
     switch (conn->state)
     {
+        /* we expect to read a handshake request from the client. */
         case UPCS_READ_HANDSHAKE_REQ_FROM_CLIENT:
             unauthorized_protocol_service_connection_handshake_req_read(conn);
+            break;
+
+        /* we expect to read a handshake acknowledgement from the client. */
+        case UPCS_READ_HANDSHAKE_ACK_FROM_CLIENT:
+            unauthorized_protocol_service_connection_handshake_ack_read(conn);
             break;
 
         default:
@@ -267,7 +275,7 @@ static void unauthorized_protocol_service_connection_handshake_req_read(
     if (size != expected_size)
     {
         unauthorized_protocol_service_error_response(
-            conn, 0, AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST, 0);
+            conn, 0, AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST, 0, false);
         goto cleanup_data;
     }
 
@@ -278,7 +286,7 @@ static void unauthorized_protocol_service_connection_handshake_req_read(
     if (UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE != request_id)
     {
         unauthorized_protocol_service_error_response(
-            conn, 0, AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST, 0);
+            conn, 0, AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST, 0, false);
         goto cleanup_data;
     }
 
@@ -290,7 +298,7 @@ static void unauthorized_protocol_service_connection_handshake_req_read(
     {
         unauthorized_protocol_service_error_response(
             conn, UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE,
-            AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST, 0);
+            AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST, 0, false);
         goto cleanup_data;
     }
 
@@ -302,7 +310,7 @@ static void unauthorized_protocol_service_connection_handshake_req_read(
     {
         unauthorized_protocol_service_error_response(
             conn, UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE,
-            AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST, 0);
+            AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST, 0, false);
         goto cleanup_data;
     }
 
@@ -314,7 +322,7 @@ static void unauthorized_protocol_service_connection_handshake_req_read(
     {
         unauthorized_protocol_service_error_response(
             conn, UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE,
-            AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST, 0);
+            AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST, 0, false);
         goto cleanup_data;
     }
 
@@ -338,7 +346,7 @@ static void unauthorized_protocol_service_connection_handshake_req_read(
     {
         unauthorized_protocol_service_error_response(
             conn, UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE,
-            AGENTD_ERROR_PROTOCOLSERVICE_UNAUTHORIZED, 0);
+            AGENTD_ERROR_PROTOCOLSERVICE_UNAUTHORIZED, 0, false);
         goto cleanup_data;
     }
 
@@ -349,11 +357,78 @@ static void unauthorized_protocol_service_connection_handshake_req_read(
     {
         unauthorized_protocol_service_error_response(
             conn, UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE,
-            AGENTD_ERROR_PROTOCOLSERVICE_PRNG_REQUEST_FAILURE, 0);
+            AGENTD_ERROR_PROTOCOLSERVICE_PRNG_REQUEST_FAILURE, 0, false);
         goto cleanup_data;
     }
 
     /* success */
+
+cleanup_data:
+    memset(req, 0, size);
+    free(req);
+}
+
+/**
+ * \brief Attempt to the client challenge response acknowledgement.
+ *
+ * \param conn      The connection from which this ack should be read.
+ */
+static void unauthorized_protocol_service_connection_handshake_ack_read(
+    unauthorized_protocol_connection_t* conn)
+{
+    void* req = NULL;
+    uint32_t size = 0U;
+
+    /* attempt to read the ack packet. */
+    int retval =
+        ipc_read_authed_data_noblock(
+            &conn->ctx, conn->client_iv, &req, &size, &conn->svc->suite,
+            &conn->shared_secret);
+    if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
+    {
+        return;
+    }
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        unauthorized_protocol_service_error_response(
+            conn, 0, AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST, 0, true);
+        return;
+    }
+
+    /* from here on, we are committed.  Don't call this callback again. */
+    ++conn->client_iv;
+    ipc_set_readcb_noblock(&conn->ctx, NULL, &conn->svc->loop);
+
+    /* Build the ack payload. */
+    uint32_t payload[3] = {
+        htonl(UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_ACKNOWLEDGE),
+        htonl(AGENTD_STATUS_SUCCESS),
+        htonl(0)
+    };
+
+    /* attempt to write this payload to the socket. */
+    retval =
+        ipc_write_authed_data_noblock(
+            &conn->ctx, conn->server_iv, payload, sizeof(payload),
+            &conn->svc->suite, &conn->shared_secret);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        unauthorized_protocol_service_close_connection(conn);
+        goto cleanup_data;
+    }
+
+    /* Update the server iv on success. */
+    ++conn->server_iv;
+
+    /* set the updated connection state. */
+    conn->state = UPCS_WRITE_HANDSHAKE_ACK_TO_CLIENT;
+
+    /* set the write callback. */
+    ipc_set_writecb_noblock(
+        &conn->ctx, &unauthorized_protocol_service_connection_write,
+        &conn->svc->loop);
+
+    /* success. */
 
 cleanup_data:
     memset(req, 0, size);
@@ -610,6 +685,10 @@ static int unauthorized_protocol_service_write_handshake_request_response(
         &conn->ctx, &unauthorized_protocol_service_connection_write,
         &conn->svc->loop);
 
+    /* set the IVs. */
+    conn->client_iv = 0x0000000000000001UL;
+    conn->server_iv = 0x8000000000000001UL;
+
     /* success. */
     retval = AGENTD_STATUS_SUCCESS;
 
@@ -640,17 +719,32 @@ done:
  * \param request_id    The id of the request that caused the error.
  * \param status        The status code of the error.
  * \param offset        The request offset that caused the error.
+ * \param encrypted     Set to true if this packet should be encrypted.
  */
 static void unauthorized_protocol_service_error_response(
     unauthorized_protocol_connection_t* conn, int request_id, int status,
-    uint32_t offset)
+    uint32_t offset, bool encrypted)
 {
     int retval = AGENTD_STATUS_SUCCESS;
 
     uint32_t payload[3] = { htonl(request_id), htonl(status), htonl(offset) };
 
     /* attempt to write the response payload to the socket. */
-    retval = ipc_write_data_noblock(&conn->ctx, payload, sizeof(payload));
+    if (encrypted)
+    {
+        /* encrypted write. */
+        retval =
+            ipc_write_authed_data_noblock(
+                &conn->ctx, conn->server_iv, payload, sizeof(payload),
+                &conn->svc->suite, &conn->shared_secret);
+    }
+    else
+    {
+        /* unencrypted write. */
+        retval = ipc_write_data_noblock(&conn->ctx, payload, sizeof(payload));
+    }
+
+    /* verify the status of writing this error response. */
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         unauthorized_protocol_service_close_connection(conn);
@@ -697,9 +791,30 @@ static void unauthorized_protocol_service_connection_write(
     }
     else
     {
+        /* we are done writing to this socket. */
+        ipc_set_writecb_noblock(
+            &conn->ctx, NULL, &conn->svc->loop);
+
         /* should we change state? */
         switch (conn->state)
         {
+            /* after writing the handshake response to the client, read the
+             * ack. */
+            case UPCS_WRITE_HANDSHAKE_RESP_TO_CLIENT:
+                conn->state = UPCS_READ_HANDSHAKE_ACK_FROM_CLIENT;
+                ipc_set_readcb_noblock(
+                    &conn->ctx, &unauthorized_protocol_service_connection_read,
+                    &conn->svc->loop);
+                return;
+
+            /* after writing the handshake ack response to the client, close the
+             * connection for now. */
+            case UPCS_WRITE_HANDSHAKE_ACK_TO_CLIENT:
+                unauthorized_protocol_service_close_connection(conn);
+                return;
+
+            /* if we are in a forced unauthorized state, close the
+             * connection. */
             case UPCS_UNAUTHORIZED:
                 unauthorized_protocol_service_close_connection(conn);
                 return;
@@ -832,7 +947,7 @@ static void unauthorized_protocol_service_random_read(
     {
         /* log the error to the socket. */
         unauthorized_protocol_service_error_response(
-            conn, UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE, status, 0);
+            conn, UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE, status, 0, false);
         goto cleanup_resp;
     }
 

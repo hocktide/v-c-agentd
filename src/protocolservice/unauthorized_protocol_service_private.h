@@ -98,6 +98,8 @@ typedef struct unauthorized_protocol_connection
     vccrypt_buffer_t server_key_nonce;
     vccrypt_buffer_t server_challenge_nonce;
     vccrypt_buffer_t shared_secret; /* TODO - move to auth service. */
+    uint64_t client_iv;
+    uint64_t server_iv;
 } unauthorized_protocol_connection_t;
 
 /**

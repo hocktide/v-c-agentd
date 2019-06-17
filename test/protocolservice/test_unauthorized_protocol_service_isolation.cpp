@@ -368,4 +368,152 @@ TEST_F(unauthorized_protocol_service_isolation_test, handshake_request_happy)
 
     dispose((disposable_t*)&client_key_nonce);
     dispose((disposable_t*)&client_challenge_nonce);
+    dispose((disposable_t*)&server_public_key);
+    dispose((disposable_t*)&server_id);
+    dispose((disposable_t*)&shared_secret);
+    dispose((disposable_t*)&server_challenge_nonce);
+}
+
+/**
+ * Test that writing an unencrypted packet after a valid handshake response
+ * causes an error.
+ */
+TEST_F(unauthorized_protocol_service_isolation_test,
+    handshake_response_plaintext_error)
+{
+    uint32_t offset, status;
+
+    vccrypt_buffer_t client_key_nonce;
+    vccrypt_buffer_t client_challenge_nonce;
+    vccrypt_buffer_t server_public_key;
+    vccrypt_buffer_t server_id;
+    vccrypt_buffer_t shared_secret;
+    vccrypt_buffer_t server_challenge_nonce;
+
+    /* we must have a valid crypto suite for this to work. */
+    ASSERT_TRUE(suite_initialized);
+
+    /* write the handshake request to the socket. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_handshake_request_block(
+            protosock, &suite, authorized_entity_id, &client_key_nonce,
+            &client_challenge_nonce));
+
+    /* This should return successfully. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_handshake_request_block(
+            protosock, &suite, &server_id, &client_private_key,
+            &server_public_key, &client_key_nonce,
+            &client_challenge_nonce, &server_challenge_nonce,
+            &shared_secret, &offset, &status));
+
+    /* the offset is always 0 for a handshake response. */
+    EXPECT_EQ(0U, offset);
+
+    /* the status code is AGENTD_STATUS_SUCCESS. */
+    EXPECT_EQ(AGENTD_STATUS_SUCCESS, (int)status);
+
+    /* write a garbage packet. */
+    write(
+        protosock, "test12345678901234567890123456789012345678901234567890", 54);
+
+    /* we'll get back an encrypted error response. */
+    uint8_t* val;
+    uint32_t size;
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        ipc_read_authed_data_block(
+            protosock, 0x8000000000000001UL, (void**)&val, &size,
+            &suite, &shared_secret));
+
+    /* the value should not be NULL. */
+    ASSERT_NE(nullptr, val);
+    /* the size of the payload should be 12 bytes. */
+    ASSERT_EQ(12U, size);
+
+    /* create a response array for convenience. */
+    uint32_t* resparr = (uint32_t*)val;
+
+    /* the request ID should be 0, as the request was malformed. */
+    EXPECT_EQ(0U, resparr[0]);
+    /* the status code is AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST */
+    EXPECT_EQ(AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST,
+        (int)ntohl(resparr[1]));
+    /* the offset is 0. */
+    EXPECT_EQ(0U, resparr[2]);
+
+    dispose((disposable_t*)&client_key_nonce);
+    dispose((disposable_t*)&client_challenge_nonce);
+    dispose((disposable_t*)&server_public_key);
+    dispose((disposable_t*)&server_id);
+    dispose((disposable_t*)&shared_secret);
+    dispose((disposable_t*)&server_challenge_nonce);
+    free(val);
+}
+
+/**
+ * Test that writing a valid response to the server challenge results in a
+ * successful response packet.
+ */
+TEST_F(unauthorized_protocol_service_isolation_test,
+    handshake_response_happy_path)
+{
+    uint32_t offset, status;
+
+    vccrypt_buffer_t client_key_nonce;
+    vccrypt_buffer_t client_challenge_nonce;
+    vccrypt_buffer_t server_public_key;
+    vccrypt_buffer_t server_id;
+    vccrypt_buffer_t shared_secret;
+    vccrypt_buffer_t server_challenge_nonce;
+
+    /* we must have a valid crypto suite for this to work. */
+    ASSERT_TRUE(suite_initialized);
+
+    /* write the handshake request to the socket. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_handshake_request_block(
+            protosock, &suite, authorized_entity_id, &client_key_nonce,
+            &client_challenge_nonce));
+
+    /* This should return successfully. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_handshake_request_block(
+            protosock, &suite, &server_id, &client_private_key,
+            &server_public_key, &client_key_nonce,
+            &client_challenge_nonce, &server_challenge_nonce,
+            &shared_secret, &offset, &status));
+
+    /* the offset is always 0 for a handshake response. */
+    EXPECT_EQ(0U, offset);
+
+    /* the status code is AGENTD_STATUS_SUCCESS. */
+    EXPECT_EQ(AGENTD_STATUS_SUCCESS, (int)status);
+
+    /* send the handshake ack request. */
+    uint64_t client_iv = 0;
+    uint64_t server_iv = 0;
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_handshake_ack_block(
+            protosock, &suite, &client_iv, &shared_secret,
+            &server_challenge_nonce));
+
+    /* receive the handshake ack response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_handshake_ack_block(
+            protosock, &suite, &server_iv, &shared_secret, &offset,
+            &status));
+
+    /* the status should indicate success. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS, (int)status);
+    /* the offset should be zero. */
+    ASSERT_EQ(0U, offset);
+
+    /* at this point, we have successfully established a secure channel. */
+
+    dispose((disposable_t*)&client_key_nonce);
+    dispose((disposable_t*)&client_challenge_nonce);
+    dispose((disposable_t*)&server_public_key);
+    dispose((disposable_t*)&server_id);
+    dispose((disposable_t*)&shared_secret);
+    dispose((disposable_t*)&server_challenge_nonce);
 }
