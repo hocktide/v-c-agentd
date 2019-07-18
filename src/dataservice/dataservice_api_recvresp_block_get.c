@@ -162,7 +162,7 @@ int dataservice_api_recvresp_block_get(
     /* get the raw data. */
     const uint8_t* bval = (const uint8_t*)(val + 3);
     /* update data size. */
-    dat_size -= 3 * sizeof(uint32_t) + block_packet_size;
+    dat_size -= response_packet_size + block_packet_size;
 
     /* process the node data if the node is specified. */
     if (NULL != node)

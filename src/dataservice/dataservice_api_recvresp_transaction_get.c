@@ -106,6 +106,9 @@ int dataservice_api_recvresp_transaction_get(
         goto done;
     }
 
+    /* there are four IDs. */
+    uint32_t id_arr_size = 4 * 16;
+
     /* set up data size for later. */
     uint32_t dat_size = size;
 
@@ -143,8 +146,8 @@ int dataservice_api_recvresp_transaction_get(
     }
 
     /* if the node size is invalid, return an error code. */
-    /* 4*16 as above sizeof node (key + prev + next + artifact_id) */
-    if (dat_size < 4 * 16)
+    /* id_arr_size as above sizeof node (key + prev + next + artifact_id) */
+    if (dat_size < response_packet_size + id_arr_size)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA;
         goto cleanup_val;
@@ -153,7 +156,7 @@ int dataservice_api_recvresp_transaction_get(
     /* get the raw data. */
     const uint8_t* bval = (const uint8_t*)(val + 3);
     /* update data size. */
-    dat_size -= 3 * sizeof(uint32_t) + 4 * 16;
+    dat_size -= response_packet_size + id_arr_size;
 
     /* process the node data if the node is specified. */
     if (NULL != node)
@@ -178,7 +181,7 @@ int dataservice_api_recvresp_transaction_get(
     }
 
     /* get to the location of the data. */
-    bval += 4 * 16;
+    bval += id_arr_size;
 
     /* allocate memory for the data. */
     *data = malloc(dat_size);
