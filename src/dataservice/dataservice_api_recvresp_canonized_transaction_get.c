@@ -150,7 +150,7 @@ int dataservice_api_recvresp_canonized_transaction_get(
     }
 
     /* if the node size is invalid, return an error code. */
-    /* 4*16 as above sizeof node (key + prev + next + artifact_id + block_id) */
+    /* 5*16 as above sizeof node (key + prev + next + artifact_id + block_id) */
     if (dat_size < response_packet_size + 5 * 16)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA;
