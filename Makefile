@@ -63,8 +63,10 @@ TESTAGENTD=$(HOST_CHECKED_BUILD_DIR)/testagentd
 #platform options
 HOST_RELEASE_BUILD_DIR=$(BUILD_DIR)/host/release
 HOST_CHECKED_BUILD_DIR=$(BUILD_DIR)/host/checked
+HOST_DEBUG_BUILD_DIR=$(BUILD_DIR)/host/debug
 HOST_RELEASE_EXE=$(HOST_RELEASE_BUILD_DIR)/bin/$(EXE_NAME)
 HOST_CHECKED_EXE=$(HOST_CHECKED_BUILD_DIR)/bin/$(EXE_NAME)
+HOST_DEBUG_EXE=$(HOST_DEBUG_BUILD_DIR)/bin/$(EXE_NAME)
 HOST_CHECKED_DIRS=$(filter-out $(SRCDIR), \
     $(patsubst $(SRCDIR)/%,$(HOST_CHECKED_BUILD_DIR)/%,$(DIRS)))
 HOST_CHECKED_COBJECTS= \
@@ -92,6 +94,20 @@ HOST_RELEASE_LEXOBJECTS= \
 HOST_RELEASE_OBJECTS= \
     $(HOST_RELEASE_COBJECTS) $(HOST_RELEASE_YACCOBJECTS) \
     $(HOST_RELEASE_LEXOBJECTS)
+HOST_DEBUG_DIRS=$(filter-out $(SRCDIR), \
+    $(patsubst $(SRCDIR)/%,$(HOST_DEBUG_BUILD_DIR)/%,$(DIRS)))
+HOST_DEBUG_COBJECTS= \
+    $(patsubst %.c,$(HOST_DEBUG_BUILD_DIR)/%.o,$(STRIPPED_SOURCES))
+HOST_DEBUG_YACCOBJECTS= \
+    $(patsubst %.y,$(HOST_DEBUG_BUILD_DIR)/%.tab.o,$(STRIPPED_YACCSOURCES))
+HOST_DEBUG_YACCHEADERS= \
+    $(patsubst %.y,$(HOST_DEBUG_BUILD_DIR)/%.tab.h,$(STRIPPED_YACCSOURCES))
+HOST_DEBUG_LEXOBJECTS= \
+    $(patsubst %.l,$(HOST_DEBUG_BUILD_DIR)/%.yy.o,$(STRIPPED_LEXSOURCES))
+HOST_DEBUG_OBJECTS= \
+    $(HOST_DEBUG_COBJECTS) $(HOST_DEBUG_YACCOBJECTS) \
+    $(HOST_DEBUG_LEXOBJECTS)
+
 
 #report files
 COVERAGE_REPORT_DIR=$(TEST_BUILD_DIR)/coverage-report
@@ -115,6 +131,13 @@ HOST_CHECKED_AR=$(AR)
 HOST_CHECKED_RANLIB=$(RANLIB)
 HOST_CHECKED_LEX=$(TOOLCHAIN_DIR)/host/bin/flex
 HOST_CHECKED_YACC=$(TOOLCHAIN_DIR)/host/bin/bison
+HOST_DEBUG_CC?=$(TOOLCHAIN_DIR)/host/bin/gcc
+HOST_DEBUG_CXX=$(TOOLCHAIN_DIR)/host/bin/g++
+HOST_DEBUG_GCOV?=$(TOOLCHAIN_DIR)/host/bin/gcov
+HOST_DEBUG_AR=$(AR)
+HOST_DEBUG_RANLIB=$(RANLIB)
+HOST_DEBUG_LEX=$(TOOLCHAIN_DIR)/host/bin/flex
+HOST_DEBUG_YACC=$(TOOLCHAIN_DIR)/host/bin/bison
 
 #platform compiler flags
 COMMON_INCLUDES=$(MODEL_CHECK_INCLUDES) $(VCBLOCKCHAIN_CFLAGS) \
@@ -131,16 +154,22 @@ HOST_RELEASE_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_RELEASE_BUILD_DIR) \
 HOST_RELEASE_LEXCOMPAT_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_RELEASE_BUILD_DIR) \
     -fPIC -O2 \
 	-Wno-unused-function -Wno-unused-value -Wno-unused-const-variable
+HOST_DEBUG_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_DEBUG_BUILD_DIR) \
+    -fPIC -O0 -g
+HOST_DEBUG_LEXCOMPAT_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_DEBUG_BUILD_DIR) \
+    -fPIC -O0 -g \
+	-Wno-unused-function -Wno-unused-value -Wno-unused-const-variable
 COMMON_CXXFLAGS=-I $(PWD)/include $(VCBLOCKCHAIN_CFLAGS) -Wall -Werror -Wextra \
     -I $(TOOLCHAIN_DIR)/host/include
 HOST_CHECKED_CXXFLAGS=-std=c++14 $(COMMON_CXXFLAGS) -O0 --coverage
 HOST_RELEASE_CXXFLAGS=-std=c++14 $(COMMON_CXXFLAGS) -O2
+HOST_DEBUG_CXXFLAGS=-std=c++14 $(COMMON_CXXFLAGS) -O2
 TEST_CXXFLAGS=$(HOST_RELEASE_CXXFLAGS) $(COMMON_INCLUDES) -I $(GTEST_DIR) \
      -I $(GTEST_DIR)/include -I $(HOST_CHECKED_BUILD_DIR)
 
 .PHONY: ALL clean vcblockchain-build vcblockchain-test vcblockchain-clean
-.PHONY: agentd-build host.exe.release host.exe.checked test test.agentd
-.PHONY: testreport.agentd
+.PHONY: agentd-build host.exe.release host.exe.checked host.exe.debug
+.PHONY: test test.agentd testreport.agentd
 .PHONY: install agentd-install
 
 MODEL_MAKEFILES?= \
@@ -172,7 +201,7 @@ agentd-install: ALL
 	fi
 	mkdir -p ${PREFIX}/var/pid
 
-test.agentd: vcblockchain-build $(TEST_DIRS) host.exe.checked $(TESTAGENTD)
+test.agentd: vcblockchain-build $(TEST_DIRS) host.exe.release host.exe.debug host.exe.checked $(TESTAGENTD)
 	rm -rf $(HOST_CHECKED_BUILD_DIR)/databases
 	rm -rf $(BUILD_DIR)/test/isolation/databases
 	find $(BUILD_DIR) -type f -name "*.gcda" -exec rm {} \; -print
@@ -187,14 +216,16 @@ $(COVERAGE_REPORT_DIR)/%.c.gcov: $(SRCDIR)/%.c test.agentd
 	(cd $(dir $@) && \
 	    $(HOST_RELEASE_GCOV) -o $(dir $(HOST_CHECKED_BUILD_DIR)/$*.o) $<)
 
-agentd-build: host.exe.checked host.exe.release
+agentd-build: host.exe.checked host.exe.release host.exe.debug
 
 host.exe.release: $(HOST_RELEASE_DIRS) $(HOST_RELEASE_EXE)
 
 host.exe.checked: $(HOST_CHECKED_DIRS) $(HOST_CHECKED_EXE)
 
+host.exe.debug: $(HOST_DEBUG_DIRS) $(HOST_DEBUG_EXE)
+
 #build missing directories
-$(HOST_RELEASE_DIRS) $(HOST_CHECKED_DIRS) $(TEST_DIRS):
+$(HOST_RELEASE_DIRS) $(HOST_CHECKED_DIRS) $(HOST_DEBUG_DIRS) $(TEST_DIRS):
 	mkdir -p $@
 
 #Host checked executable
@@ -209,6 +240,13 @@ $(HOST_CHECKED_EXE) : vcblockchain-build $(HOST_CHECKED_OBJECTS)
 $(HOST_RELEASE_EXE) : vcblockchain-build $(HOST_RELEASE_OBJECTS)
 	mkdir -p $(dir $@)
 	$(HOST_RELEASE_CC) -o $@ $(HOST_RELEASE_OBJECTS) \
+	    $(VCBLOCKCHAIN_HOST_RELEASE_LINK) \
+	    -L $(TOOLCHAIN_DIR)/host/lib -Wl,-Bstatic -lfl -ly -Wl,-Bdynamic
+
+#Host debug executable
+$(HOST_DEBUG_EXE) : vcblockchain-build $(HOST_DEBUG_OBJECTS)
+	mkdir -p $(dir $@)
+	$(HOST_DEBUG_CC) -o $@ $(HOST_DEBUG_OBJECTS) \
 	    $(VCBLOCKCHAIN_HOST_RELEASE_LINK) \
 	    -L $(TOOLCHAIN_DIR)/host/lib -Wl,-Bstatic -lfl -ly -Wl,-Bdynamic
 
@@ -237,13 +275,24 @@ $(HOST_RELEASE_LEXOBJECTS): $(HOST_RELEASE_YACCOBJECTS)
 $(HOST_RELEASE_COBJECTS): $(HOST_RELEASE_LEXOBJECTS)
 $(HOST_RELEASE_COBJECTS): $(HOST_RELEASE_YACCOBJECTS)
 
+#host debug build objects depend on lex and yacc objects
+$(HOST_DEBUG_LEXOBJECTS): $(HOST_DEBUG_YACCOBJECTS)
+$(HOST_DEBUG_COBJECTS): $(HOST_DEBUG_LEXOBJECTS)
+$(HOST_DEBUG_COBJECTS): $(HOST_DEBUG_YACCOBJECTS)
+
 #Host release build objects
 $(HOST_RELEASE_BUILD_DIR)/%.o: $(SRCDIR)/%.c
 	mkdir -p $(dir $@)
 	$(HOST_RELEASE_CC) $(HOST_RELEASE_CFLAGS) -c -o $@ $<
 
+#Host debug build objects
+$(HOST_DEBUG_BUILD_DIR)/%.o: $(SRCDIR)/%.c
+	mkdir -p $(dir $@)
+	$(HOST_DEBUG_CC) $(HOST_DEBUG_CFLAGS) -c -o $@ $<
+
 HRBD=$(HOST_RELEASE_BUILD_DIR)
 HCBD=$(HOST_CHECKED_BUILD_DIR)
+HDBD=$(HOST_DEBUG_BUILD_DIR)
 
 #Host checked build yacc objects
 $(HCBD)/%.tab.c $(HCBD)/%.tab.h : $(SRCDIR)/%.y
@@ -269,6 +318,18 @@ $(HRBD)/%.yy.c: $(SRCDIR)/%.l
 	$(HOST_RELEASE_LEX) -s --header-file=$(HRBD)/$*.yy.h -o $(HRBD)/$*.yy.c \
 	    $(SRCDIR)/$*.l
 
+#Host debug build yacc objects
+$(HDBD)/%.tab.c $(HRBD)/%.tab.h : $(SRCDIR)/%.y
+	mkdir -p $(dir $@)
+	$(HOST_DEBUG_YACC) -d -b $(*F) -o $(HDBD)/$*.tab.c \
+	    $(SRCDIR)/$*.y
+
+#Host debug build lex objects
+$(HDBD)/%.yy.c: $(SRCDIR)/%.l
+	mkdir -p $(dir $@)
+	$(HOST_DEBUG_LEX) -s --header-file=$(HDBD)/$*.yy.h -o $(HDBD)/$*.yy.c \
+	    $(SRCDIR)/$*.l
+
 #host checked lex objects depend on the availability of host checked yacc
 #objects.
 $(HCBD)/%.yy.o: $(HOST_CHECKED_YACCHEADERS)
@@ -276,6 +337,10 @@ $(HCBD)/%.yy.o: $(HOST_CHECKED_YACCHEADERS)
 #host release lex objects depend on the availability of host release yacc
 #objects.
 $(HRBD)/%.yy.o: $(HOST_RELEASE_YACCHEADERS)
+
+#host debug lex objects depend on the availability of host debug yacc
+#objects.
+$(HDBD)/%.yy.o: $(HOST_DEBUG_YACCHEADERS)
 
 $(HCBD)/%.yy.o: $(HCBD)/%.yy.c
 	mkdir -p $(dir $@)
@@ -285,6 +350,10 @@ $(HRBD)/%.yy.o: $(HRBD)/%.yy.c
 	mkdir -p $(dir $@)
 	$(HOST_RELEASE_CC) $(HOST_RELEASE_LEXCOMPAT_CFLAGS) -c -o $@ $<
 
+$(HDBD)/%.yy.o: $(HDBD)/%.yy.c
+	mkdir -p $(dir $@)
+	$(HOST_DEBUG_CC) $(HOST_DEBUG_LEXCOMPAT_CFLAGS) -c -o $@ $<
+
 $(HCBD)/%.tab.o: $(HCBD)/%.tab.c
 	mkdir -p $(dir $@)
 	$(HOST_CHECKED_CC) $(HOST_CHECKED_LEXCOMPAT_CFLAGS) -c -o $@ $<
@@ -292,6 +361,10 @@ $(HCBD)/%.tab.o: $(HCBD)/%.tab.c
 $(HRBD)/%.tab.o: $(HRBD)/%.tab.c
 	mkdir -p $(dir $@)
 	$(HOST_RELEASE_CC) $(HOST_RELEASE_LEXCOMPAT_CFLAGS) -c -o $@ $<
+
+$(HDBD)/%.tab.o: $(HDBD)/%.tab.c
+	mkdir -p $(dir $@)
+	$(HOST_DEBUG_CC) $(HOST_DEBUG_LEXCOMPAT_CFLAGS) -c -o $@ $<
 
 $(TESTAGENTD): vcblockchain-build $(HOST_CHECKED_OBJECTS) $(TEST_OBJECTS) $(GTEST_OBJ)
 	find $(TEST_BUILD_DIR) -name "*.gcda" -exec rm {} \; -print
