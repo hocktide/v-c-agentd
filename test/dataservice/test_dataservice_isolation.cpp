@@ -1828,13 +1828,6 @@ TEST_F(dataservice_isolation_test, make_block_simple)
     ASSERT_EQ(0, recvresp_status);
     ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
     ASSERT_EQ(0U, status);
-    printf("Block ID A: ");
-    for (int i = 0; i < 16; ++i)
-        printf("%02x", foo_block_id[i]);
-    printf("\nBlock ID B: ");
-    for (int i = 0; i < 16; ++i)
-        printf("%02x", canonized_node.block_id[i]);
-    printf("\n");
 
     ASSERT_EQ(foo_cert_length, canonized_data_size);
     ASSERT_EQ(0, memcmp(foo_cert, canonized_data, canonized_data_size));
