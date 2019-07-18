@@ -576,6 +576,45 @@ int dataservice_artifact_get(
     dataservice_transaction_context_t* dtxn_ctx, const uint8_t* artifact_id,
     data_artifact_record_t* record);
 
+/**
+ * \brief Query the canonized transaction database for a given transaction by
+ *        UUID.
+ *
+ * \param ctx           The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation.
+ * \param txn_id        The transaction ID for this transaction.
+ * \param node          Optional transaction node details.  If NULL, this is
+ *                      ignored.  If not NULL, this structure is provided by the
+ *                      caller and is populated by the transaction node data on
+ *                      success.
+ * \param txn_bytes     Pointer to be updated with the transaction.
+ * \param txn_size      Pointer to size to be updated by the size of txn.
+ *
+ * Note that this transaction will be a COPY if dtxn_ctx is NULL, and a raw
+ * pointer to the database data if dtxn_ctx is not NULL which will be valid
+ * until the transaction pointed to by dtxn_ctx is committed or released.  If
+ * this is a COPY, then the caller is responsible for freeing the memory
+ * associated with this copy by calling free().  If this is NOT a COPY, then
+ * this memory will be released when dtxn_ctx is committed or released.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if this transaction was not found.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this function encountered an
+ *        out-of-memory condition.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this child context is not
+ *        authorized to call this function.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function failed
+ *        to begin a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read data from the database.
+ */
+int dataservice_canonized_transaction_get(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id,
+    data_transaction_node_t* node,
+    uint8_t** txn_bytes, size_t* txn_size);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

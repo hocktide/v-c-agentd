@@ -1495,6 +1495,8 @@ TEST_F(dataservice_isolation_test, make_block_simple)
         DATASERVICE_API_CAP_APP_BLOCK_READ);
     BITCAP_SET_TRUE(reducedcaps,
         DATASERVICE_API_CAP_APP_BLOCK_ID_BY_HEIGHT_READ);
+    BITCAP_SET_TRUE(reducedcaps,
+        DATASERVICE_API_CAP_APP_TRANSACTION_READ);
 
     /* create child context. */
     sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
@@ -1788,11 +1790,61 @@ TEST_F(dataservice_isolation_test, make_block_simple)
     ASSERT_EQ(0, memcmp(foo_key, artifact_rec.txn_first, 16));
     ASSERT_EQ(0, memcmp(foo_key, artifact_rec.txn_latest, 16));
 
+    /* query the foo certificate. */
+    sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    data_transaction_node_t canonized_node;
+    void* canonized_data;
+    size_t canonized_data_size;
+
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_canonized_transaction_get(
+                        &nonblockdatasock, &offset, &status, &canonized_node,
+                        &canonized_data, &canonized_data_size);
+
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_canonized_transaction_get(
+                        &nonblockdatasock, child_context, foo_key);
+            }
+        });
+
+    /* verify that the canonized transaction read worked. */
+    ASSERT_EQ(0, sendreq_status);
+    ASSERT_EQ(0, recvresp_status);
+    ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
+    ASSERT_EQ(0U, status);
+
+    ASSERT_EQ(foo_cert_length, canonized_data_size);
+    ASSERT_EQ(0, memcmp(foo_cert, canonized_data, canonized_data_size));
+    ASSERT_EQ(0, memcmp(foo_key, canonized_node.key, sizeof(foo_key)));
+    ASSERT_EQ(0, memcmp(foo_prev, canonized_node.prev, sizeof(foo_prev)));
+    ASSERT_EQ(0, memcmp(foo_prev, canonized_node.next, sizeof(foo_prev)));
+    ASSERT_EQ(0,
+        memcmp(foo_artifact, canonized_node.artifact_id, sizeof(foo_artifact)));
+    ASSERT_EQ(0,
+        memcmp(foo_block_id, canonized_node.block_id, sizeof(foo_block_id)));
+
     /* clean up. */
     free(block_data);
     free(txn_data);
     free(foo_cert);
     free(foo_block_cert);
+    free(canonized_data);
 }
 
 /**

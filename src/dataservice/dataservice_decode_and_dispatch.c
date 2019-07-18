@@ -135,8 +135,14 @@ int dataservice_decode_and_dispatch(
             return dataservice_decode_and_dispatch_block_read(
                 inst, sock, breq, payload_size);
 
+        /* handle block by height read. */
         case DATASERVICE_API_METHOD_APP_BLOCK_ID_BY_HEIGHT_READ:
             return dataservice_decode_and_dispatch_block_id_by_height_read(
+                inst, sock, breq, payload_size);
+
+        /* handle canonized transaction read. */
+        case DATASERVICE_API_METHOD_APP_TRANSACTION_READ:
+            return dataservice_decode_and_dispatch_canonized_transaction_get(
                 inst, sock, breq, payload_size);
 
         /* unknown method.  Return an error. */
