@@ -101,7 +101,7 @@ int dataservice_api_recvresp_global_settings_get(
         goto done;
     }
 
-    /* the size should be greater than or equal to the size we respect. */
+    /* the size should be greater than or equal to the size we expect. */
     uint32_t response_packet_size =
         /* size of the API method. */
         sizeof(uint32_t) +
