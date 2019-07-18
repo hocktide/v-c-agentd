@@ -116,7 +116,7 @@ int dataservice_api_recvresp_canonized_transaction_get(
     /* set up data size for later. */
     uint32_t dat_size = size;
 
-    /* the size should be greater than or equal to the size we respect. */
+    /* the size should be greater than or equal to the size we expect. */
     uint32_t response_packet_size =
         /* size of the API method. */
         sizeof(uint32_t) +
@@ -151,7 +151,7 @@ int dataservice_api_recvresp_canonized_transaction_get(
 
     /* if the node size is invalid, return an error code. */
     /* 4*16 as above sizeof node (key + prev + next + artifact_id + block_id) */
-    if (dat_size < 5 * 16)
+    if (dat_size < response_packet_size + 5 * 16)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA;
         goto cleanup_val;
@@ -160,7 +160,7 @@ int dataservice_api_recvresp_canonized_transaction_get(
     /* get the raw data. */
     const uint8_t* bval = (const uint8_t*)(val + 3);
     /* update data size. */
-    dat_size -= 3 * sizeof(uint32_t) + 5 * 16;
+    dat_size -= response_packet_size + 5 * 16;
 
     /* process the node data if the node is specified. */
     if (NULL != node)
