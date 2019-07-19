@@ -153,7 +153,7 @@ int dataservice_api_recvresp_block_get(
     }
 
     /* if the node size is invalid, return an error code. */
-    if (dat_size < block_packet_size)
+    if (dat_size < response_packet_size + block_packet_size)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA;
         goto cleanup_val;
