@@ -112,10 +112,13 @@ int dataservice_api_recvresp_transaction_get_first(
         goto done;
     }
 
+    /* the size of the id array. */
+    uint32_t id_arr_size = 4 * 16;
+
     /* set up data size for later. */
     uint32_t dat_size = size;
 
-    /* the size should be greater than or equal to the size we respect. */
+    /* the size should be greater than or equal to the size we expect. */
     uint32_t response_packet_size =
         /* size of the API method. */
         sizeof(uint32_t) +
@@ -124,7 +127,7 @@ int dataservice_api_recvresp_transaction_get_first(
         /* size of the status. */
         sizeof(uint32_t) +
         /* size of the node data */
-        4 * 16;
+        id_arr_size;
     if (size < response_packet_size)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE;
@@ -152,7 +155,7 @@ int dataservice_api_recvresp_transaction_get_first(
     /* get the raw data. */
     const uint8_t* bval = (const uint8_t*)(val + 3);
     /* update data size. */
-    dat_size -= 3 * sizeof(uint32_t) + 4 * 16;
+    dat_size -= response_packet_size;
 
     /* process the node data if the node is specified. */
     if (NULL != node)
@@ -177,7 +180,7 @@ int dataservice_api_recvresp_transaction_get_first(
     }
 
     /* get to the location of the data. */
-    bval += 4 * 16;
+    bval += id_arr_size;
 
     /* allocate memory for the data. */
     *data = malloc(dat_size);

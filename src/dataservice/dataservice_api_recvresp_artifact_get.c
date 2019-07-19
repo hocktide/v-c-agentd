@@ -143,7 +143,7 @@ int dataservice_api_recvresp_artifact_get(
     }
 
     /* adjust the data size. */
-    dat_size -= 3 * sizeof(uint32_t);
+    dat_size -= response_packet_size;
 
     /* if the record size is invalid, return an error code. */
     if (artifact_record_size != dat_size)
