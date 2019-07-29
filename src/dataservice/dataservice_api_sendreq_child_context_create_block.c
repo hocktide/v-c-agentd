@@ -1,8 +1,7 @@
 /**
- * \file dataservice/dataservice_api_sendreq_root_context_reduce_caps_block.c
+ * \file dataservice/dataservice_api_sendreq_child_context_create.c
  *
- * \brief Request that the capabilities of the root context be reduced, using a
- * blocking socket.
+ * \brief Request the creation of a child context.
  *
  * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
@@ -16,44 +15,32 @@
 #include <vpr/parameters.h>
 
 /**
- * \brief Request that the capabilities of the root context be reduced.
+ * \brief Create a child context with further reduced capabilities.
  *
  * \param sock          The socket on which this request is made.
- * \param caps          The capabilities to use for the reduction.
+ * \param caps          The capabilities to use for this child context.
  * \param size          The size of the capabilities in bytes.
  *
  * \returns a status code indicating success or failure.
  *      - AGENTD_STATUS_SUCCESS on success.
  *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
  *        out-of-memory condition.
- *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the
- *        capabilities size is invalid.
  *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if an error occurred
  *        when writing to the socket.
  */
-int dataservice_api_sendreq_root_context_reduce_caps_block(
+int dataservice_api_sendreq_child_context_create_block(
     int sock, uint32_t* caps, size_t size)
 {
-    BITCAP(bitcaps, DATASERVICE_API_CAP_BITS_MAX);
-
     /* parameter sanity check. */
-    MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != caps);
-    MODEL_ASSERT(size == sizeof(bitcaps));
 
-    /* | Root context reduce capabilities request packet.                  | */
-    /* | -------------------------------------------------- | ------------ | */
-    /* | DATA                                               | SIZE         | */
-    /* | -------------------------------------------------- | ------------ | */
-    /* | DATASERVICE_API_METHOD_LL_ROOT_CONTEXT_REDUCE_CAPS | 4 bytes      | */
-    /* | caps                                               | n - 4 bytes  | */
-    /* | -------------------------------------------------- | ------------ | */
-
-    /* verify that caps is the correct size. */
-    if (size != sizeof(bitcaps))
-    {
-        return AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
-    }
+    /* | Child context create packet.                                 | */
+    /* | --------------------------------------------- | ------------ | */
+    /* | DATA                                          | SIZE         | */
+    /* | --------------------------------------------- | ------------ | */
+    /* | DATASERVICE_API_METHOD_LL_CHILD_CONTEXT_CREATE| 4 bytes      | */
+    /* | caps                                          | n - 4 bytes  | */
+    /* | --------------------------------------------- | ------------ | */
 
     /* allocate a structure large enough for writing this request. */
     size_t reqbuflen = size + sizeof(uint32_t);
@@ -64,13 +51,13 @@ int dataservice_api_sendreq_root_context_reduce_caps_block(
     }
 
     /* copy the request ID to the buffer. */
-    uint32_t req = htonl(DATASERVICE_API_METHOD_LL_ROOT_CONTEXT_REDUCE_CAPS);
+    uint32_t req = htonl(DATASERVICE_API_METHOD_LL_CHILD_CONTEXT_CREATE);
     memcpy(reqbuf, &req, sizeof(req));
 
-    /* copy the capabilities parameter to this buffer. */
+    /* copy the caps parameter to this buffer. */
     memcpy(reqbuf + sizeof(req), caps, size);
 
-    /* write the data packet. */
+    /* the request packet consists of the command and capabilities. */
     int retval = ipc_write_data_block(sock, reqbuf, reqbuflen);
     if (AGENTD_STATUS_SUCCESS != retval)
     {

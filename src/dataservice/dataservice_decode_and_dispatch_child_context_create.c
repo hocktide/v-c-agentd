@@ -72,7 +72,7 @@ int dataservice_decode_and_dispatch_child_context_create(
         goto done;
     }
 
-    /* explicitly allow child context create in the chlid caps. */
+    /* explicitly allow child context create in the child caps. */
     /* NOTE that this does not bypass root capability restrictions. */
     BITCAP_SET_TRUE(inst->children[child_offset].ctx.childcaps,
         DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CREATE);
