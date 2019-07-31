@@ -151,6 +151,96 @@ TEST(config_test, logdir_config)
 }
 
 /**
+ * Test that a dot path logdir setting adds this data to the config.
+ */
+TEST(config_test, logdir_dotpath_config)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(nullptr, state = yy_scan_string("logdir ./log", scanner));
+    ASSERT_EQ(0, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+    /* there are no errors. */
+    ASSERT_EQ(0U, user_context.errors.size());
+
+    /* verify user config. */
+    ASSERT_NE(nullptr, user_context.config);
+    ASSERT_STREQ("./log", user_context.config->logdir);
+    ASSERT_FALSE(user_context.config->loglevel_set);
+    ASSERT_EQ(0L, user_context.config->loglevel);
+    ASSERT_EQ(nullptr, user_context.config->secret);
+    ASSERT_EQ(nullptr, user_context.config->rootblock);
+    ASSERT_EQ(nullptr, user_context.config->datastore);
+    ASSERT_EQ(nullptr, user_context.config->listen_head);
+    ASSERT_EQ(nullptr, user_context.config->chroot);
+    ASSERT_EQ(nullptr, user_context.config->usergroup);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
+ * Test that an absolute path for log is not accepted.
+ */
+TEST(config_test, logdir_no_absolute)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(nullptr, state = yy_scan_string("logdir /log", scanner));
+    ASSERT_EQ(1, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
+ * Test that a relative path starting with .. for log is not accepted.
+ */
+TEST(config_test, logdir_no_dotdot)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(nullptr, state = yy_scan_string("logdir ../log", scanner));
+    ASSERT_EQ(1, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
  * Test that a loglevel setting adds this data to the config.
  */
 TEST(config_test, loglevel_config)
@@ -254,6 +344,96 @@ TEST(config_test, secret_config)
     ASSERT_EQ(nullptr, user_context.config->listen_head);
     ASSERT_EQ(nullptr, user_context.config->chroot);
     ASSERT_EQ(nullptr, user_context.config->usergroup);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
+ * Test that the secret parameter can be a dot path.
+ */
+TEST(config_test, secret_dotpath_config)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(nullptr, state = yy_scan_string("secret ./dir", scanner));
+    ASSERT_EQ(0, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+    /* there are no errors. */
+    ASSERT_EQ(0U, user_context.errors.size());
+
+    /* verify user config. */
+    ASSERT_NE(nullptr, user_context.config);
+    ASSERT_EQ(nullptr, user_context.config->logdir);
+    ASSERT_FALSE(user_context.config->loglevel_set);
+    ASSERT_EQ(0L, user_context.config->loglevel);
+    ASSERT_STREQ("./dir", user_context.config->secret);
+    ASSERT_EQ(nullptr, user_context.config->rootblock);
+    ASSERT_EQ(nullptr, user_context.config->datastore);
+    ASSERT_EQ(nullptr, user_context.config->listen_head);
+    ASSERT_EQ(nullptr, user_context.config->chroot);
+    ASSERT_EQ(nullptr, user_context.config->usergroup);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
+ * Test that the secret parameter can't be absolute.
+ */
+TEST(config_test, secret_no_absolute)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(nullptr, state = yy_scan_string("secret /dir", scanner));
+    ASSERT_EQ(1, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
+ * Test that the secret parameter can't be a dotdot relative path.
+ */
+TEST(config_test, secret_no_dotdot)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(nullptr, state = yy_scan_string("secret ../dir", scanner));
+    ASSERT_EQ(1, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
 
     dispose((disposable_t*)&user_context);
 }
@@ -479,6 +659,96 @@ TEST(config_test, datastore_config)
 }
 
 /**
+ * Test that the datastroe parameter can be a dot path.
+ */
+TEST(config_test, datastore_dotpath)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(nullptr, state = yy_scan_string("datastore ./data", scanner));
+    ASSERT_EQ(0, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+    /* there are no errors. */
+    ASSERT_EQ(0U, user_context.errors.size());
+
+    /* verify user config. */
+    ASSERT_NE(nullptr, user_context.config);
+    ASSERT_EQ(nullptr, user_context.config->logdir);
+    ASSERT_FALSE(user_context.config->loglevel_set);
+    ASSERT_EQ(0L, user_context.config->loglevel);
+    ASSERT_EQ(nullptr, user_context.config->secret);
+    ASSERT_EQ(nullptr, user_context.config->rootblock);
+    ASSERT_STREQ("./data", user_context.config->datastore);
+    ASSERT_EQ(nullptr, user_context.config->listen_head);
+    ASSERT_EQ(nullptr, user_context.config->chroot);
+    ASSERT_EQ(nullptr, user_context.config->usergroup);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
+ * Test that the datastroe parameter can't be absolute.
+ */
+TEST(config_test, datastore_no_absolute)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(nullptr, state = yy_scan_string("datastore /data", scanner));
+    ASSERT_EQ(1, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
+ * Test that the datastroe parameter can't be a dotdot relative path.
+ */
+TEST(config_test, datastore_no_dotdot)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(nullptr, state = yy_scan_string("datastore ../data", scanner));
+    ASSERT_EQ(1, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
  * Test that a single listen parameter is added to the config.
  */
 TEST(config_test, listen_single)
@@ -613,6 +883,96 @@ TEST(config_test, chroot_config)
     ASSERT_EQ(nullptr, user_context.config->listen_head);
     ASSERT_STREQ("root", user_context.config->chroot);
     ASSERT_EQ(nullptr, user_context.config->usergroup);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
+ * Test that a chroot parameter can be a dot relative path.
+ */
+TEST(config_test, chroot_dot)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(nullptr, state = yy_scan_string("chroot ./root", scanner));
+    ASSERT_EQ(0, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+    /* there are no errors. */
+    ASSERT_EQ(0U, user_context.errors.size());
+
+    /* verify user config. */
+    ASSERT_NE(nullptr, user_context.config);
+    ASSERT_EQ(nullptr, user_context.config->logdir);
+    ASSERT_FALSE(user_context.config->loglevel_set);
+    ASSERT_EQ(0L, user_context.config->loglevel);
+    ASSERT_EQ(nullptr, user_context.config->secret);
+    ASSERT_EQ(nullptr, user_context.config->rootblock);
+    ASSERT_EQ(nullptr, user_context.config->datastore);
+    ASSERT_EQ(nullptr, user_context.config->listen_head);
+    ASSERT_STREQ("./root", user_context.config->chroot);
+    ASSERT_EQ(nullptr, user_context.config->usergroup);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
+ * Test that a chroot parameter can't be an absolute path.
+ */
+TEST(config_test, chroot_no_absolute)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(nullptr, state = yy_scan_string("chroot /root", scanner));
+    ASSERT_EQ(1, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+    dispose((disposable_t*)&user_context);
+}
+
+/**
+ * Test that a chroot parameter can't be a dotdot relative path.
+ */
+TEST(config_test, chroot_no_dotdot)
+{
+    YY_BUFFER_STATE state;
+    yyscan_t scanner;
+    config_context_t context;
+    test_context user_context;
+
+    test_context_init(&user_context);
+
+    context.set_error = &set_error;
+    context.val_callback = &config_callback;
+    context.user_context = &user_context;
+
+    ASSERT_EQ(0, yylex_init(&scanner));
+    ASSERT_NE(nullptr, state = yy_scan_string("chroot ../root", scanner));
+    ASSERT_EQ(1, yyparse(scanner, &context));
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
 
     dispose((disposable_t*)&user_context);
 }
