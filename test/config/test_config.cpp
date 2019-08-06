@@ -619,7 +619,7 @@ TEST(config_test, rootblock_no_absolute)
 }
 
 /**
- * Test that the datastroe parameter adds data to the config.
+ * Test that the datastore parameter adds data to the config.
  */
 TEST(config_test, datastore_config)
 {
@@ -659,7 +659,7 @@ TEST(config_test, datastore_config)
 }
 
 /**
- * Test that the datastroe parameter can be a dot path.
+ * Test that the datastore parameter can be a dot path.
  */
 TEST(config_test, datastore_dotpath)
 {
@@ -699,7 +699,7 @@ TEST(config_test, datastore_dotpath)
 }
 
 /**
- * Test that the datastroe parameter can't be absolute.
+ * Test that the datastore parameter can't be absolute.
  */
 TEST(config_test, datastore_no_absolute)
 {
@@ -724,7 +724,7 @@ TEST(config_test, datastore_no_absolute)
 }
 
 /**
- * Test that the datastroe parameter can't be a dotdot relative path.
+ * Test that the datastore parameter can't be a dotdot relative path.
  */
 TEST(config_test, datastore_no_dotdot)
 {
