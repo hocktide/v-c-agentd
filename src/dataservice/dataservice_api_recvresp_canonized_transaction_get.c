@@ -1,9 +1,9 @@
 /**
- * \file dataservice/dataservice_api_recvresp_artifact_get.c
+ * \file dataservice/dataservice_api_recvresp_canonized_transaction_get.c
  *
- * \brief Read the response from the artifact get call.
+ * \brief Read the response from the canonized transaction get call.
  *
- * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <arpa/inet.h>
@@ -16,18 +16,27 @@
 #include <vpr/parameters.h>
 
 /**
- * \brief Receive a response from the get artifact query.
+ * \brief Receive a response from the get canonized transaction query.
  *
  * \param sock          The socket on which this request is made.
  * \param offset        The child context offset for this response.
  * \param status        This value is updated with the status code returned from
  *                      the request.
- * \param record        Pointer to the record to be updated with data from this
- *                      artifact record.
+ * \param node          Pointer to the node to be updated with data from this
+ *                      transaction node in the database.
+ * \param data          This pointer is updated with the data received from the
+ *                      response.  The caller owns this buffer and it must be
+ *                      freed when no longer needed.
+ * \param data_size     Pointer to the size of the data buffer.  On successful
+ *                      execution, this size is updated with the size of the
+ *                      data allocated for this buffer.
  *
  * On a successful return from this function, the status is updated with the
  * status code from the API request.  This status should be checked.  A zero
- * status indicates success, and a non-zero status indicates failure.
+ * status indicates success, and a non-zero status indicates failure.  On
+ * success, the data pointer and size are both updated to reflect the data read
+ * from the query.  This is a dynamically allocated buffer that must be freed by
+ * the caller.
  *
  * If the status code is updated with an error from the service, then this error
  * will be reflected in the status variable, and a AGENTD_STATUS_SUCCESS will be
@@ -61,9 +70,9 @@
  *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
  *        out-of-memory error.
  */
-int dataservice_api_recvresp_artifact_get(
+int dataservice_api_recvresp_canonized_transaction_get(
     ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status,
-    data_artifact_record_t* record)
+    data_transaction_node_t* node, void** data, size_t* data_size)
 {
     int retval = 0;
 
@@ -71,22 +80,23 @@ int dataservice_api_recvresp_artifact_get(
     MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != offset);
     MODEL_ASSERT(NULL != status);
-    MODEL_ASSERT(NULL != record);
+    MODEL_ASSERT(NULL != data);
+    MODEL_ASSERT(NULL != data_size);
 
-    /* | Artifact get response packet.                                      | */
+    /* | Transaction get first response packet.                             | */
     /* | --------------------------------------------------- | ------------ | */
     /* | DATA                                                | SIZE         | */
     /* | --------------------------------------------------- | ------------ | */
-    /* | DATASERVICE_API_METHOD_APP_ARTIFACT_READ            |  4 bytes     | */
+    /* | DATASERVICE_API_METHOD_APP_TRANSACTION_READ         |  4 bytes     | */
     /* | offset                                              |  4 bytes     | */
     /* | status                                              |  4 bytes     | */
-    /* | record:                                             | 68 bytes     | */
+    /* | node:                                               | 80 bytes     | */
     /* |    key                                              | 16 bytes     | */
-    /* |    txn_first                                        | 16 bytes     | */
-    /* |    txn_latest                                       | 16 bytes     | */
-    /* |    net_height_first                                 |  8 bytes     | */
-    /* |    net_height_latest                                |  8 bytes     | */
-    /* |    net_state_latest                                 |  4 bytes     | */
+    /* |    prev                                             | 16 bytes     | */
+    /* |    next                                             | 16 bytes     | */
+    /* |    artifact_id                                      | 16 bytes     | */
+    /* |    block_id                                         | 16 bytes     | */
+    /* | data                                                | n - 92 bytes | */
     /* | --------------------------------------------------- | ------------ | */
 
     /* read a data packet from the socket. */
@@ -106,10 +116,7 @@ int dataservice_api_recvresp_artifact_get(
     /* set up data size for later. */
     uint32_t dat_size = size;
 
-    /* set up the artifact record size. */
-    uint32_t artifact_record_size = 68U;
-
-    /* the size should be equal to the size we expect. */
+    /* the size should be greater than or equal to the size we expect. */
     uint32_t response_packet_size =
         /* size of the API method. */
         sizeof(uint32_t) +
@@ -125,7 +132,7 @@ int dataservice_api_recvresp_artifact_get(
 
     /* verify that the method code is the code we expect. */
     uint32_t code = ntohl(val[0]);
-    if (DATASERVICE_API_METHOD_APP_ARTIFACT_READ != code)
+    if (DATASERVICE_API_METHOD_APP_TRANSACTION_READ != code)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE;
         goto cleanup_val;
@@ -136,48 +143,64 @@ int dataservice_api_recvresp_artifact_get(
 
     /* get the status code. */
     *status = ntohl(val[2]);
-    if (0 != *status)
+    if (AGENTD_STATUS_SUCCESS != *status)
     {
         retval = AGENTD_STATUS_SUCCESS;
-        goto done;
+        goto cleanup_val;
     }
 
-    /* adjust the data size. */
-    dat_size -= response_packet_size;
-
-    /* if the record size is invalid, return an error code. */
-    if (artifact_record_size != dat_size)
+    /* if the node size is invalid, return an error code. */
+    /* 5*16 as above sizeof node (key + prev + next + artifact_id + block_id) */
+    if (dat_size < response_packet_size + 5 * 16)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA;
-        goto done;
+        goto cleanup_val;
     }
 
     /* get the raw data. */
     const uint8_t* bval = (const uint8_t*)(val + 3);
+    /* update data size. */
+    dat_size -= response_packet_size + 5 * 16;
 
-    /* clear the record. */
-    memset(record, 0, sizeof(data_artifact_record_t));
+    /* process the node data if the node is specified. */
+    if (NULL != node)
+    {
+        /* clear the node. */
+        memset(node, 0, sizeof(data_transaction_node_t));
 
-    /* copy the key. */
-    memcpy(record->key, bval, sizeof(record->key));
+        /* copy the key. */
+        memcpy(node->key, bval, sizeof(node->key));
 
-    /* copy the prev. */
-    memcpy(record->txn_first, bval + 16, sizeof(record->txn_first));
+        /* copy the prev. */
+        memcpy(node->prev, bval + 16, sizeof(node->prev));
 
-    /* copy the next. */
-    memcpy(record->txn_latest, bval + 32, sizeof(record->txn_latest));
+        /* copy the next. */
+        memcpy(node->next, bval + 32, sizeof(node->next));
 
-    /* copy the first height. */
-    memcpy(&record->net_height_first, bval + 48,
-        sizeof(record->net_height_first));
+        /* copy the artifact_id. */
+        memcpy(node->artifact_id, bval + 48, sizeof(node->artifact_id));
 
-    /* copy the latest height. */
-    memcpy(&record->net_height_latest, bval + 56,
-        sizeof(record->net_height_latest));
+        /* copy the block id. */
+        memcpy(node->block_id, bval + 64, sizeof(node->block_id));
 
-    /* copy the latest state. */
-    memcpy(&record->net_state_latest, bval + 64,
-        sizeof(record->net_state_latest));
+        /* set the size. */
+        node->net_txn_cert_size = htonll(dat_size);
+    }
+
+    /* get to the location of the data. */
+    bval += 5 * 16;
+
+    /* allocate memory for the data. */
+    *data = malloc(dat_size);
+    if (NULL == *data)
+    {
+        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
+        goto cleanup_val;
+    }
+
+    /* copy data. */
+    memcpy(*data, bval, dat_size);
+    *data_size = dat_size;
 
     /* success. */
     retval = AGENTD_STATUS_SUCCESS;

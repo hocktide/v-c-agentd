@@ -1,9 +1,9 @@
 /**
- * \file dataservice/dataservice_api_recvresp_artifact_get.c
+ * \file dataservice/dataservice_api_recvresp_latest_block_id_get.c
  *
- * \brief Read the response from the artifact get call.
+ * \brief Read the response from the latest block id get call.
  *
- * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <arpa/inet.h>
@@ -16,18 +16,19 @@
 #include <vpr/parameters.h>
 
 /**
- * \brief Receive a response from the get artifact query.
+ * \brief Receive a response from the get latest block id query.
  *
  * \param sock          The socket on which this request is made.
  * \param offset        The child context offset for this response.
  * \param status        This value is updated with the status code returned from
  *                      the request.
- * \param record        Pointer to the record to be updated with data from this
- *                      artifact record.
+ * \param block_id      Pointer to the 16 byte array to receive the block id.
  *
  * On a successful return from this function, the status is updated with the
  * status code from the API request.  This status should be checked.  A zero
- * status indicates success, and a non-zero status indicates failure.
+ * status indicates success, and a non-zero status indicates failure.  On
+ * success, the block id array is updated with the UUID for the block associated
+ * with the height provided when the original request was sent.
  *
  * If the status code is updated with an error from the service, then this error
  * will be reflected in the status variable, and a AGENTD_STATUS_SUCCESS will be
@@ -61,9 +62,9 @@
  *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
  *        out-of-memory error.
  */
-int dataservice_api_recvresp_artifact_get(
+int dataservice_api_recvresp_latest_block_id_get(
     ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status,
-    data_artifact_record_t* record)
+    uint8_t* block_id)
 {
     int retval = 0;
 
@@ -71,22 +72,16 @@ int dataservice_api_recvresp_artifact_get(
     MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != offset);
     MODEL_ASSERT(NULL != status);
-    MODEL_ASSERT(NULL != record);
+    MODEL_ASSERT(NULL != block_id);
 
-    /* | Artifact get response packet.                                      | */
+    /* | Block get by height response packet.                               | */
     /* | --------------------------------------------------- | ------------ | */
     /* | DATA                                                | SIZE         | */
     /* | --------------------------------------------------- | ------------ | */
-    /* | DATASERVICE_API_METHOD_APP_ARTIFACT_READ            |  4 bytes     | */
+    /* | DATASERVICE_API_METHOD_APP_BLOCK_ID_LATEST_READ     |  4 bytes     | */
     /* | offset                                              |  4 bytes     | */
     /* | status                                              |  4 bytes     | */
-    /* | record:                                             | 68 bytes     | */
-    /* |    key                                              | 16 bytes     | */
-    /* |    txn_first                                        | 16 bytes     | */
-    /* |    txn_latest                                       | 16 bytes     | */
-    /* |    net_height_first                                 |  8 bytes     | */
-    /* |    net_height_latest                                |  8 bytes     | */
-    /* |    net_state_latest                                 |  4 bytes     | */
+    /* | block_id                                            | 16 bytes     | */
     /* | --------------------------------------------------- | ------------ | */
 
     /* read a data packet from the socket. */
@@ -103,12 +98,6 @@ int dataservice_api_recvresp_artifact_get(
         goto done;
     }
 
-    /* set up data size for later. */
-    uint32_t dat_size = size;
-
-    /* set up the artifact record size. */
-    uint32_t artifact_record_size = 68U;
-
     /* the size should be equal to the size we expect. */
     uint32_t response_packet_size =
         /* size of the API method. */
@@ -116,8 +105,10 @@ int dataservice_api_recvresp_artifact_get(
         /* size of the offset. */
         sizeof(uint32_t) +
         /* size of the status. */
-        sizeof(uint32_t);
-    if (size < response_packet_size)
+        sizeof(uint32_t) +
+        /* size of the block id. */
+        16;
+    if (size != response_packet_size)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE;
         goto cleanup_val;
@@ -125,7 +116,7 @@ int dataservice_api_recvresp_artifact_get(
 
     /* verify that the method code is the code we expect. */
     uint32_t code = ntohl(val[0]);
-    if (DATASERVICE_API_METHOD_APP_ARTIFACT_READ != code)
+    if (DATASERVICE_API_METHOD_APP_BLOCK_ID_LATEST_READ != code)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE;
         goto cleanup_val;
@@ -136,48 +127,12 @@ int dataservice_api_recvresp_artifact_get(
 
     /* get the status code. */
     *status = ntohl(val[2]);
-    if (0 != *status)
-    {
-        retval = AGENTD_STATUS_SUCCESS;
-        goto done;
-    }
-
-    /* adjust the data size. */
-    dat_size -= response_packet_size;
-
-    /* if the record size is invalid, return an error code. */
-    if (artifact_record_size != dat_size)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA;
-        goto done;
-    }
 
     /* get the raw data. */
     const uint8_t* bval = (const uint8_t*)(val + 3);
 
-    /* clear the record. */
-    memset(record, 0, sizeof(data_artifact_record_t));
-
-    /* copy the key. */
-    memcpy(record->key, bval, sizeof(record->key));
-
-    /* copy the prev. */
-    memcpy(record->txn_first, bval + 16, sizeof(record->txn_first));
-
-    /* copy the next. */
-    memcpy(record->txn_latest, bval + 32, sizeof(record->txn_latest));
-
-    /* copy the first height. */
-    memcpy(&record->net_height_first, bval + 48,
-        sizeof(record->net_height_first));
-
-    /* copy the latest height. */
-    memcpy(&record->net_height_latest, bval + 56,
-        sizeof(record->net_height_latest));
-
-    /* copy the latest state. */
-    memcpy(&record->net_state_latest, bval + 64,
-        sizeof(record->net_state_latest));
+    /* copy the block id. */
+    memcpy(block_id, bval, 16);
 
     /* success. */
     retval = AGENTD_STATUS_SUCCESS;

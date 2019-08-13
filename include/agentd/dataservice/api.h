@@ -85,8 +85,6 @@ int dataservice_api_recvresp_root_context_init_block(
  *        out-of-memory condition.
  *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the
  *        capabilities size is invalid.
- *      - AGENTD_ERROR_IPC_WOULD_BLOCK if this write operation would block this
- *        thread.
  *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if an error occurred
  *        when writing to the socket.
  */
@@ -130,6 +128,261 @@ int dataservice_api_sendreq_root_context_reduce_caps_block(
  *        out-of-memory error.
  */
 int dataservice_api_recvresp_root_context_reduce_caps_block(
+    int sock, uint32_t* offset, uint32_t* status);
+
+/**
+ * \brief Create a child context with further reduced capabilities.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param caps          The capabilities to use for this child context.
+ * \param size          The size of the capabilities in bytes.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory condition.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if an error occurred
+ *        when writing to the socket.
+ */
+int dataservice_api_sendreq_child_context_create_block(
+    int sock, uint32_t* caps, size_t size);
+
+/**
+ * \brief Receive a response from the child context create API call.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ * \param child         The integer index of the created child context,
+ *                      populated if status is 0.
+ *
+ * On a successful return from this function, the status and child index are
+ * updated with the status code from the API request.  This status should be
+ * checked.  A zero status indicates success, and a non-zero status indicates
+ * failure.  The child index is only good if status is 0.
+ *
+ * If the status code is updated with an error from the service, then this error
+ * will be reflected in the status variable, and a AGENTD_STATUS_SUCCESS will be
+ * returned by this function.  Thus, both the return value of this function and
+ * the upstream status code must be checked for correct operation.  Here are a
+ * few possible status codes; it is not possible to list them all.
+ *      - AGENTD_STATUS_SUCCESS if the remote operation completed successfully.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this client node is not
+ *        authorized to perform the requested operation.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet size is invalid.
+ *      - AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_MAX_REACHED if no more child
+ *        contexts can be created.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_READ_DATA_FAILURE if reading data from
+ *        the socket failed.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE if the
+ *        data packet size is unexpected.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE if the
+ *        method code was unexpected.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA if the
+ *        payload data was malformed.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error.
+ */
+int dataservice_api_recvresp_child_context_create_block(
+    int sock, uint32_t* offset, uint32_t* status, uint32_t* child);
+
+/**
+ * \brief Close the specified child context.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param child         The child index to be closed.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory condition.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if an error occurred
+ *        when writing to the socket.
+ */
+int dataservice_api_sendreq_child_context_close_block(
+    int sock, uint32_t child);
+
+/**
+ * \brief Receive a response from the child context close API call.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates success, and a non-zero status indicates failure.
+ *
+ * If the status code is updated with an error from the service, then this error
+ * will be reflected in the status variable, and a AGENTD_STATUS_SUCCESS will be
+ * returned by this function.  Thus, both the return value of this function and
+ * the upstream status code must be checked for correct operation.  Here are a
+ * few possible status codes; it is not possible to list them all.
+ *      - AGENTD_STATUS_SUCCESS if the remote operation completed successfully.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this client node is not
+ *        authorized to perform the requested operation.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet size is invalid.
+ *      - AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX if the child context
+ *        index is out of bounds.
+ *      - AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID if the child context is
+ *        invalid.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_READ_DATA_FAILURE if reading data from
+ *        the socket failed.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE if the
+ *        data packet size is unexpected.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE if the
+ *        method code was unexpected.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error.
+ */
+int dataservice_api_recvresp_child_context_close_block(
+    int sock, uint32_t* offset, uint32_t* status);
+
+/**
+ * \brief Query a global setting using the given child context.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param child         The child index used for the query.
+ * \param key           The global key to query.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory condition.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if an error occurred
+ *        when writing to the socket.
+ */
+int dataservice_api_sendreq_global_settings_get_block(
+    int sock, uint32_t child, uint64_t key);
+
+/**
+ * \brief Receive a response from the global settings query.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ * \param data          Pointer to a data buffer to write the data value to.
+ * \param data_size     Pointer to the size of the data buffer.  On entry, the
+ *                      value this is pointed to is set to the size of the data
+ *                      buffer.  On exit, if successful, this size is updated to
+ *                      the size written to this buffer.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates success, and a non-zero status indicates failure.  On
+ * success, the data value and size are both updated to reflect the data read
+ * from the query.
+ *
+ * If the status code is updated with an error from the service, then this error
+ * will be reflected in the status variable, and a AGENTD_STATUS_SUCCESS will be
+ * returned by this function.  Thus, both the return value of this function and
+ * the upstream status code must be checked for correct operation.  Here are a
+ * few possible status codes; it is not possible to list them all.
+ *      - AGENTD_STATUS_SUCCESS if the remote operation completed successfully.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if the requested data was not
+ *        found.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this client node is not
+ *        authorized to perform the requested operation.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet size is invalid.
+ *      - AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX if the child context
+ *        index is out of bounds.
+ *      - AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID if the child context is
+ *        invalid.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_READ_DATA_FAILURE if reading data from
+ *        the socket failed.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE if the
+ *        data packet size is unexpected.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE if the
+ *        method code was unexpected.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA if the
+ *        payload data was malformed.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error.
+ */
+int dataservice_api_recvresp_global_settings_get_block(
+    int sock, uint32_t* offset, uint32_t* status, void* data,
+    size_t* data_size);
+
+/**
+ * \brief Set a global setting using a 64-bit key.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param child         The child index used for this operation.
+ * \param key           The global key to set.
+ * \param val           Buffer holding the value to set for this key.
+ * \param val_size      The size of this key.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory condition.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if an error occurred
+ *        when writing to the socket.
+ */
+int dataservice_api_sendreq_global_settings_set_block(
+    int sock, uint32_t child, uint64_t key, const void* val,
+    uint32_t val_size);
+
+/**
+ * \brief Receive a response from the global settings set operation.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates success, and a non-zero status indicates failure.  On
+ * success, the data value and size are both updated to reflect the data read
+ * from the query.
+ *
+ * If the status code is updated with an error from the service, then this error
+ * will be reflected in the status variable, and a AGENTD_STATUS_SUCCESS will be
+ * returned by this function.  Thus, both the return value of this function and
+ * the upstream status code must be checked for correct operation.  Here are a
+ * few possible status codes; it is not possible to list them all.
+ *      - AGENTD_STATUS_SUCCESS if the remote operation completed successfully.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if the requested global setting was
+ *        not found.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this client node is not
+ *        authorized to perform the requested operation.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet size is invalid.
+ *      - AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX if the child context
+ *        index is out of bounds.
+ *      - AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID if the child context is
+ *        invalid.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_READ_DATA_FAILURE if reading data from
+ *        the socket failed.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE if the
+ *        data packet size is unexpected.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE if the
+ *        method code was unexpected.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA if the
+ *        payload data was malformed.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error.
+ */
+int dataservice_api_recvresp_global_settings_set_block(
     int sock, uint32_t* offset, uint32_t* status);
 
 /**
@@ -271,6 +524,7 @@ int dataservice_api_recvresp_root_context_reduce_caps(
  */
 int dataservice_api_sendreq_child_context_create(
     ipc_socket_context_t* sock, uint32_t* caps, size_t size);
+
 
 /**
  * \brief Receive a response from the child context create API call.
@@ -453,6 +707,7 @@ int dataservice_api_sendreq_global_settings_get(
 int dataservice_api_recvresp_global_settings_get(
     ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status, void* data,
     size_t* data_size);
+
 
 /**
  * \brief Set a global setting using a 64-bit key.
@@ -1111,6 +1366,153 @@ int dataservice_api_sendreq_block_id_by_height_get(
 int dataservice_api_recvresp_block_id_by_height_get(
     ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status,
     uint8_t* block_id);
+
+/**
+ * \brief Get the latest block id.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param child         The child index used for the query.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory condition.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if this write operation would block this
+ *        thread.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if an error occurred
+ *        when writing to the socket.
+ */
+int dataservice_api_sendreq_latest_block_id_get(
+    ipc_socket_context_t* sock, uint32_t child);
+
+/**
+ * \brief Receive a response from the get latest block id query.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ * \param block_id      Pointer to the 16 byte array to receive the block id.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates success, and a non-zero status indicates failure.  On
+ * success, the block id array is updated with the UUID for the block associated
+ * with the height provided when the original request was sent.
+ *
+ * If the status code is updated with an error from the service, then this error
+ * will be reflected in the status variable, and a AGENTD_STATUS_SUCCESS will be
+ * returned by this function.  Thus, both the return value of this function and
+ * the upstream status code must be checked for correct operation.  Here are a
+ * few possible status codes; it is not possible to list them all.
+ *      - AGENTD_STATUS_SUCCESS if the remote operation completed successfully.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if the requested data was not
+ *        found.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this client node is not
+ *        authorized to perform the requested operation.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet size is invalid.
+ *      - AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX if the child context
+ *        index is out of bounds.
+ *      - AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID if the child context is
+ *        invalid.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if the operation was halted because it
+ *        would block this thread.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_READ_DATA_FAILURE if reading data from
+ *        the socket failed.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE if the
+ *        data packet size is unexpected.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE if the
+ *        method code was unexpected.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA if the
+ *        payload data was malformed.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error.
+ */
+int dataservice_api_recvresp_latest_block_id_get(
+    ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status,
+    uint8_t* block_id);
+
+/**
+ * \brief Get a canonized transaction from the transaction database by ID.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param child         The child index used for the query.
+ * \param txn_id        The transaction UUID of the transaction to retrieve.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory condition.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if this write operation would block this
+ *        thread.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if an error occurred
+ *        when writing to the socket.
+ */
+int dataservice_api_sendreq_canonized_transaction_get(
+    ipc_socket_context_t* sock, uint32_t child, const uint8_t* txn_id);
+
+/**
+ * \brief Receive a response from the get canonized transaction query.
+ *
+ * \param sock          The socket on which this request is made.
+ * \param offset        The child context offset for this response.
+ * \param status        This value is updated with the status code returned from
+ *                      the request.
+ * \param node          Pointer to the node to be updated with data from this
+ *                      transaction node in the database.
+ * \param data          This pointer is updated with the data received from the
+ *                      response.  The caller owns this buffer and it must be
+ *                      freed when no longer needed.
+ * \param data_size     Pointer to the size of the data buffer.  On successful
+ *                      execution, this size is updated with the size of the
+ *                      data allocated for this buffer.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates success, and a non-zero status indicates failure.  On
+ * success, the data pointer and size are both updated to reflect the data read
+ * from the query.  This is a dynamically allocated buffer that must be freed by
+ * the caller.
+ *
+ * If the status code is updated with an error from the service, then this error
+ * will be reflected in the status variable, and a AGENTD_STATUS_SUCCESS will be
+ * returned by this function.  Thus, both the return value of this function and
+ * the upstream status code must be checked for correct operation.  Here are a
+ * few possible status codes; it is not possible to list them all.
+ *      - AGENTD_STATUS_SUCCESS if the remote operation completed successfully.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if the requested data was not
+ *        found.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_AUTHORIZED if this client node is not
+ *        authorized to perform the requested operation.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet size is invalid.
+ *      - AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX if the child context
+ *        index is out of bounds.
+ *      - AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID if the child context is
+ *        invalid.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if the operation was halted because it
+ *        would block this thread.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_READ_DATA_FAILURE if reading data from
+ *        the socket failed.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE if the
+ *        data packet size is unexpected.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE if the
+ *        method code was unexpected.
+ *      - AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA if the
+ *        payload data was malformed.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error.
+ */
+int dataservice_api_recvresp_canonized_transaction_get(
+    ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status,
+    data_transaction_node_t* node, void** data, size_t* data_size);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

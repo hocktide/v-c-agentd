@@ -24,11 +24,11 @@ int config_set_defaults(agent_config_t* conf, const bootstrap_config_t* bconf)
     MODEL_ASSERT(NULL != conf);
     MODEL_ASSERT(NULL != bconf);
 
-    /* if logdir is not set, set it to "/log" */
+    /* if logdir is not set, set it to "log" */
     if (NULL == conf->logdir)
     {
         /* attempt to set the logdir. */
-        conf->logdir = strdup("/log");
+        conf->logdir = strdup("log");
         if (NULL == conf->logdir)
         {
             return 1;
@@ -56,33 +56,33 @@ int config_set_defaults(agent_config_t* conf, const bootstrap_config_t* bconf)
         conf->block_max_transactions_set = true;
     }
 
-    /* if secret is not set, set it to "/root/secret.cert" */
+    /* if secret is not set, set it to "root/secret.cert" */
     if (NULL == conf->secret)
     {
         /* attempt to set the secret. */
-        conf->secret = strdup("/root/secret.cert");
+        conf->secret = strdup("root/secret.cert");
         if (NULL == conf->secret)
         {
             return 2;
         }
     }
 
-    /* if rootblock is not set, set it to "/root/root.cert" */
+    /* if rootblock is not set, set it to "root/root.cert" */
     if (NULL == conf->rootblock)
     {
         /* attempt to set the rootblock. */
-        conf->rootblock = strdup("/root/root.cert");
+        conf->rootblock = strdup("root/root.cert");
         if (NULL == conf->rootblock)
         {
             return 3;
         }
     }
 
-    /* if datastore is not set, set it to "/data" */
+    /* if datastore is not set, set it to "data" */
     if (NULL == conf->datastore)
     {
         /* attempt to set the datastore. */
-        conf->datastore = strdup("/data");
+        conf->datastore = strdup("data");
         if (NULL == conf->datastore)
         {
             return 4;
