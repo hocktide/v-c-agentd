@@ -140,6 +140,11 @@ int dataservice_decode_and_dispatch(
             return dataservice_decode_and_dispatch_block_id_by_height_read(
                 inst, sock, breq, payload_size);
 
+        /* handle latest block ID read. */
+        case DATASERVICE_API_METHOD_APP_BLOCK_ID_LATEST_READ:
+            return dataservice_decode_and_dispatch_block_id_latest_read(
+                inst, sock, breq, payload_size);
+
         /* handle canonized transaction read. */
         case DATASERVICE_API_METHOD_APP_TRANSACTION_READ:
             return dataservice_decode_and_dispatch_canonized_transaction_get(
