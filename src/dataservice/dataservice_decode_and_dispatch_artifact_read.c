@@ -15,6 +15,7 @@
 #include <vpr/parameters.h>
 
 #include "dataservice_internal.h"
+#include "dataservice_protocol_internal.h"
 
 /**
  * \brief Decode and dispatch an artifact read request.
@@ -41,7 +42,7 @@ int dataservice_decode_and_dispatch_artifact_read(
     size_t size)
 {
     int retval = 0;
-    uint8_t* payload_bytes = NULL;
+    void* payload = NULL;
     size_t payload_size = 0U;
 
     /* parameter sanity check. */
@@ -52,28 +53,19 @@ int dataservice_decode_and_dispatch_artifact_read(
     /* default child_index. */
     uint32_t child_index = 0U;
 
-    /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
+    /* artifact id buffer. */
+    uint8_t artifact_id[16];
 
-    /* the payload size should be equal to the child context */
-    if (size != (sizeof(uint32_t) + 16))
+    /* parse the payload. */
+    retval =
+        dataservice_decode_request_payload_artifact_read(
+            req, size, &child_index, artifact_id);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
         goto done;
     }
 
-    /* copy the index. */
-    uint32_t nchild_index;
-    memcpy(&nchild_index, breq, sizeof(uint32_t));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
-
-    /* decode the index. */
-    child_index = ntohl(nchild_index);
-
-    /* check bounds. */
+    /* check child_index bounds. */
     if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
     {
         retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX;
@@ -87,14 +79,6 @@ int dataservice_decode_and_dispatch_artifact_read(
         goto done;
     }
 
-    /* copy the artifact id. */
-    uint8_t artifact_id[16];
-    memcpy(artifact_id, breq, sizeof(artifact_id));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
-
     /* call the artifact get method. */
     data_artifact_record_t record;
     retval =
@@ -105,25 +89,16 @@ int dataservice_decode_and_dispatch_artifact_read(
         goto done;
     }
 
-    /* create the payload. */
-    payload_size = 3 * 16 + 2 * sizeof(uint64_t) + sizeof(uint32_t);
-    payload_bytes = (uint8_t*)malloc(payload_size);
-    if (NULL == payload_bytes)
+    /* encode the payload. */
+    retval =
+        dataservice_encode_response_payload_artifact_read(
+            &payload, &payload_size, record.key, record.txn_first,
+            record.txn_latest, ntohll(record.net_height_first),
+            ntohll(record.net_height_latest), ntohl(record.net_state_latest));
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
         goto done;
     }
-
-    /* copy the record values to the payload. */
-    memcpy(payload_bytes, record.key, sizeof(record.key));
-    memcpy(payload_bytes + 16, record.txn_first, sizeof(record.txn_first));
-    memcpy(payload_bytes + 32, record.txn_latest, sizeof(record.txn_latest));
-    memcpy(payload_bytes + 48, &record.net_height_first,
-        sizeof(record.net_height_first));
-    memcpy(payload_bytes + 56, &record.net_height_latest,
-        sizeof(record.net_height_latest));
-    memcpy(payload_bytes + 64, &record.net_state_latest,
-        sizeof(record.net_state_latest));
 
     /* success. Fall through. */
 
@@ -132,13 +107,13 @@ done:
     retval =
         dataservice_decode_and_dispatch_write_status(
             sock, DATASERVICE_API_METHOD_APP_ARTIFACT_READ,
-            child_index, (uint32_t)retval, payload_bytes, payload_size);
+            child_index, (uint32_t)retval, payload, payload_size);
 
     /* clean up payload bytes. */
-    if (NULL != payload_bytes)
+    if (NULL != payload)
     {
-        memset(payload_bytes, 0, payload_size);
-        free(payload_bytes);
+        memset(payload, 0, payload_size);
+        free(payload);
     }
 
     return retval;
