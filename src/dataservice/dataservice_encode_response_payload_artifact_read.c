@@ -57,7 +57,7 @@ int dataservice_encode_response_payload_artifact_read(
 
     uint64_t net_height_first = htonll(height_first);
     uint64_t net_height_latest = htonll(height_latest);
-    uint32_t net_state_latest = htonll(state_latest);
+    uint32_t net_state_latest = htonl(state_latest);
 
     /* copy the record values to the payload. */
     memcpy(payload_bytes, artifact_id, 16);
