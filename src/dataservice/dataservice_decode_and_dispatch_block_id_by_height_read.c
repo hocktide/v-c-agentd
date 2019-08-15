@@ -86,8 +86,6 @@ int dataservice_decode_and_dispatch_block_id_by_height_read(
             &inst->children[child_index].ctx, NULL, block_height, block_id);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        /* zero out the block ID. */
-        memset(block_id, 0, sizeof(block_id));
         goto done;
     }
 
