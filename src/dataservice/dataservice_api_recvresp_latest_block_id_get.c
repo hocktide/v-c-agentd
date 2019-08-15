@@ -105,10 +105,8 @@ int dataservice_api_recvresp_latest_block_id_get(
         /* size of the offset. */
         sizeof(uint32_t) +
         /* size of the status. */
-        sizeof(uint32_t) +
-        /* size of the block id. */
-        16;
-    if (size != response_packet_size)
+        sizeof(uint32_t);
+    if (size < response_packet_size)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE;
         goto cleanup_val;
@@ -127,6 +125,18 @@ int dataservice_api_recvresp_latest_block_id_get(
 
     /* get the status code. */
     *status = ntohl(val[2]);
+
+    /* if the status code is successful, then the block id will be in this
+     * payload. */
+    if (AGENTD_STATUS_SUCCESS != (int)*status)
+        goto cleanup_val;
+
+    /* verify that the payload size is correct. */
+    if (size < response_packet_size + 16)
+    {
+        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE;
+        goto cleanup_val;
+    }
 
     /* get the raw data. */
     const uint8_t* bval = (const uint8_t*)(val + 3);
