@@ -15,6 +15,7 @@
 #include <vpr/parameters.h>
 
 #include "dataservice_internal.h"
+#include "dataservice_protocol_internal.h"
 
 /**
  * \brief Decode and dispatch a block make request.
@@ -50,26 +51,21 @@ int dataservice_decode_and_dispatch_block_make(
     /* default child_index. */
     uint32_t child_index = 0U;
 
-    /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
+    /* block_id */
+    uint8_t block_id[16];
 
-    /* the payload size should be at least the size of the header. */
-    if (size < (sizeof(uint32_t) + 16))
+    /* certificate pointer. */
+    uint8_t* cert = NULL;
+    size_t cert_size = 0U;
+
+    /* parse the request payload. */
+    retval =
+        dataservice_decode_request_block_make(
+            req, size, &child_index, block_id, &cert, &cert_size);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
         goto done;
     }
-
-    /* copy the index. */
-    uint32_t nchild_index;
-    memcpy(&nchild_index, breq, sizeof(uint32_t));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
-
-    /* decode the index. */
-    child_index = ntohl(nchild_index);
 
     /* check bounds. */
     if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
@@ -85,18 +81,10 @@ int dataservice_decode_and_dispatch_block_make(
         goto done;
     }
 
-    /* copy the block id. */
-    uint8_t block_id[16];
-    memcpy(block_id, breq, sizeof(block_id));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(block_id);
-    size -= sizeof(block_id);
-
     /* call the make block method. */
     retval =
         dataservice_block_make(
-            &inst->children[child_index].ctx, NULL, block_id, breq, size);
+            &inst->children[child_index].ctx, NULL, block_id, cert, cert_size);
 
     /* Fall through. */
 
