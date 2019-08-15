@@ -93,7 +93,7 @@ int dataservice_decode_and_dispatch_block_make(
     breq += sizeof(block_id);
     size -= sizeof(block_id);
 
-    /* call the transaction drop method. */
+    /* call the make block method. */
     retval =
         dataservice_block_make(
             &inst->children[child_index].ctx, NULL, block_id, breq, size);

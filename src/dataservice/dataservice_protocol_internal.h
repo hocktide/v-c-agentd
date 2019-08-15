@@ -114,7 +114,7 @@ int dataservice_decode_request_block_id_latest_read(
     const void* req, size_t size, uint32_t* child_index);
 
 /**
- * \brief Encode a read latest block id response a payload packet.
+ * \brief Encode a read latest block id response payload packet.
  *
  * \param payload           Pointer to receive the allocated packet payload.
  * \param payload_size      Pointer to receive the size of the payload.
