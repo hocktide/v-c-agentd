@@ -245,6 +245,21 @@ int dataservice_encode_response_canonized_transaction_get(
     const uint8_t* prev_id, const uint8_t* next_id, const uint8_t* artifact_id,
     const uint8_t* block_id, const void* cert, size_t cert_size);
 
+/**
+ * \brief Decode a child context close request.
+ *
+ * \param req           The request payload to parse.
+ * \param size          The size of this request payload.
+ * \param child_index   Pointer to receive the child index.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet payload size is incorrect.
+ */
+int dataservice_decode_request_child_context_close(
+    const void* req, size_t size, uint32_t* child_index);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

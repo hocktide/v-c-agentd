@@ -14,6 +14,7 @@
 #include <vpr/parameters.h>
 
 #include "dataservice_internal.h"
+#include "dataservice_protocol_internal.h"
 
 /**
  * \brief Decode and dispatch a child context close request.
@@ -49,22 +50,14 @@ int dataservice_decode_and_dispatch_child_context_close(
     /* default child_index. */
     uint32_t child_index = 0U;
 
-    /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
-
-    /* the payload size should be equal to the size of a child context index. */
-    if (size != sizeof(uint32_t))
+    /* parse the request payload. */
+    retval =
+        dataservice_decode_request_child_context_close(
+            req, size, &child_index);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
         goto done;
     }
-
-    /* copy the index. */
-    uint32_t nchild_index;
-    memcpy(&nchild_index, breq, sizeof(uint32_t));
-
-    /* decode the index. */
-    child_index = ntohl(nchild_index);
 
     /* check bounds. */
     if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
@@ -91,8 +84,7 @@ int dataservice_decode_and_dispatch_child_context_close(
     /* clean up the child instance. */
     dataservice_child_details_delete(inst, child_index);
 
-    /* success. */
-    goto done;
+    /* success. Fall through. */
 
 done:
     /* write the status to output. */
