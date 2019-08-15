@@ -2317,7 +2317,6 @@ TEST_F(dataservice_isolation_test, block_id_by_height_get_not_found)
     EXPECT_EQ(0, recvresp_status);
     ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
     ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND, (int)status);
-    ASSERT_EQ(0, memcmp(empty_block_id, height_block_id, 16));
 }
 
 /**
