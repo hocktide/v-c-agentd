@@ -15,6 +15,7 @@
 #include <vpr/parameters.h>
 
 #include "dataservice_internal.h"
+#include "dataservice_protocol_internal.h"
 
 /**
  * \brief Decode and dispatch a block read request.
@@ -41,7 +42,7 @@ int dataservice_decode_and_dispatch_block_read(
     size_t size)
 {
     int retval = 0;
-    uint8_t* payload_bytes = NULL;
+    void* payload = NULL;
     size_t payload_size = 0U;
     uint8_t* block_bytes = NULL;
     size_t block_size = 0U;
@@ -54,26 +55,17 @@ int dataservice_decode_and_dispatch_block_read(
     /* default child_index. */
     uint32_t child_index = 0U;
 
-    /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
+    /* block id. */
+    uint8_t block_id[16];
 
-    /* the payload size should be equal to the child context */
-    if (size != (sizeof(uint32_t) + 16))
+    /* parse the request. */
+    retval =
+        dataservice_decode_request_block_read(
+            req, size, &child_index, block_id);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
         goto done;
     }
-
-    /* copy the index. */
-    uint32_t nchild_index;
-    memcpy(&nchild_index, breq, sizeof(uint32_t));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
-
-    /* decode the index. */
-    child_index = ntohl(nchild_index);
 
     /* check bounds. */
     if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
@@ -89,14 +81,6 @@ int dataservice_decode_and_dispatch_block_read(
         goto done;
     }
 
-    /* copy the block_id. */
-    uint8_t block_id[16];
-    memcpy(block_id, breq, sizeof(block_id));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
-
     /* call the block get method. */
     data_block_node_t node;
     retval =
@@ -109,26 +93,16 @@ int dataservice_decode_and_dispatch_block_read(
         goto done;
     }
 
-    /* create the payload. */
-    payload_size = 4 * 16 + sizeof(uint64_t) + block_size;
-    payload_bytes = (uint8_t*)malloc(payload_size);
-    if (NULL == payload_bytes)
+    /* encode the payload. */
+    retval =
+        dataservice_encode_response_block_read(
+            &payload, &payload_size, node.key, node.prev, node.next,
+            node.first_transaction_id, ntohll(node.net_block_height),
+            block_bytes, block_size);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
         goto done;
     }
-
-    /* copy the node values to the payload. */
-    memcpy(payload_bytes, node.key, sizeof(node.key));
-    memcpy(payload_bytes + 16, node.prev, sizeof(node.prev));
-    memcpy(payload_bytes + 32, node.next, sizeof(node.next));
-    memcpy(payload_bytes + 48, node.first_transaction_id,
-        sizeof(node.first_transaction_id));
-    memcpy(payload_bytes + 64, &node.net_block_height,
-        sizeof(node.net_block_height));
-
-    /* copy the transaction data to the payload. */
-    memcpy(payload_bytes + 72, block_bytes, block_size);
 
     /* success. Fall through. */
 
@@ -137,13 +111,13 @@ done:
     retval =
         dataservice_decode_and_dispatch_write_status(
             sock, DATASERVICE_API_METHOD_APP_BLOCK_READ,
-            child_index, (uint32_t)retval, payload_bytes, payload_size);
+            child_index, (uint32_t)retval, payload, payload_size);
 
     /* clean up payload bytes. */
-    if (NULL != payload_bytes)
+    if (NULL != payload)
     {
-        memset(payload_bytes, 0, payload_size);
-        free(payload_bytes);
+        memset(payload, 0, payload_size);
+        free(payload);
     }
 
     /* clean up block bytes. */
