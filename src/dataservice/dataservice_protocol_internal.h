@@ -437,6 +437,30 @@ int dataservice_encode_response_transaction_get_first(
     const uint8_t* prev_id, const uint8_t* next_id, const uint8_t* artifact_id,
     const void* cert, size_t cert_size);
 
+/**
+ * \brief Decode a transaction submit request.
+ *
+ * \param req           The request payload to parse.
+ * \param size          The size of this request payload.
+ * \param child_index   Pointer to receive the child index.
+ * \param txn_id        Pointer to a buffer large enough to receive the txn
+ *                      UUID.
+ * \param artifact_id   Pointer to a buffer large enough to receive the artifact
+ *                      UUID.
+ * \param cert          Pointer to receive the start of the txn certificate in
+ *                      the request payload.  Note that this is a substring in
+ *                      the request payload.  It should not be freed.
+ * \param cert_size     Pointer to receive the size of the txn certificate.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet payload size is incorrect.
+ */
+int dataservice_decode_request_transaction_submit(
+    const void* req, size_t size, uint32_t* child_index, uint8_t* txn_id,
+    uint8_t* artifact_id, const uint8_t** cert, size_t* cert_size);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

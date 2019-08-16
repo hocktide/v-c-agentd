@@ -15,6 +15,7 @@
 #include <vpr/parameters.h>
 
 #include "dataservice_internal.h"
+#include "dataservice_protocol_internal.h"
 
 /**
  * \brief Decode and dispatch a transaction submission request.
@@ -50,27 +51,24 @@ int dataservice_decode_and_dispatch_transaction_submit(
     /* default child_index. */
     uint32_t child_index = 0U;
 
-    /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
+    /* transaction UUID. */
+    uint8_t txn_id[16];
 
-    /* the payload size should be greater than the child context
-     * size and size of the two UUIDs. */
-    if (size <= sizeof(uint32_t) + 2 * 16)
+    /* artifact UUID. */
+    uint8_t artifact_id[16];
+
+    /* certificate substring. */
+    const uint8_t* cert = NULL;
+    size_t cert_size = 0UL;
+
+    /* parse the request. */
+    retval =
+        dataservice_decode_request_transaction_submit(
+            req, size, &child_index, txn_id, artifact_id, &cert, &cert_size);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
         goto done;
     }
-
-    /* copy the index. */
-    uint32_t nchild_index;
-    memcpy(&nchild_index, breq, sizeof(uint32_t));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
-
-    /* decode the index. */
-    child_index = ntohl(nchild_index);
 
     /* check bounds. */
     if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
@@ -86,22 +84,6 @@ int dataservice_decode_and_dispatch_transaction_submit(
         goto done;
     }
 
-    /* copy the transaction id. */
-    uint8_t txn_id[16];
-    memcpy(txn_id, breq, sizeof(txn_id));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(txn_id);
-    size -= sizeof(txn_id);
-
-    /* copy the artifact id. */
-    uint8_t artifact_id[16];
-    memcpy(artifact_id, breq, sizeof(artifact_id));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(artifact_id);
-    size -= sizeof(artifact_id);
-
     /* the value size should be greater than zero. */
     MODEL_ASSERT(size > 0);
 
@@ -109,7 +91,9 @@ int dataservice_decode_and_dispatch_transaction_submit(
     retval =
         dataservice_transaction_submit(
             &inst->children[child_index].ctx, NULL, txn_id, artifact_id,
-            breq, size);
+            cert, cert_size);
+
+    /* success. Fall through. */
 
 done:
     /* write the status to the caller. */
