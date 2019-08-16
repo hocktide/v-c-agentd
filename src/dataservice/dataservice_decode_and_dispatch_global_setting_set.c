@@ -15,6 +15,7 @@
 #include <vpr/parameters.h>
 
 #include "dataservice_internal.h"
+#include "dataservice_protocol_internal.h"
 
 /**
  * \brief Decode and dispatch a global setting set request.
@@ -50,27 +51,21 @@ int dataservice_decode_and_dispatch_global_setting_set(
     /* default child_index. */
     uint32_t child_index = 0U;
 
-    /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
+    /* the key. */
+    uint64_t key = 0ULL;
 
-    /* the payload size should be greater than or equal to the child context
-     * size and the 64-bit global settings key. */
-    if (size <= sizeof(uint32_t) + sizeof(uint64_t))
+    /* the value. */
+    void* val = NULL;
+    size_t val_size = 0UL;
+
+    /* parse the request packet. */
+    retval =
+        dataservice_decode_request_global_setting_set(
+            req, size, &child_index, &key, &val, &val_size);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
         goto done;
     }
-
-    /* copy the index. */
-    uint32_t nchild_index;
-    memcpy(&nchild_index, breq, sizeof(uint32_t));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
-
-    /* decode the index. */
-    child_index = ntohl(nchild_index);
 
     /* check bounds. */
     if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
@@ -86,24 +81,13 @@ int dataservice_decode_and_dispatch_global_setting_set(
         goto done;
     }
 
-    /* get the global settings key. */
-    uint64_t nkey;
-    memcpy(&nkey, breq, sizeof(nkey));
-
-    /* decode the key. */
-    uint64_t key = ntohll(nkey);
-
-    /* increment breq and decrement size. */
-    breq += sizeof(uint64_t);
-    size -= sizeof(uint64_t);
-
     /* the value size should be greater than zero. */
-    MODEL_ASSERT(size > 0);
+    MODEL_ASSERT(val_size > 0);
 
     /* call the global settings set method. */
     retval =
         dataservice_global_settings_set(
-            &inst->children[child_index].ctx, key, (const char*)breq, size);
+            &inst->children[child_index].ctx, key, (const char*)val, val_size);
 
 done:
     /* write the status to the caller. */
