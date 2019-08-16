@@ -14,6 +14,7 @@
 #include <vpr/parameters.h>
 
 #include "dataservice_internal.h"
+#include "dataservice_protocol_internal.h"
 
 /**
  * \brief Decode and dispatch a child context create request.
@@ -39,8 +40,9 @@ int dataservice_decode_and_dispatch_child_context_create(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
     size_t size)
 {
-    uint32_t response_data[1] = { 0 };
     int retval = 0;
+    void* payload = NULL;
+    size_t payload_size = 0U;
 
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != inst);
@@ -50,18 +52,14 @@ int dataservice_decode_and_dispatch_child_context_create(
     /* storage for the capabilities. */
     BITCAP(caps, DATASERVICE_API_CAP_BITS_MAX);
 
-    /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
-
-    /* the payload size should be equal to the size of the capabilities. */
-    if (size != sizeof(caps))
+    /* parse the request. */
+    retval =
+        dataservice_decode_request_child_context_create(
+            req, size, caps);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
         goto done;
     }
-
-    /* copy the caps. */
-    memcpy(caps, breq, size);
 
     /* allocate a free child context. */
     int child_offset = 0;
@@ -86,8 +84,16 @@ int dataservice_decode_and_dispatch_child_context_create(
         goto cleanup_child_instance;
     }
 
+    /* encode the payload. */
+    retval =
+        dataservice_encode_response_child_context_create(
+            &payload, &payload_size, child_offset);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        goto cleanup_child_instance;
+    }
+
     /* success. */
-    response_data[0] = htonl(child_offset);
     goto done;
 
 cleanup_child_instance:
@@ -95,7 +101,17 @@ cleanup_child_instance:
 
 done:
     /* write the status to output. */
-    return dataservice_decode_and_dispatch_write_status(
-        sock, DATASERVICE_API_METHOD_LL_CHILD_CONTEXT_CREATE, 0,
-        (uint32_t)retval, response_data, sizeof(response_data));
+    retval =
+        dataservice_decode_and_dispatch_write_status(
+            sock, DATASERVICE_API_METHOD_LL_CHILD_CONTEXT_CREATE, 0,
+            (uint32_t)retval, payload, payload_size);
+
+    /* clean up payload. */
+    if (NULL != payload)
+    {
+        memset(payload, 0, payload_size);
+        free(payload);
+    }
+
+    return retval;
 }
