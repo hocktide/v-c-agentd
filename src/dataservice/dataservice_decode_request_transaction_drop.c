@@ -58,10 +58,6 @@ int dataservice_decode_request_transaction_drop(
     /* copy the txn_id. */
     memcpy(txn_id, breq, 16);
 
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
-
     /* success. */
     return AGENTD_STATUS_SUCCESS;
 }
