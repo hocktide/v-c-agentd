@@ -15,6 +15,7 @@
 #include <vpr/parameters.h>
 
 #include "dataservice_internal.h"
+#include "dataservice_protocol_internal.h"
 
 /**
  * \brief Decode and dispatch a transaction drop request.
@@ -50,26 +51,17 @@ int dataservice_decode_and_dispatch_transaction_drop(
     /* default child_index. */
     uint32_t child_index = 0U;
 
-    /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
+    /* transaction id. */
+    uint8_t txn_id[16];
 
-    /* the payload size should be equal to the child context plus the UUID. */
-    if (size != (sizeof(uint32_t) + 16))
+    /* parse the request payload. */
+    retval =
+        dataservice_decode_request_transaction_drop(
+            req, size, &child_index, txn_id);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
         goto done;
     }
-
-    /* copy the index. */
-    uint32_t nchild_index;
-    memcpy(&nchild_index, breq, sizeof(uint32_t));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
-
-    /* decode the index. */
-    child_index = ntohl(nchild_index);
 
     /* check bounds. */
     if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
@@ -85,14 +77,6 @@ int dataservice_decode_and_dispatch_transaction_drop(
         ;
         goto done;
     }
-
-    /* copy the txn_id. */
-    uint8_t txn_id[16];
-    memcpy(txn_id, breq, sizeof(txn_id));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
 
     /* call the transaction drop method. */
     retval =

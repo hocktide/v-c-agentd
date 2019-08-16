@@ -1,0 +1,67 @@
+/**
+ * \file dataservice/dataservice_decode_request_transaction_drop.c
+ *
+ * \brief Decode a transaction drop request.
+ *
+ * \copyright 2019 Velo Payments, Inc.  All rights reserved.
+ */
+
+#include <arpa/inet.h>
+#include <agentd/status_codes.h>
+#include <cbmc/model_assert.h>
+#include <string.h>
+
+#include "dataservice_protocol_internal.h"
+
+/**
+ * \brief Decode a transaction drop request.
+ *
+ * \param req           The request payload to parse.
+ * \param size          The size of this request payload.
+ * \param child_index   Pointer to receive the child index.
+ * \param txn_id        Pointer to receive the transaction UUID. Must be large
+ *                      enough to hold this value.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet payload size is incorrect.
+ */
+int dataservice_decode_request_transaction_drop(
+    const void* req, size_t size, uint32_t* child_index, void* txn_id)
+{
+    /* parameter sanity check. */
+    MODEL_ASSERT(NULL != req);
+    MODEL_ASSERT(NULL != child_index);
+    MODEL_ASSERT(NULL != txn_id);
+
+    /* make working with the request more convenient. */
+    uint8_t* breq = (uint8_t*)req;
+
+    /* the payload size should be equal to the child context plus the UUID. */
+    if (size != (sizeof(uint32_t) + 16))
+    {
+        return AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
+    }
+
+    /* copy the index. */
+    uint32_t nchild_index;
+    memcpy(&nchild_index, breq, sizeof(uint32_t));
+
+    /* increment breq and decrement size. */
+    breq += sizeof(uint32_t);
+    size -= sizeof(uint32_t);
+
+    /* decode the index. */
+    *child_index = ntohl(nchild_index);
+
+    /* copy the txn_id. */
+    memcpy(txn_id, breq, 16);
+
+    /* increment breq and decrement size. */
+    breq += sizeof(uint32_t);
+    size -= sizeof(uint32_t);
+
+    /* success. */
+    return AGENTD_STATUS_SUCCESS;
+}

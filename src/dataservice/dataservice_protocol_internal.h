@@ -334,6 +334,23 @@ int dataservice_decode_request_global_setting_set(
     const void* req, size_t size, uint32_t* child_index, uint64_t* key,
     void** val, size_t* val_size);
 
+/**
+ * \brief Decode a transaction drop request.
+ *
+ * \param req           The request payload to parse.
+ * \param size          The size of this request payload.
+ * \param child_index   Pointer to receive the child index.
+ * \param txn_id        Pointer to receive the transaction UUID. Must be large
+ *                      enough to hold this value.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet payload size is incorrect.
+ */
+int dataservice_decode_request_transaction_drop(
+    const void* req, size_t size, uint32_t* child_index, void* txn_id);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
