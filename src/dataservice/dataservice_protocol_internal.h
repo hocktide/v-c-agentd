@@ -395,6 +395,48 @@ int dataservice_encode_response_transaction_get(
     const uint8_t* prev_id, const uint8_t* next_id, const uint8_t* artifact_id,
     const void* cert, size_t cert_size);
 
+/**
+ * \brief Decode a transaction get first request.
+ *
+ * \param req           The request payload to parse.
+ * \param size          The size of this request payload.
+ * \param child_index   Pointer to receive the child index.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet payload size is incorrect.
+ */
+int dataservice_decode_request_transaction_get_first(
+    const void* req, size_t size, uint32_t* child_index);
+
+/**
+ * \brief Encode a transaction get first response payload packet.
+ *
+ * \param payload           Pointer to receive the allocated packet payload.
+ * \param payload_size      Pointer to receive the size of the payload.
+ * \param txn_id            Pointer to the transaction UUID.               
+ * \param prev_id           Pointer to the previous transaction UUID.               
+ * \param next_id           Pointer to the next transaction UUID.               
+ * \param artifact_id       Pointer to the artifact UUID.
+ * \param cert              Pointer to the transaction certificate.
+ * \param cert_size         Size of the transaction certificate.
+ *
+ * On successful completion of this function, the payload pointer is updated
+ * with a buffer containing the payload packet, and the payload_size pointer is
+ * updated with the size of this payload packet.  The caller owns the payload
+ * packet and must clear and free it when it is no longer needed.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered during this operation.
+ */
+int dataservice_encode_response_transaction_get_first(
+    void** payload, size_t* payload_size, const uint8_t* txn_id,
+    const uint8_t* prev_id, const uint8_t* next_id, const uint8_t* artifact_id,
+    const void* cert, size_t cert_size);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
