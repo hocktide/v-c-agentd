@@ -297,6 +297,22 @@ int dataservice_decode_request_child_context_create(
 int dataservice_encode_response_child_context_create(
     void** payload, size_t* payload_size, uint32_t child_offset);
 
+/**
+ * \brief Decode a global setting get request.
+ *
+ * \param req           The request payload to parse.
+ * \param size          The size of this request payload.
+ * \param child_index   Pointer to receive the child index.
+ * \param key           Pointer to receive the 64-bit key.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet payload size is incorrect.
+ */
+int dataservice_decode_request_global_setting_get(
+    const void* req, size_t size, uint32_t* child_index, uint64_t* key);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
