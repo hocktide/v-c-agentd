@@ -67,17 +67,11 @@ int dataservice_decode_and_dispatch_transaction_get(
         goto done;
     }
 
-    /* check bounds. */
-    if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
+    /* look up the child context. */
+    dataservice_child_context_t* ctx = NULL;
+    retval = dataservice_child_context_lookup(&ctx, inst, child_index);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX;
-        goto done;
-    }
-
-    /* verify that this child context is open. */
-    if (NULL == inst->children[child_index].hdr.dispose)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID;
         goto done;
     }
 
@@ -85,8 +79,7 @@ int dataservice_decode_and_dispatch_transaction_get(
     data_transaction_node_t node;
     retval =
         dataservice_transaction_get(
-            &inst->children[child_index].ctx, NULL, txn_id, &node,
-            &txn_bytes, &txn_size);
+            ctx, NULL, txn_id, &node, &txn_bytes, &txn_size);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         txn_bytes = NULL;

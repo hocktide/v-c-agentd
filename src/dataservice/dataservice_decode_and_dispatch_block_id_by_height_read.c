@@ -65,25 +65,18 @@ int dataservice_decode_and_dispatch_block_id_by_height_read(
         goto done;
     }
 
-    /* check bounds. */
-    if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
+    /* look up the child context. */
+    dataservice_child_context_t* ctx = NULL;
+    retval = dataservice_child_context_lookup(&ctx, inst, child_index);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX;
-        goto done;
-    }
-
-    /* verify that this child context is open. */
-    if (NULL == inst->children[child_index].hdr.dispose)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID;
         goto done;
     }
 
     /* call the block id get by height method. */
     uint8_t block_id[16];
     retval =
-        dataservice_block_id_by_height_get(
-            &inst->children[child_index].ctx, NULL, block_height, block_id);
+        dataservice_block_id_by_height_get(ctx, NULL, block_height, block_id);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;

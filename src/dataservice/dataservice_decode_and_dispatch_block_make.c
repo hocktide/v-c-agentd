@@ -67,24 +67,16 @@ int dataservice_decode_and_dispatch_block_make(
         goto done;
     }
 
-    /* check bounds. */
-    if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
+    /* look up the child context. */
+    dataservice_child_context_t* ctx = NULL;
+    retval = dataservice_child_context_lookup(&ctx, inst, child_index);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX;
-        goto done;
-    }
-
-    /* verify that this child context is open. */
-    if (NULL == inst->children[child_index].hdr.dispose)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID;
         goto done;
     }
 
     /* call the make block method. */
-    retval =
-        dataservice_block_make(
-            &inst->children[child_index].ctx, NULL, block_id, cert, cert_size);
+    retval = dataservice_block_make(ctx, NULL, block_id, cert, cert_size);
 
     /* Fall through. */
 

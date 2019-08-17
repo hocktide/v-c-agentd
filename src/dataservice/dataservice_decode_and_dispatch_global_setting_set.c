@@ -67,17 +67,11 @@ int dataservice_decode_and_dispatch_global_setting_set(
         goto done;
     }
 
-    /* check bounds. */
-    if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
+    /* look up the child context. */
+    dataservice_child_context_t* ctx = NULL;
+    retval = dataservice_child_context_lookup(&ctx, inst, child_index);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX;
-        goto done;
-    }
-
-    /* verify that this child context is open. */
-    if (NULL == inst->children[child_index].hdr.dispose)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID;
         goto done;
     }
 
@@ -87,7 +81,7 @@ int dataservice_decode_and_dispatch_global_setting_set(
     /* call the global settings set method. */
     retval =
         dataservice_global_settings_set(
-            &inst->children[child_index].ctx, key, (const char*)val, val_size);
+            ctx, key, (const char*)val, val_size);
 
 done:
     /* write the status to the caller. */

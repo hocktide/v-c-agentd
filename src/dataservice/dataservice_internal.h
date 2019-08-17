@@ -135,6 +135,27 @@ int dataservice_child_details_create(dataservice_instance_t* inst, int* offset);
 void dataservice_child_details_delete(dataservice_instance_t* inst, int offset);
 
 /**
+ * \brief Look up a child context from a potentially bad index.
+ *
+ * \param ctx           Pointer to the child context to populate.
+ * \param inst          The data service instance to use for the lookup.
+ * \param offset        The offset used for the lookup.
+ *
+ * This method does bounds checking on an index value and populates a
+ * dataservice_child_context_t if valid.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX if the index is
+ *        invalid.
+ *      - AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID if the index is
+ *        invalid.
+ */
+int dataservice_child_context_lookup(
+    dataservice_child_context_t** ctx, dataservice_instance_t* inst,
+    uint32_t offset);
+
+/**
  * \brief Drop a given transaction by ID from the queue.
  *
  * This is the internal version of the function, which does not perform any

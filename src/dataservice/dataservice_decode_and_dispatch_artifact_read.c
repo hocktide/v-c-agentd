@@ -65,25 +65,17 @@ int dataservice_decode_and_dispatch_artifact_read(
         goto done;
     }
 
-    /* check child_index bounds. */
-    if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
+    /* look up the child context. */
+    dataservice_child_context_t* ctx = NULL;
+    retval = dataservice_child_context_lookup(&ctx, inst, child_index);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX;
-        goto done;
-    }
-
-    /* verify that this child context is open. */
-    if (NULL == inst->children[child_index].hdr.dispose)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID;
         goto done;
     }
 
     /* call the artifact get method. */
     data_artifact_record_t record;
-    retval =
-        dataservice_artifact_get(
-            &inst->children[child_index].ctx, NULL, artifact_id, &record);
+    retval = dataservice_artifact_get(ctx, NULL, artifact_id, &record);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
