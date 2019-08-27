@@ -18,15 +18,8 @@
  *
  * \param req           The request payload to parse.
  * \param size          The size of this request payload.
- * \param child_index   Pointer to receive the child index.
- * \param txn_id        Pointer to a buffer large enough to receive the txn
- *                      UUID.
- * \param artifact_id   Pointer to a buffer large enough to receive the artifact
- *                      UUID.
- * \param cert          Pointer to receive the start of the txn certificate in
- *                      the request payload.  Note that this is a substring in
- *                      the request payload.  It should not be freed.
- * \param cert_size     Pointer to receive the size of the txn certificate.
+ * \param dreq          The request structure into which this request is
+ *                      decoded.
  *
  * \returns a status code indicating success or failure.
  *      - AGENTD_STATUS_SUCCESS on success.
@@ -34,59 +27,61 @@
  *        packet payload size is incorrect.
  */
 int dataservice_decode_request_transaction_submit(
-    const void* req, size_t size, uint32_t* child_index, uint8_t* txn_id,
-    uint8_t* artifact_id, const uint8_t** cert, size_t* cert_size)
+    const void* req, size_t size,
+    dataservice_request_transaction_submit_t* dreq)
 {
+    int retval = AGENTD_STATUS_SUCCESS;
+
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != req);
-    MODEL_ASSERT(NULL != child_index);
-    MODEL_ASSERT(NULL != txn_id);
-    MODEL_ASSERT(NULL != artifact_id);
-    MODEL_ASSERT(NULL != cert);
-    MODEL_ASSERT(NULL != cert_size);
+    MODEL_ASSERT(NULL != dreq);
 
     /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
+    const uint8_t* breq = (const uint8_t*)req;
 
-    /* the payload size should be greater than the child context
-     * size and size of the two UUIDs. */
-    if (size <= sizeof(uint32_t) + 2 * 16)
+    /* initialize the request structure. */
+    retval = dataservice_request_init(&breq, &size, &dreq->hdr, sizeof(*dreq));
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        return AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
+        goto done;
     }
 
-    /* copy the index. */
-    uint32_t nchild_index;
-    memcpy(&nchild_index, breq, sizeof(uint32_t));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
-
-    /* decode the index. */
-    *child_index = ntohl(nchild_index);
+    /* the remaining payload size should be greater than the size of the
+     * two UUIDs. */
+    if (size <= (sizeof(dreq->txn_id) + sizeof(dreq->artifact_id)))
+    {
+        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
+        goto cleanup_dreq;
+    }
 
     /* copy the transaction id. */
-    memcpy(txn_id, breq, 16);
+    memcpy(dreq->txn_id, breq, sizeof(dreq->txn_id));
 
     /* increment breq and decrement size. */
-    breq += 16;
-    size -= 16;
+    breq += sizeof(dreq->txn_id);
+    size -= sizeof(dreq->txn_id);
 
     /* copy the artifact id. */
-    memcpy(artifact_id, breq, 16);
+    memcpy(dreq->artifact_id, breq, sizeof(dreq->artifact_id));
 
     /* increment breq and decrement size. */
-    breq += 16;
-    size -= 16;
+    breq += sizeof(dreq->artifact_id);
+    size -= sizeof(dreq->artifact_id);
 
     /* the value size should be greater than zero. */
     MODEL_ASSERT(size > 0);
 
     /* set the cert substring and size. */
-    *cert = breq;
-    *cert_size = size;
+    dreq->cert = breq;
+    dreq->cert_size = size;
 
-    /* success. */
-    return AGENTD_STATUS_SUCCESS;
+    /* success. dreq contents are owned by the caller. */
+    goto done;
+
+cleanup_dreq:
+    /* we failed, so don't pass dreq contents to the caller. */
+    dispose((disposable_t*)dreq);
+
+done:
+    return retval;
 }

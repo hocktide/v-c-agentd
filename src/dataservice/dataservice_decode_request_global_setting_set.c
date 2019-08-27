@@ -19,12 +19,11 @@
  *
  * \param req           The request payload to parse.
  * \param size          The size of this request payload.
- * \param child_index   Pointer to receive the child index.
- * \param key           Pointer to receive the 64-bit key.
- * \param val           Pointer to receive the value to be set.  Note that this
- *                      is a substring in the request payload.  It should not be
- *                      freed.
- * \param val_size      Pointer to receive the size of this value.
+ * \param dreq          The request structure into which this request is
+ *                      decoded.
+ *
+ * \note On successful completion of this call, the dreq->value points to data
+ * in req, and should not be freed.
  *
  * \returns a status code indicating success or failure.
  *      - AGENTD_STATUS_SUCCESS on success.
@@ -32,52 +31,55 @@
  *        packet payload size is incorrect.
  */
 int dataservice_decode_request_global_setting_set(
-    const void* req, size_t size, uint32_t* child_index, uint64_t* key,
-    void** val, size_t* val_size)
+    const void* req, size_t size,
+    dataservice_request_global_setting_set_t* dreq)
 {
+    int retval = AGENTD_STATUS_SUCCESS;
+
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != req);
-    MODEL_ASSERT(NULL != child_index);
-    MODEL_ASSERT(NULL != key);
-    MODEL_ASSERT(NULL != val);
-    MODEL_ASSERT(NULL != val_size);
+    MODEL_ASSERT(NULL != dreq);
 
     /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
+    const uint8_t* breq = (const uint8_t*)req;
 
-    /* the payload size should be greater than or equal to the child context
-     * size and the 64-bit global settings key. */
-    if (size <= sizeof(uint32_t) + sizeof(uint64_t))
+    /* initialize the request structure. */
+    retval = dataservice_request_init(&breq, &size, &dreq->hdr, sizeof(*dreq));
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        return AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
+        goto done;
     }
 
-    /* copy the index. */
-    uint32_t nchild_index;
-    memcpy(&nchild_index, breq, sizeof(uint32_t));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
-
-    /* decode the index. */
-    *child_index = ntohl(nchild_index);
+    /* the remaining payload size should be greater than or equal to the 64-bit
+     * global settings key. */
+    if (size <= sizeof(dreq->key))
+    {
+        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
+        goto cleanup_dreq;
+    }
 
     /* get the global settings key. */
     uint64_t nkey;
     memcpy(&nkey, breq, sizeof(nkey));
 
     /* decode the key. */
-    *key = ntohll(nkey);
+    dreq->key = ntohll(nkey);
 
     /* increment breq and decrement size. */
-    breq += sizeof(uint64_t);
-    size -= sizeof(uint64_t);
+    breq += sizeof(dreq->key);
+    size -= sizeof(dreq->key);
 
     /* save the val / val_size. */
-    *val = breq;
-    *val_size = size;
+    dreq->val = breq;
+    dreq->val_size = size;
 
-    /* success. */
-    return AGENTD_STATUS_SUCCESS;
+    /* success. dreq contents are owned by the caller. */
+    goto done;
+
+cleanup_dreq:
+    /* we failed, so don't pass dreq contents to the caller. */
+    dispose((disposable_t*)dreq);
+
+done:
+    return retval;
 }

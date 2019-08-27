@@ -42,40 +42,32 @@ int dataservice_decode_and_dispatch_transaction_submit(
     size_t size)
 {
     int retval = 0;
+    bool dispose_dreq = false;
 
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != inst);
     MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != req);
 
-    /* default child_index. */
-    uint32_t child_index = 0U;
-
-    /* transaction UUID. */
-    uint8_t txn_id[16];
-
-    /* artifact UUID. */
-    uint8_t artifact_id[16];
-
-    /* certificate substring. */
-    const uint8_t* cert = NULL;
-    size_t cert_size = 0UL;
+    /* transaction submit request structure. */
+    dataservice_request_transaction_submit_t dreq;
 
     /* parse the request. */
-    retval =
-        dataservice_decode_request_transaction_submit(
-            req, size, &child_index, txn_id, artifact_id, &cert, &cert_size);
+    retval = dataservice_decode_request_transaction_submit(req, size, &dreq);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
     }
 
-    /* the value size should be greater than zero. */
-    MODEL_ASSERT(size > 0);
+    /* be sure to clean up dreq. */
+    dispose_dreq = true;
+
+    /* the certificate size should be greater than zero. */
+    MODEL_ASSERT(dreq.cert_size > 0);
 
     /* look up the child context. */
     dataservice_child_context_t* ctx = NULL;
-    retval = dataservice_child_context_lookup(&ctx, inst, child_index);
+    retval = dataservice_child_context_lookup(&ctx, inst, dreq.hdr.child_index);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
@@ -84,7 +76,8 @@ int dataservice_decode_and_dispatch_transaction_submit(
     /* call the transaction submit method. */
     retval =
         dataservice_transaction_submit(
-            ctx, NULL, txn_id, artifact_id, cert, cert_size);
+            ctx, NULL, dreq.txn_id, dreq.artifact_id, dreq.cert,
+            dreq.cert_size);
 
     /* success. Fall through. */
 
@@ -92,8 +85,14 @@ done:
     /* write the status to the caller. */
     retval =
         dataservice_decode_and_dispatch_write_status(
-            sock, DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_SUBMIT, child_index,
-            (uint32_t)retval, NULL, 0);
+            sock, DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_SUBMIT,
+            dreq.hdr.child_index, (uint32_t)retval, NULL, 0);
+
+    /* clean up dreq. */
+    if (dispose_dreq)
+    {
+        dispose((disposable_t*)&dreq);
+    }
 
     return retval;
 }

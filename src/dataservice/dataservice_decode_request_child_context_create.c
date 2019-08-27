@@ -18,9 +18,8 @@
  *
  * \param req           The request payload to parse.
  * \param size          The size of this request payload.
- * \param caps          Pointer to the buffer to receive the capabilities for
- *                      this context.  Must be large enough to hold the
- *                      dataservice bit capabilities set.
+ * \param dreq          The request structure into which this request is
+ *                      decoded.
  *
  * \returns a status code indicating success or failure.
  *      - AGENTD_STATUS_SUCCESS on success.
@@ -28,26 +27,43 @@
  *        packet payload size is incorrect.
  */
 int dataservice_decode_request_child_context_create(
-    const void* req, size_t size, void* caps)
+    const void* req, size_t size,
+    dataservice_request_child_context_create_t* dreq)
 {
+    int retval = AGENTD_STATUS_SUCCESS;
+
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != req);
-    MODEL_ASSERT(NULL != caps);
-
-    BITCAP(dummy_caps, DATASERVICE_API_CAP_BITS_MAX);
+    MODEL_ASSERT(NULL != dreq);
 
     /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
+    const uint8_t* breq = (const uint8_t*)req;
+
+    /* initialize the request structure. */
+    retval =
+        dataservice_request_init_empty(&breq, &size, &dreq->hdr, sizeof(*dreq));
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        goto done;
+    }
 
     /* the payload size should be equal to the size of the capabilities. */
-    if (size != sizeof(dummy_caps))
+    if (size != sizeof(dreq->caps))
     {
-        return AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
+        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
+        goto cleanup_dreq;
     }
 
     /* copy the caps. */
-    memcpy(caps, breq, size);
+    memcpy(dreq->caps, breq, size);
 
-    /* success. */
-    return AGENTD_STATUS_SUCCESS;
+    /* success. dreq contents are owned by the caller. */
+    goto done;
+
+cleanup_dreq:
+    /* we failed, so don't pass dreq contents to the caller. */
+    dispose((disposable_t*)dreq);
+
+done:
+    return retval;
 }

@@ -42,34 +42,29 @@ int dataservice_decode_and_dispatch_global_setting_set(
     size_t size)
 {
     int retval = 0;
+    bool dispose_dreq = false;
 
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != inst);
     MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != req);
 
-    /* default child_index. */
-    uint32_t child_index = 0U;
+    /* global setting get request structure. */
+    dataservice_request_global_setting_set_t dreq;
 
-    /* the key. */
-    uint64_t key = 0ULL;
-
-    /* the value. */
-    void* val = NULL;
-    size_t val_size = 0UL;
-
-    /* parse the request packet. */
-    retval =
-        dataservice_decode_request_global_setting_set(
-            req, size, &child_index, &key, &val, &val_size);
+    /* parse the request payload. */
+    retval = dataservice_decode_request_global_setting_set(req, size, &dreq);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
     }
 
+    /* be sure to clean up dreq. */
+    dispose_dreq = true;
+
     /* look up the child context. */
     dataservice_child_context_t* ctx = NULL;
-    retval = dataservice_child_context_lookup(&ctx, inst, child_index);
+    retval = dataservice_child_context_lookup(&ctx, inst, dreq.hdr.child_index);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
@@ -81,14 +76,20 @@ int dataservice_decode_and_dispatch_global_setting_set(
     /* call the global settings set method. */
     retval =
         dataservice_global_settings_set(
-            ctx, key, (const char*)val, val_size);
+            ctx, dreq.key, (const char*)dreq.val, dreq.val_size);
 
 done:
     /* write the status to the caller. */
     retval =
         dataservice_decode_and_dispatch_write_status(
-            sock, DATASERVICE_API_METHOD_APP_GLOBAL_SETTING_WRITE, child_index,
-            (uint32_t)retval, NULL, 0);
+            sock, DATASERVICE_API_METHOD_APP_GLOBAL_SETTING_WRITE,
+            dreq.hdr.child_index, (uint32_t)retval, NULL, 0);
+
+    /* clean up dreq. */
+    if (dispose_dreq)
+    {
+        dispose((disposable_t*)&dreq);
+    }
 
     return retval;
 }

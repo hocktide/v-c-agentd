@@ -42,6 +42,7 @@ int dataservice_decode_and_dispatch_artifact_read(
     size_t size)
 {
     int retval = 0;
+    bool dispose_dreq = false;
     void* payload = NULL;
     size_t payload_size = 0U;
 
@@ -50,24 +51,22 @@ int dataservice_decode_and_dispatch_artifact_read(
     MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != req);
 
-    /* default child_index. */
-    uint32_t child_index = 0U;
+    /* artifact read request structure. */
+    dataservice_request_payload_artifact_read_t dreq;
 
-    /* artifact id buffer. */
-    uint8_t artifact_id[16];
-
-    /* parse the payload. */
-    retval =
-        dataservice_decode_request_payload_artifact_read(
-            req, size, &child_index, artifact_id);
+    /* parse the request payload. */
+    retval = dataservice_decode_request_payload_artifact_read(req, size, &dreq);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
     }
 
+    /* be sure to clean up dreq. */
+    dispose_dreq = true;
+
     /* look up the child context. */
     dataservice_child_context_t* ctx = NULL;
-    retval = dataservice_child_context_lookup(&ctx, inst, child_index);
+    retval = dataservice_child_context_lookup(&ctx, inst, dreq.hdr.child_index);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
@@ -75,7 +74,7 @@ int dataservice_decode_and_dispatch_artifact_read(
 
     /* call the artifact get method. */
     data_artifact_record_t record;
-    retval = dataservice_artifact_get(ctx, NULL, artifact_id, &record);
+    retval = dataservice_artifact_get(ctx, NULL, dreq.artifact_id, &record);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
@@ -99,13 +98,19 @@ done:
     retval =
         dataservice_decode_and_dispatch_write_status(
             sock, DATASERVICE_API_METHOD_APP_ARTIFACT_READ,
-            child_index, (uint32_t)retval, payload, payload_size);
+            dreq.hdr.child_index, (uint32_t)retval, payload, payload_size);
 
     /* clean up payload bytes. */
     if (NULL != payload)
     {
         memset(payload, 0, payload_size);
         free(payload);
+    }
+
+    /* clean up dreq. */
+    if (dispose_dreq)
+    {
+        dispose((disposable_t*)&dreq);
     }
 
     return retval;

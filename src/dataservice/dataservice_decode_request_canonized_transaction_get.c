@@ -18,9 +18,8 @@
  *
  * \param req           The request payload to parse.
  * \param size          The size of this request payload.
- * \param child_index   Pointer to receive the child index.
- * \param txn_id        Pointer to a buffer large enough to receive the
- *                      transaction UUID.
+ * \param dreq          The request structure into which this request is
+ *                      decoded.
  *
  * \returns a status code indicating success or failure.
  *      - AGENTD_STATUS_SUCCESS on success.
@@ -28,36 +27,42 @@
  *        packet payload size is incorrect.
  */
 int dataservice_decode_request_canonized_transaction_get(
-    const void* req, size_t size, uint32_t* child_index, uint8_t* txn_id)
+    const void* req, size_t size,
+    dataservice_request_canonized_transaction_get_t* dreq)
 {
+    int retval = AGENTD_STATUS_SUCCESS;
+
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != req);
-    MODEL_ASSERT(NULL != child_index);
-    MODEL_ASSERT(NULL != txn_id);
+    MODEL_ASSERT(NULL != dreq);
 
     /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
+    const uint8_t* breq = (const uint8_t*)req;
 
-    /* the payload size should be equal to the child context */
-    if (size != (sizeof(uint32_t) + 16))
+    /* initialize the request structure. */
+    retval = dataservice_request_init(&breq, &size, &dreq->hdr, sizeof(*dreq));
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        return AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
+        goto done;
     }
 
-    /* copy the index. */
-    uint32_t nchild_index;
-    memcpy(&nchild_index, breq, sizeof(uint32_t));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
-
-    /* decode the index. */
-    *child_index = ntohl(nchild_index);
+    /* the remaining payload size should be equal to the transaction id */
+    if (size != sizeof(dreq->txn_id))
+    {
+        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
+        goto cleanup_dreq;
+    }
 
     /* copy the txn_id. */
-    memcpy(txn_id, breq, 16);
+    memcpy(dreq->txn_id, breq, 16);
 
-    /* success. */
-    return AGENTD_STATUS_SUCCESS;
+    /* success. dreq contents are owned by the caller. */
+    goto done;
+
+cleanup_dreq:
+    /* we failed, so don't pass dreq contents to the caller. */
+    dispose((disposable_t*)dreq);
+
+done:
+    return retval;
 }

@@ -42,37 +42,36 @@ int dataservice_decode_and_dispatch_transaction_drop(
     size_t size)
 {
     int retval = 0;
+    bool dispose_dreq = false;
 
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != inst);
     MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != req);
 
-    /* default child_index. */
-    uint32_t child_index = 0U;
-
-    /* transaction id. */
-    uint8_t txn_id[16];
+    /* transaction drop request structure. */
+    dataservice_request_transaction_drop_t dreq;
 
     /* parse the request payload. */
-    retval =
-        dataservice_decode_request_transaction_drop(
-            req, size, &child_index, txn_id);
+    retval = dataservice_decode_request_transaction_drop(req, size, &dreq);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
     }
 
+    /* be sure to clean up dreq. */
+    dispose_dreq = true;
+
     /* look up the child context. */
     dataservice_child_context_t* ctx = NULL;
-    retval = dataservice_child_context_lookup(&ctx, inst, child_index);
+    retval = dataservice_child_context_lookup(&ctx, inst, dreq.hdr.child_index);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
     }
 
     /* call the transaction drop method. */
-    retval = dataservice_transaction_drop(ctx, NULL, txn_id);
+    retval = dataservice_transaction_drop(ctx, NULL, dreq.txn_id);
 
     /* success. Fall through. */
 
@@ -81,7 +80,13 @@ done:
     retval =
         dataservice_decode_and_dispatch_write_status(
             sock, DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_DROP,
-            child_index, (uint32_t)retval, NULL, 0);
+            dreq.hdr.child_index, (uint32_t)retval, NULL, 0);
+
+    /* clean up dreq. */
+    if (dispose_dreq)
+    {
+        dispose((disposable_t*)&dreq);
+    }
 
     return retval;
 }

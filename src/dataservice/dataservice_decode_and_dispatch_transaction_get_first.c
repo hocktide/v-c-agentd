@@ -42,6 +42,7 @@ int dataservice_decode_and_dispatch_transaction_get_first(
     size_t size)
 {
     int retval = 0;
+    bool dispose_dreq = false;
     void* payload = NULL;
     size_t payload_size = 0U;
     uint8_t* txn_bytes = NULL;
@@ -52,21 +53,22 @@ int dataservice_decode_and_dispatch_transaction_get_first(
     MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != req);
 
-    /* default child_index. */
-    uint32_t child_index = 0U;
+    /* transaction get first request structure. */
+    dataservice_request_transaction_get_first_t dreq;
 
     /* decode the request payload. */
-    retval =
-        dataservice_decode_request_transaction_get_first(
-            req, size, &child_index);
+    retval = dataservice_decode_request_transaction_get_first(req, size, &dreq);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
     }
 
+    /* be sure to clean up dreq. */
+    dispose_dreq = true;
+
     /* look up the child context. */
     dataservice_child_context_t* ctx = NULL;
-    retval = dataservice_child_context_lookup(&ctx, inst, child_index);
+    retval = dataservice_child_context_lookup(&ctx, inst, dreq.hdr.child_index);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
@@ -100,7 +102,7 @@ done:
     retval =
         dataservice_decode_and_dispatch_write_status(
             sock, DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_FIRST_READ,
-            child_index, (uint32_t)retval, payload, payload_size);
+            dreq.hdr.child_index, (uint32_t)retval, payload, payload_size);
 
     /* clean up payload bytes. */
     if (NULL != payload)
@@ -114,6 +116,12 @@ done:
     {
         memset(txn_bytes, 0, txn_size);
         free(txn_bytes);
+    }
+
+    /* clean up dreq. */
+    if (dispose_dreq)
+    {
+        dispose((disposable_t*)&dreq);
     }
 
     return retval;

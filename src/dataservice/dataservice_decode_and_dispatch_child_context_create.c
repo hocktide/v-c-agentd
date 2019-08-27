@@ -41,6 +41,7 @@ int dataservice_decode_and_dispatch_child_context_create(
     size_t size)
 {
     int retval = 0;
+    bool dispose_dreq = false;
     void* payload = NULL;
     size_t payload_size = 0U;
 
@@ -49,17 +50,20 @@ int dataservice_decode_and_dispatch_child_context_create(
     MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != req);
 
-    /* storage for the capabilities. */
-    BITCAP(caps, DATASERVICE_API_CAP_BITS_MAX);
+    /* child context create request structure. */
+    dataservice_request_child_context_create_t dreq;
 
     /* parse the request. */
     retval =
         dataservice_decode_request_child_context_create(
-            req, size, caps);
+            req, size, &dreq);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
     }
+
+    /* be sure to clean up dreq. */
+    dispose_dreq = true;
 
     /* allocate a free child context. */
     int child_offset = 0;
@@ -77,7 +81,7 @@ int dataservice_decode_and_dispatch_child_context_create(
 
     /* call the child context create method. */
     retval = dataservice_child_context_create(
-        &inst->ctx, &inst->children[child_offset].ctx, caps);
+        &inst->ctx, &inst->children[child_offset].ctx, dreq.caps);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_CREATE_FAILURE;
@@ -111,6 +115,12 @@ done:
     {
         memset(payload, 0, payload_size);
         free(payload);
+    }
+
+    /* clean up dreq. */
+    if (dispose_dreq)
+    {
+        dispose((disposable_t*)&dreq);
     }
 
     return retval;
