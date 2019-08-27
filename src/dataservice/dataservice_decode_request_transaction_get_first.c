@@ -32,7 +32,7 @@ int dataservice_decode_request_transaction_get_first(
 {
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != req);
-    MODEL_ASSERT(NULL != child_index);
+    MODEL_ASSERT(NULL != dreq);
 
     /* make working with the request more convenient. */
     const uint8_t* breq = (const uint8_t*)req;
