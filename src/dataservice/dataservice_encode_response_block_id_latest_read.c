@@ -40,7 +40,7 @@ int dataservice_encode_response_block_id_latest_read(
     /* create the payload. */
     *payload_size = 16U;
     *payload = malloc(*payload_size);
-    if (NULL == payload)
+    if (NULL == *payload)
     {
         return AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
     }
