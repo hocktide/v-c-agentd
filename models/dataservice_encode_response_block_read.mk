@@ -21,5 +21,5 @@ ALL:
 	$(MODEL_CHECK_SOURCES) \
 	$(VPR_DIR)/src/disposable/dispose.c \
 	../src/inet/htonll.c \
-    ../models/shadow/dataservice/dataservice_encode_response_block_read.c \
+    ../src/dataservice/dataservice_encode_response_block_read.c \
 	dataservice_encode_response_block_read_main.c
