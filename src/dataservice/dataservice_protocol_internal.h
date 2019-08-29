@@ -459,7 +459,7 @@ int dataservice_decode_request_child_context_create(
     dataservice_request_child_context_create_t* dreq);
 
 /**
- * \brief Encode a child context create request.
+ * \brief Encode a child context create response.
  *
  * \param payload           Pointer to receive the allocated packet payload.
  * \param payload_size      Pointer to receive the size of the payload.

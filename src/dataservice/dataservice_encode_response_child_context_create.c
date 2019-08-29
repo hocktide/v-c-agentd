@@ -14,7 +14,7 @@
 #include "dataservice_protocol_internal.h"
 
 /**
- * \brief Encode a child context create request.
+ * \brief Encode a child context create response.
  *
  * \param payload           Pointer to receive the allocated packet payload.
  * \param payload_size      Pointer to receive the size of the payload.
