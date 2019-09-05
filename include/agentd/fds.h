@@ -84,6 +84,23 @@ extern "C" {
 #define AGENTD_FD_PID ((int)2)
 
 /******************************************************************************/
+/* Authentication Service                                                     */
+/******************************************************************************/
+
+/**
+ * \brief File descriptor for the auth service accept socket.
+ * Used by the auth service private command.
+ */
+#define AGENTD_FD_AUTHSVC_ACCEPT ((int)0)
+
+/**
+ * \brief File descriptor for the auth service log socket.
+ * Used by the auth service private command.
+ */
+#define AGENTD_FD_AUTHSVC_LOG ((int)1)
+
+
+/******************************************************************************/
 /* Unauthorized Protocol Service                                              */
 /******************************************************************************/
 
