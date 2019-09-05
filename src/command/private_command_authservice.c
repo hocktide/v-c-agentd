@@ -23,8 +23,8 @@ void private_command_authservice(bootstrap_config_t* UNUSED(bconf))
     /* run the event loop for the auth service. */
     int retval =
         auth_service_event_loop(
-            AGENTD_FD_AUTHSVC_ACCEPT,
-            AGENTD_FD_AUTHSVC_LOG);
+            AGENTD_FD_AUTHSERVICE_SOCK,
+            AGENTD_FD_AUTHSERVICE_LOG);
 
     /* exit with the return code from the event loop. */
     exit(retval);

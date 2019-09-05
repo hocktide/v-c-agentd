@@ -88,16 +88,16 @@ extern "C" {
 /******************************************************************************/
 
 /**
- * \brief File descriptor for the auth service accept socket.
+ * \brief File descriptor for the auth service socket.
  * Used by the auth service private command.
  */
-#define AGENTD_FD_AUTHSVC_ACCEPT ((int)0)
+#define AGENTD_FD_AUTHSERVICE_SOCK ((int)0)
 
 /**
  * \brief File descriptor for the auth service log socket.
  * Used by the auth service private command.
  */
-#define AGENTD_FD_AUTHSVC_LOG ((int)1)
+#define AGENTD_FD_AUTHSERVICE_LOG ((int)1)
 
 
 /******************************************************************************/

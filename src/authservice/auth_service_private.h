@@ -9,6 +9,9 @@
 #ifndef AGENTD_AUTH_SERVICE_PRIVATE_HEADER_GUARD
 #define AGENTD_AUTH_SERVICE_PRIVATE_HEADER_GUARD
 
+#include <agentd/authservice.h>
+#include <agentd/ipc.h>
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 extern "C" {
