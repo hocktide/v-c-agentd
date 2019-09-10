@@ -6,7 +6,7 @@
  * \copyright 2019 Velo Payments, Inc.  All rights reserved.
  */
 
-#include <agentd/authservice.h>
+#include <agentd/authservice/private/authservice.h>
 #include <agentd/ipc.h>
 #include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
@@ -120,11 +120,12 @@ static void auth_service_ipc_read(
     {
         /* on success, decode and dispatch. */
         case 0:
-            /*if (0 != dataservice_decode_and_dispatch(instance, ctx, req, size))
+            if (0 !=
+                auth_service_decode_and_dispatch(instance, ctx, req, size))
             {
-                instance->dataservice_force_exit = true;
-                ipc_exit_loop(instance->loop_context);
-            }*/
+                instance->auth_service_force_exit = true;
+                ipc_exit_loop(instance->loop);
+            }
 
             /* clear and free the request data. */
             memset(req, 0, size);

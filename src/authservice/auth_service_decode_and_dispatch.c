@@ -39,7 +39,7 @@
  *        written to the client socket.
  */
 int auth_service_decode_and_dispatch(
-    auth_service_instance_t* UNUSED(inst), ipc_socket_context_t* UNUSED(sock), void* req,
+    auth_service_instance_t* inst, ipc_socket_context_t* sock, void* req,
     size_t size)
 {
     /* parameter sanity check. */
@@ -65,19 +65,22 @@ int auth_service_decode_and_dispatch(
     breq += sizeof(uint32_t);
 
     /* derive the payload size. */
-    //size_t payload_size = size - sizeof(uint32_t);
-    //MODEL_ASSERT(payload_size >= 0);
+    size_t payload_size = size - sizeof(uint32_t);
+    MODEL_ASSERT(payload_size >= 0);
 
     /* decode the method. */
     switch (method)
     {
+        /* handle initialize method. */
+        case AUTHSERVICE_API_METHOD_INITIALIZE:
+            return auth_service_decode_and_dispatch_initialize(
+                inst, sock, breq, payload_size);
 
         /* unknown method.  Return an error. */
         default:
-            /* TODO: make sure to write an error to the socket as well. */
-            /*dataservice_decode_and_dispatch_write_status(
-                sock, method, 0U, AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_BAD,
-                NULL, 0);*/
+            auth_service_decode_and_dispatch_write_status(
+                sock, method, 0U, AGENTD_ERROR_AUTHSERVICE_REQUEST_PACKET_BAD,
+                NULL, 0);
 
             return AGENTD_ERROR_AUTHSERVICE_REQUEST_PACKET_BAD;
     }

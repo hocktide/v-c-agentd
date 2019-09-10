@@ -20,6 +20,32 @@ extern "C" {
 
 
 /**
+ * \brief Auth service API methods.
+ */
+enum authservice_api_method_enum
+{
+    /**
+     * \brief Lower bound of API methods.  Must be the first value in this
+     * enumeration.
+     */
+    AUTHSERVICE_API_METHOD_LOWER_BOUND,
+
+    /**
+     * \brief Initialize the auth service.  Must proceed directly after lower 
+     * bound.
+     */
+    AUTHSERVICE_API_METHOD_INITIALIZE =
+        AUTHSERVICE_API_METHOD_LOWER_BOUND,
+
+    /**
+     * \brief The number of methods in this API.
+     *
+     * Must be immediately after the last enumerated bit value.
+     */
+    AUTHSERVICE_API_METHOD_UPPER_BOUND
+};
+
+/**
  * \brief Event loop for the authentication service.  This is the entry point 
  * for the auth service.  It handles the details of reacting to events
  * sent over the auth service socket.

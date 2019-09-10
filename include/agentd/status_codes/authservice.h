@@ -107,6 +107,30 @@ extern "C" {
 #define AGENTD_ERROR_AUTHSERVICE_PRIVSEP_EXEC_SURVIVAL_WEIRDNESS \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_AUTHSERVICE, 0x000FU)
 
+/**
+ * \brief Error writing data to the socket.
+ */
+#define AGENTD_ERROR_AUTHSERVICE_IPC_WRITE_DATA_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_AUTHSERVICE, 0x0010U)
+
+/**
+ * \brief Error reading data from the socket.
+ */
+#define AGENTD_ERROR_AUTHSERVICE_IPC_READ_DATA_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_AUTHSERVICE, 0x0011U)
+
+/**
+ * \brief The size of the API response packet was invalid.
+ */
+#define AGENTD_ERROR_AUTHSERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_AUTHSERVICE, 0x0012U)
+
+/**
+ * \brief The method code of the API response packet was unexpected.
+ */
+#define AGENTD_ERROR_AUTHSERVICE_RECVRESP_UNEXPECTED_METHOD_CODE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_AUTHSERVICE, 0x0013U)
+
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
