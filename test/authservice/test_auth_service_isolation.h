@@ -30,6 +30,10 @@ protected:
     void SetUp() override;
     void TearDown() override;
 
+    static const uint8_t root_entity_id[16];
+    static const uint8_t agent_pubkey[32];
+    static const uint8_t agent_privkey[32];
+
     int suite_init_result;
     allocator_options_t alloc_opts;
     vccrypt_suite_options_t crypto_suite;

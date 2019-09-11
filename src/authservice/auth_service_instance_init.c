@@ -32,14 +32,13 @@ static void auth_service_instance_dispose(void* disposable);
 int auth_service_instance_init(auth_service_instance_t* inst, int auth)
 {
     int retval = AGENTD_STATUS_SUCCESS;
-    ipc_event_loop_context_t loop;
 
     /* parameter sanity checks. */
     MODEL_ASSERT(NULL != inst);
     MODEL_ASSERT(auth >= 0);
     MODEL_ASSERT(max_socks > 0);
 
-    /* Set up the instance basics. */
+    /* set up the instance basics. */
     memset(inst, 0, sizeof(auth_service_instance_t));
     inst->hdr.dispose = &auth_service_instance_dispose;
 
@@ -52,30 +51,53 @@ int auth_service_instance_init(auth_service_instance_t* inst, int auth)
             &inst->suite, &inst->alloc_opts, VCCRYPT_SUITE_VELO_V1))
     {
         retval = AGENTD_ERROR_AUTHSERVICE_IPC_EVENT_LOOP_INIT_FAILURE;
-        goto cleanup_allocator;
+        goto dispose_allocator;
+    }
+
+    /* initialize the public key crypto buffer */
+    if (VCCRYPT_STATUS_SUCCESS !=
+        vccrypt_suite_buffer_init_for_auth_key_agreement_public_key(
+            &inst->suite, &inst->agent_pubkey))
+    {
+        retval = AGENTD_ERROR_AUTHSERVICE_PUBKEY_BUFFER_INIT_FAILURE;
+        goto dispose_suite;
+    }
+
+    /* create agent privkey buffer. */
+    if (VCCRYPT_STATUS_SUCCESS !=
+        vccrypt_suite_buffer_init_for_auth_key_agreement_private_key(
+            &inst->suite, &inst->agent_privkey))
+    {
+        retval = AGENTD_ERROR_AUTHSERVICE_PRIVKEY_BUFFER_INIT_FAILURE;
+        goto dispose_pubkey;
     }
 
     /* set the auth socket to non-blocking. */
     if (AGENTD_STATUS_SUCCESS != ipc_make_noblock(auth, &inst->auth, inst))
     {
         retval = AGENTD_ERROR_AUTHSERVICE_IPC_MAKE_NOBLOCK_FAILURE;
-        goto cleanup_suite;
+        goto dispose_privkey;
     }
 
     /* initialize the IPC event loop instance. */
-    if (AGENTD_STATUS_SUCCESS != ipc_event_loop_init(&loop))
+    inst->loop = (ipc_event_loop_context_t*)allocate(
+        &inst->alloc_opts, sizeof(ipc_event_loop_context_t));
+    if (NULL == inst->loop)
     {
-        retval = AGENTD_ERROR_AUTHSERVICE_IPC_MAKE_NOBLOCK_FAILURE;
-        goto cleanup_auth;
+        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
+        goto dispose_auth;
     }
 
-    /* set a reference to the event loop in the instance. */
-    inst->loop = &loop;
+    if (AGENTD_STATUS_SUCCESS != ipc_event_loop_init(inst->loop))
+    {
+        retval = AGENTD_ERROR_AUTHSERVICE_IPC_MAKE_NOBLOCK_FAILURE;
+        goto release_loop;
+    }
 
     /* on these signals, leave the event loop and shut down gracefully. */
-    ipc_exit_loop_on_signal(&loop, SIGHUP);
-    ipc_exit_loop_on_signal(&loop, SIGTERM);
-    ipc_exit_loop_on_signal(&loop, SIGQUIT);
+    ipc_exit_loop_on_signal(inst->loop, SIGHUP);
+    ipc_exit_loop_on_signal(inst->loop, SIGTERM);
+    ipc_exit_loop_on_signal(inst->loop, SIGQUIT);
 
 
     /* success. */
@@ -84,15 +106,22 @@ int auth_service_instance_init(auth_service_instance_t* inst, int auth)
 
 
     /* clean up resources if an error occurred */
-    dispose((disposable_t*)&loop);
+release_loop:
+    release(&inst->alloc_opts, inst->loop);
 
-cleanup_auth:
+dispose_auth:
     dispose((disposable_t*)&inst->auth);
 
-cleanup_suite:
+dispose_privkey:
+    dispose((disposable_t*)&inst->agent_privkey);
+
+dispose_pubkey:
+    dispose((disposable_t*)&inst->agent_pubkey);
+
+dispose_suite:
     dispose((disposable_t*)&inst->suite);
 
-cleanup_allocator:
+dispose_allocator:
     dispose((disposable_t*)&inst->alloc_opts);
 
 done:
@@ -109,11 +138,18 @@ static void auth_service_instance_dispose(void* disposable)
     /* parameter sanity checks. */
     MODEL_ASSERT(NULL != inst);
 
+    /* dispose of the loop. */
+    dispose((disposable_t*)inst->loop);
+    release(&inst->alloc_opts, inst->loop);
+
     /* dispose of the auth socket. */
     dispose((disposable_t*)&inst->auth);
 
-    /* dispose of the loop. */
-    dispose((disposable_t*)&inst->loop);
+    /* dispose of the private key crypto buffer */
+    dispose((disposable_t*)&inst->agent_privkey);
+
+    /* dispose of the public key crypto buffer */
+    dispose((disposable_t*)&inst->agent_pubkey);
 
     /* dispose of the crypto suite. */
     dispose((disposable_t*)&inst->suite);

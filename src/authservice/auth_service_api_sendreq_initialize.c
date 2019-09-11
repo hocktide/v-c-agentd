@@ -36,7 +36,7 @@
  *        when writing to the socket.
  */
 int auth_service_api_sendreq_initialize(
-    ipc_socket_context_t* sock, const uint8_t* UNUSED(agent_id),
+    ipc_socket_context_t* sock, const uint8_t* agent_id,
     const vccrypt_buffer_t* pub_key, const vccrypt_buffer_t* priv_key)
 {
     /* parameter sanity check. */
@@ -73,8 +73,14 @@ int auth_service_api_sendreq_initialize(
     uint32_t req = htonl(AUTHSERVICE_API_METHOD_INITIALIZE);
     memcpy(reqbuf, &req, sizeof(req));
 
-    /* TODO: write remaining data to buffer */
-    memset(reqbuf + 4, 0, reqbuflen - 4);
+    /* write the agent ID to the buffer */
+    memcpy(reqbuf + 4, agent_id, 16);
+
+    /* write the public key to the buffer */
+    memcpy(reqbuf + 20, pub_key->data, pub_key->size);
+
+    /* write the private key to the buffer */
+    memcpy(reqbuf + 20 + pub_key->size, priv_key->data, priv_key->size);
 
     /* write out the request buffer */
     int retval = ipc_write_data_noblock(sock, reqbuf, reqbuflen);

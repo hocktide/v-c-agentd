@@ -36,17 +36,38 @@
  *        written to the client socket.
  */
 int auth_service_decode_and_dispatch_initialize(
-    auth_service_instance_t* UNUSED(inst), ipc_socket_context_t* sock, void* UNUSED(req),
-    size_t UNUSED(size))
+    auth_service_instance_t* inst, ipc_socket_context_t* sock, void* req,
+    size_t size)
 {
+    int retval = AGENTD_STATUS_SUCCESS;
+
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != inst);
     MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != req);
 
-    /* TODO - implement me! */
-    int retval = 0;
+    /* make working with the request more convenient. */
+    uint8_t* breq = (uint8_t*)req;
 
+    /* validate the payload size */
+    if (size != sizeof(inst->agent_id) + inst->agent_pubkey.size + inst->agent_privkey.size)
+    {
+        retval = AGENTD_ERROR_AUTHSERVICE_REQUEST_PACKET_INVALID_SIZE;
+        goto done;
+    }
+
+    /* set the agent ID */
+    memcpy(inst->agent_id, breq, 16);
+    breq += 16;
+
+    /* set the public key */
+    memcpy(inst->agent_pubkey.data, breq, inst->agent_pubkey.size);
+    breq += inst->agent_pubkey.size;
+
+    /* set the private key */
+    memcpy(inst->agent_privkey.data, breq, inst->agent_privkey.size);
+
+done:
     /* write the status to output. */
     return auth_service_decode_and_dispatch_write_status(
         sock, AUTHSERVICE_API_METHOD_INITIALIZE, 0,
