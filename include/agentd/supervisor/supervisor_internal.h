@@ -129,6 +129,26 @@ int supervisor_create_protocol_service(
     int* data_socket, int* log_socket);
 
 /**
+ * \brief Create the auth service as a process that can be started.
+ *
+ * \param svc                   Pointer to the pointer to receive the process
+ *                              descriptor for the auth service.
+ * \param bconf                 Agentd bootstrap config for this service.
+ * \param conf                  Agentd configuration to be used to build the
+ *                              auth service.  This configuration must be
+ *                              valid for the lifetime of the service.
+ * \param auth_socket           The auth socket descriptor.
+ * \param log_socket            The log socket descriptor.
+ *
+ * \returns a status indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - a non-zero error code on failure.
+ */
+int supervisor_create_auth_service(
+    process_t** svc, const bootstrap_config_t* bconf,
+    const agent_config_t* conf, int* auth_socket, int* log_socket);
+
+/**
  * \brief Create the consensus service as a process that can be started.
  *
  * \param svc                   Pointer to the pointer to receive the process
