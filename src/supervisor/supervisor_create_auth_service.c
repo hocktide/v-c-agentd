@@ -101,6 +101,9 @@ static int supervisor_start_auth_service(process_t* proc)
     *auth_proc->auth_socket = -1;
     *auth_proc->log_socket = -1;
 
+    /* TODO: initialize auth service with agent ID, and public and private keys */
+
+
     /* success */
     retval = AGENTD_STATUS_SUCCESS;
 

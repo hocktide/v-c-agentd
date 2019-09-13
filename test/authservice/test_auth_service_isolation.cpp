@@ -24,6 +24,36 @@ TEST_F(auth_service_isolation_test, simple_spawn)
     ASSERT_EQ(0, auth_service_proc_status);
 }
 
+/**
+ * Test that we can initialize the auth service using BLOCKING calls.
+ */
+TEST_F(auth_service_isolation_test, initialize_blocking)
+{
+    ASSERT_EQ(0, auth_service_proc_status);
+
+    uint32_t offset = 0U;
+    uint32_t status = 0U;
+
+    /* initialize the public key */
+    vccrypt_buffer_t pubkey_buffer;
+    size_t sz_pubkey = sizeof(agent_pubkey);
+    ASSERT_EQ(0, vccrypt_buffer_init(&pubkey_buffer, &alloc_opts, sz_pubkey));
+    memcpy(pubkey_buffer.data, agent_pubkey, sz_pubkey);
+
+    /* initialize the private key */
+    vccrypt_buffer_t privkey_buffer;
+    size_t sz_privkey = sizeof(agent_privkey);
+    ASSERT_EQ(0, vccrypt_buffer_init(&privkey_buffer, &alloc_opts, sz_privkey));
+    memcpy(privkey_buffer.data, agent_privkey, sz_privkey);
+
+    ASSERT_EQ(0, auth_service_api_sendreq_initialize_block(authsock, root_entity_id, &pubkey_buffer, &privkey_buffer));
+
+    ASSERT_EQ(0, auth_service_api_recvresp_initialize_block(authsock, &offset, &status));
+
+    EXPECT_EQ(0U, offset);
+    EXPECT_EQ(0U, status);
+}
+
 
 /**
  * Test that we can initialize the auth service.
