@@ -30,7 +30,7 @@ protected:
     void SetUp() override;
     void TearDown() override;
 
-    static const uint8_t root_entity_id[16];
+    static const uint8_t agent_id[16];
     static const uint8_t agent_pubkey[32];
     static const uint8_t agent_privkey[32];
 

@@ -35,7 +35,7 @@ extern "C" {
  *        when writing to the socket.
  */
 int auth_service_api_sendreq_initialize_block(
-    int sock, const uint8_t* agent_id,
+    int sock, const vccrypt_buffer_t* agent_id,
     const vccrypt_buffer_t* pub_key, const vccrypt_buffer_t* priv_key);
 
 
@@ -97,7 +97,7 @@ int auth_service_api_recvresp_initialize_block(
  *        when writing to the socket.
  */
 int auth_service_api_sendreq_initialize(
-    ipc_socket_context_t* sock, const uint8_t* agent_id,
+    ipc_socket_context_t* sock, const vccrypt_buffer_t* agent_id,
     const vccrypt_buffer_t* pub_key, const vccrypt_buffer_t* priv_key);
 
 /**

@@ -34,12 +34,13 @@
  *        when writing to the socket.
  */
 int auth_service_api_sendreq_initialize_block(
-    int sock, const uint8_t* agent_id,
+    int sock, const vccrypt_buffer_t* agent_id,
     const vccrypt_buffer_t* pub_key, const vccrypt_buffer_t* priv_key)
 {
     /* parameter sanity check. */
     MODEL_ASSERT(sock >= 0);
     MODEL_ASSERT(NULL != agent_id);
+    MODEL_ASSERT(agent_id->size == 16);
     MODEL_ASSERT(NULL != pub_key);
     MODEL_ASSERT(pub_key->size > 0);
     MODEL_ASSERT(NULL != priv_key);
@@ -57,7 +58,7 @@ int auth_service_api_sendreq_initialize_block(
 
     /* allocate a structure large enough for writing this request. */
     size_t reqbuflen = sizeof(uint32_t) +
-        16 + /* agent_id */
+        agent_id->size +
         pub_key->size +
         priv_key->size;
 
@@ -71,14 +72,15 @@ int auth_service_api_sendreq_initialize_block(
     uint32_t req = htonl(AUTHSERVICE_API_METHOD_INITIALIZE);
     memcpy(reqbuf, &req, sizeof(req));
 
-    /* write the agent ID to the buffer */
-    memcpy(reqbuf + 4, agent_id, 16);
+    /* copy the agent ID to the buffer */
+    memcpy(reqbuf + 4, agent_id->data, agent_id->size);
 
-    /* write the public key to the buffer */
-    memcpy(reqbuf + 20, pub_key->data, pub_key->size);
+    /* copy the public key to the buffer */
+    memcpy(reqbuf + 4 + agent_id->size, pub_key->data, pub_key->size);
 
-    /* write the private key to the buffer */
-    memcpy(reqbuf + 20 + pub_key->size, priv_key->data, priv_key->size);
+    /* copy the private key to the buffer */
+    memcpy(reqbuf + 4 + agent_id->size + pub_key->size,
+        priv_key->data, priv_key->size);
 
     /* write out the request buffer */
     int retval = ipc_write_data_block(sock, reqbuf, reqbuflen);
