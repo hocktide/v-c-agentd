@@ -59,7 +59,8 @@ INCLUDES+=$(foreach d,$(DIRS),$(wildcard $(d)/*.h))
 TESTDIR=$(CURDIR)/test
 TESTDIRS=$(TESTDIR) $(TESTDIR)/bitcap $(TESTDIR)/bootstrap_config \
     $(TESTDIR)/commandline $(TESTDIR)/config $(TESTDIR)/dataservice \
-    $(TESTDIR)/ipc $(TESTDIR)/path $(TESTDIR)/status_codes $(TESTDIR)/string
+    $(TESTDIR)/ipc $(TESTDIR)/mocks $(TESTDIR)/mocks/dataservice \
+    $(TESTDIR)/path $(TESTDIR)/status_codes $(TESTDIR)/string
 TEST_BUILD_DIR=$(HOST_CHECKED_BUILD_DIR)/test
 TEST_DIRS=$(filter-out $(TESTDIR), \
     $(patsubst $(TESTDIR)/%,$(TEST_BUILD_DIR)/%,$(TESTDIRS)))
