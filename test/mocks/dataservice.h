@@ -331,7 +331,7 @@ public:
          * \param txn_id            The transaction id for this request.
          */
     bool request_matches_transaction_drop(
-        uint32_t child_index, const uint8_t txn_id);
+        uint32_t child_index, const uint8_t* txn_id);
 
     /**
          * \brief Return true if the next popped request matches this request.
@@ -340,7 +340,7 @@ public:
          * \param txn_id            The transaction id for this request.
          */
     bool request_matches_transaction_get(
-        uint32_t child_index, const uint8_t txn_id);
+        uint32_t child_index, const uint8_t* txn_id);
 
     /**
          * \brief Return true if the next popped request matches this request.

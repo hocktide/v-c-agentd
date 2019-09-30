@@ -1250,3 +1250,1115 @@ done:
 
     return retval;
 }
+
+/**
+ * \brief Return true if the next popped request matches this request.
+ *
+ * \param child_index       The child index for this request.
+ * \param artifact_id       The artifact_id for this request.
+ */
+bool mock_dataservice::mock_dataservice::
+    request_matches_payload_artifact_read(
+        uint32_t child_index, const uint8_t* artifact_id)
+{
+    bool retval = false;
+    void* val = nullptr;
+    uint32_t size = 0U;
+    const uint8_t* breq = nullptr;
+    uint32_t nmethod = 0U, method = 0U;
+    dataservice_request_payload_artifact_read_t dreq;
+
+    /* read a request from the test socket. */
+    if (AGENTD_STATUS_SUCCESS != ipc_read_data_block(testsock, &val, &size))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* make working with the request more convenient. */
+    breq = (const uint8_t*)val;
+
+    /* the payload should be at least large enough for the method. */
+    if (size < sizeof(uint32_t))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* get the method. */
+    memcpy(&nmethod, breq, sizeof(uint32_t));
+    method = htonl(nmethod);
+
+    /* increment breq past command. */
+    breq += sizeof(uint32_t);
+
+    /* decrement size. */
+    size -= sizeof(uint32_t);
+
+    /* verify the method. */
+    if (DATASERVICE_API_METHOD_APP_ARTIFACT_READ != method)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* parse the requset payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_payload_artifact_read(
+            breq, size, &dreq))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* verify the request. */
+    if (
+        child_index != dreq.hdr.child_index || 0 != memcmp(artifact_id, dreq.artifact_id, 16))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* successful match. */
+    retval = true;
+    goto cleanup_val;
+
+cleanup_val:
+    free(val);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Return true if the next popped request matches this request.
+ *
+ * \param child_index       The child index for this request.
+ * \param block_height      The block height of the request.
+ */
+bool mock_dataservice::mock_dataservice::
+    request_matches_block_id_by_height_read(
+        uint32_t child_index, uint64_t block_height)
+{
+    bool retval = false;
+    void* val = nullptr;
+    uint32_t size = 0U;
+    const uint8_t* breq = nullptr;
+    uint32_t nmethod = 0U, method = 0U;
+    dataservice_request_block_id_by_height_read_t dreq;
+
+    /* read a request from the test socket. */
+    if (AGENTD_STATUS_SUCCESS != ipc_read_data_block(testsock, &val, &size))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* make working with the request more convenient. */
+    breq = (const uint8_t*)val;
+
+    /* the payload should be at least large enough for the method. */
+    if (size < sizeof(uint32_t))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* get the method. */
+    memcpy(&nmethod, breq, sizeof(uint32_t));
+    method = htonl(nmethod);
+
+    /* increment breq past command. */
+    breq += sizeof(uint32_t);
+
+    /* decrement size. */
+    size -= sizeof(uint32_t);
+
+    /* verify the method. */
+    if (DATASERVICE_API_METHOD_APP_BLOCK_ID_BY_HEIGHT_READ != method)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* parse the requset payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_block_id_by_height_read(
+            breq, size, &dreq))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* verify the request. */
+    if (
+        child_index != dreq.hdr.child_index || block_height != dreq.block_height)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* successful match. */
+    retval = true;
+    goto cleanup_val;
+
+cleanup_val:
+    free(val);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Return true if the next popped request matches this request.
+ *
+ * \param child_index       The child index for this request.
+ */
+bool mock_dataservice::mock_dataservice::
+    request_matches_block_id_latest_read(
+        uint32_t child_index)
+{
+    bool retval = false;
+    void* val = nullptr;
+    uint32_t size = 0U;
+    const uint8_t* breq = nullptr;
+    uint32_t nmethod = 0U, method = 0U;
+    dataservice_request_block_id_latest_read_t dreq;
+
+    /* read a request from the test socket. */
+    if (AGENTD_STATUS_SUCCESS != ipc_read_data_block(testsock, &val, &size))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* make working with the request more convenient. */
+    breq = (const uint8_t*)val;
+
+    /* the payload should be at least large enough for the method. */
+    if (size < sizeof(uint32_t))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* get the method. */
+    memcpy(&nmethod, breq, sizeof(uint32_t));
+    method = htonl(nmethod);
+
+    /* increment breq past command. */
+    breq += sizeof(uint32_t);
+
+    /* decrement size. */
+    size -= sizeof(uint32_t);
+
+    /* verify the method. */
+    if (DATASERVICE_API_METHOD_APP_BLOCK_ID_LATEST_READ != method)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* parse the requset payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_block_id_latest_read(
+            breq, size, &dreq))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* verify the request. */
+    if (
+        child_index != dreq.hdr.child_index)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* successful match. */
+    retval = true;
+    goto cleanup_val;
+
+cleanup_val:
+    free(val);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Return true if the next popped request matches this request.
+ *
+ * \param child_index       The child index for this request.
+ * \param block_id          The block id for this request.
+ * \param cert_size         The cert_size for this request.
+ * \param cert              The cert for this request.
+ */
+bool mock_dataservice::mock_dataservice::
+    request_matches_block_make(
+        uint32_t child_index, const uint8_t* block_id, size_t cert_size,
+        const uint8_t* cert)
+{
+    bool retval = false;
+    void* val = nullptr;
+    uint32_t size = 0U;
+    const uint8_t* breq = nullptr;
+    uint32_t nmethod = 0U, method = 0U;
+    dataservice_request_block_make_t dreq;
+
+    /* read a request from the test socket. */
+    if (AGENTD_STATUS_SUCCESS != ipc_read_data_block(testsock, &val, &size))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* make working with the request more convenient. */
+    breq = (const uint8_t*)val;
+
+    /* the payload should be at least large enough for the method. */
+    if (size < sizeof(uint32_t))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* get the method. */
+    memcpy(&nmethod, breq, sizeof(uint32_t));
+    method = htonl(nmethod);
+
+    /* increment breq past command. */
+    breq += sizeof(uint32_t);
+
+    /* decrement size. */
+    size -= sizeof(uint32_t);
+
+    /* verify the method. */
+    if (DATASERVICE_API_METHOD_APP_BLOCK_WRITE != method)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* parse the requset payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_block_make(
+            breq, size, &dreq))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* verify the request. */
+    if (
+        child_index != dreq.hdr.child_index || 0 != memcmp(block_id, dreq.block_id, 16) || cert_size != dreq.cert_size || 0 != memcmp(cert, dreq.cert, cert_size))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* successful match. */
+    retval = true;
+    goto cleanup_val;
+
+cleanup_val:
+    free(val);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Return true if the next popped request matches this request.
+ *
+ * \param child_index       The child index for this request.
+ * \param block_id          The block id for this request.
+ */
+bool mock_dataservice::mock_dataservice::
+    request_matches_block_read(
+        uint32_t child_index, const uint8_t* block_id)
+{
+    bool retval = false;
+    void* val = nullptr;
+    uint32_t size = 0U;
+    const uint8_t* breq = nullptr;
+    uint32_t nmethod = 0U, method = 0U;
+    dataservice_request_block_read_t dreq;
+
+    /* read a request from the test socket. */
+    if (AGENTD_STATUS_SUCCESS != ipc_read_data_block(testsock, &val, &size))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* make working with the request more convenient. */
+    breq = (const uint8_t*)val;
+
+    /* the payload should be at least large enough for the method. */
+    if (size < sizeof(uint32_t))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* get the method. */
+    memcpy(&nmethod, breq, sizeof(uint32_t));
+    method = htonl(nmethod);
+
+    /* increment breq past command. */
+    breq += sizeof(uint32_t);
+
+    /* decrement size. */
+    size -= sizeof(uint32_t);
+
+    /* verify the method. */
+    if (DATASERVICE_API_METHOD_APP_BLOCK_READ != method)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* parse the requset payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_block_read(
+            breq, size, &dreq))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* verify the request. */
+    if (
+        child_index != dreq.hdr.child_index || 0 != memcmp(block_id, dreq.block_id, 16))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* successful match. */
+    retval = true;
+    goto cleanup_val;
+
+cleanup_val:
+    free(val);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Return true if the next popped request matches this request.
+ *
+ * \param child_index       The child index for this request.
+ * \param txn_id            The transaction id for this request.
+ */
+bool mock_dataservice::mock_dataservice::
+    request_matches_canonized_transaction_get(
+        uint32_t child_index, const uint8_t* txn_id)
+{
+    bool retval = false;
+    void* val = nullptr;
+    uint32_t size = 0U;
+    const uint8_t* breq = nullptr;
+    uint32_t nmethod = 0U, method = 0U;
+    dataservice_request_canonized_transaction_get_t dreq;
+
+    /* read a request from the test socket. */
+    if (AGENTD_STATUS_SUCCESS != ipc_read_data_block(testsock, &val, &size))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* make working with the request more convenient. */
+    breq = (const uint8_t*)val;
+
+    /* the payload should be at least large enough for the method. */
+    if (size < sizeof(uint32_t))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* get the method. */
+    memcpy(&nmethod, breq, sizeof(uint32_t));
+    method = htonl(nmethod);
+
+    /* increment breq past command. */
+    breq += sizeof(uint32_t);
+
+    /* decrement size. */
+    size -= sizeof(uint32_t);
+
+    /* verify the method. */
+    if (DATASERVICE_API_METHOD_APP_TRANSACTION_READ != method)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* parse the requset payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_canonized_transaction_get(
+            breq, size, &dreq))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* verify the request. */
+    if (
+        child_index != dreq.hdr.child_index || 0 != memcmp(txn_id, dreq.txn_id, 16))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* successful match. */
+    retval = true;
+    goto cleanup_val;
+
+cleanup_val:
+    free(val);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Return true if the next popped request matches this request.
+ *
+ * \param child_index       The child index for this request.
+ */
+bool mock_dataservice::mock_dataservice::
+    request_matches_child_context_close(
+        uint32_t child_index)
+{
+    bool retval = false;
+    void* val = nullptr;
+    uint32_t size = 0U;
+    const uint8_t* breq = nullptr;
+    uint32_t nmethod = 0U, method = 0U;
+    dataservice_request_child_context_close_t dreq;
+
+    /* read a request from the test socket. */
+    if (AGENTD_STATUS_SUCCESS != ipc_read_data_block(testsock, &val, &size))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* make working with the request more convenient. */
+    breq = (const uint8_t*)val;
+
+    /* the payload should be at least large enough for the method. */
+    if (size < sizeof(uint32_t))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* get the method. */
+    memcpy(&nmethod, breq, sizeof(uint32_t));
+    method = htonl(nmethod);
+
+    /* increment breq past command. */
+    breq += sizeof(uint32_t);
+
+    /* decrement size. */
+    size -= sizeof(uint32_t);
+
+    /* verify the method. */
+    if (DATASERVICE_API_METHOD_LL_CHILD_CONTEXT_CLOSE != method)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* parse the requset payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_child_context_close(
+            breq, size, &dreq))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* verify the request. */
+    if (
+        child_index != dreq.hdr.child_index)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* successful match. */
+    retval = true;
+    goto cleanup_val;
+
+cleanup_val:
+    free(val);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Return true if the next popped request matches this request.
+ *
+ * \param caps              The bitset for this child context.
+ */
+bool mock_dataservice::mock_dataservice::
+    request_matches_child_context_create(
+        const void* caps)
+{
+    bool retval = false;
+    void* val = nullptr;
+    uint32_t size = 0U;
+    const uint8_t* breq = nullptr;
+    uint32_t nmethod = 0U, method = 0U;
+    dataservice_request_child_context_create_t dreq;
+
+    /* read a request from the test socket. */
+    if (AGENTD_STATUS_SUCCESS != ipc_read_data_block(testsock, &val, &size))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* make working with the request more convenient. */
+    breq = (const uint8_t*)val;
+
+    /* the payload should be at least large enough for the method. */
+    if (size < sizeof(uint32_t))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* get the method. */
+    memcpy(&nmethod, breq, sizeof(uint32_t));
+    method = htonl(nmethod);
+
+    /* increment breq past command. */
+    breq += sizeof(uint32_t);
+
+    /* decrement size. */
+    size -= sizeof(uint32_t);
+
+    /* verify the method. */
+    if (DATASERVICE_API_METHOD_LL_CHILD_CONTEXT_CREATE != method)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* parse the requset payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_child_context_create(
+            breq, size, &dreq))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* verify the request. */
+    if (
+        0 != memcmp(caps, dreq.caps, sizeof(dreq.caps)))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* successful match. */
+    retval = true;
+    goto cleanup_val;
+
+cleanup_val:
+    free(val);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Return true if the next popped request matches this request.
+ *
+ * \param child_index       The child index for this request.
+ * \param key               The key for this global setting.
+ */
+bool mock_dataservice::mock_dataservice::
+    request_matches_global_setting_get(
+        uint32_t child_index, uint64_t key)
+{
+    bool retval = false;
+    void* val = nullptr;
+    uint32_t size = 0U;
+    const uint8_t* breq = nullptr;
+    uint32_t nmethod = 0U, method = 0U;
+    dataservice_request_global_setting_get_t dreq;
+
+    /* read a request from the test socket. */
+    if (AGENTD_STATUS_SUCCESS != ipc_read_data_block(testsock, &val, &size))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* make working with the request more convenient. */
+    breq = (const uint8_t*)val;
+
+    /* the payload should be at least large enough for the method. */
+    if (size < sizeof(uint32_t))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* get the method. */
+    memcpy(&nmethod, breq, sizeof(uint32_t));
+    method = htonl(nmethod);
+
+    /* increment breq past command. */
+    breq += sizeof(uint32_t);
+
+    /* decrement size. */
+    size -= sizeof(uint32_t);
+
+    /* verify the method. */
+    if (DATASERVICE_API_METHOD_APP_GLOBAL_SETTING_READ != method)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* parse the requset payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_global_setting_get(
+            breq, size, &dreq))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* verify the request. */
+    if (
+        child_index != dreq.hdr.child_index || key != dreq.key)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* successful match. */
+    retval = true;
+    goto cleanup_val;
+
+cleanup_val:
+    free(val);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Return true if the next popped request matches this request.
+ *
+ * \param child_index       The child index for this request.
+ * \param key               The key for this global setting.
+ * \param val_size          The value size for this global setting.
+ * \param val               The value.
+ */
+bool mock_dataservice::mock_dataservice::
+    request_matches_global_setting_set(
+        uint32_t child_index, uint64_t key, size_t val_size,
+        const void* gval)
+{
+    bool retval = false;
+    void* val = nullptr;
+    uint32_t size = 0U;
+    const uint8_t* breq = nullptr;
+    uint32_t nmethod = 0U, method = 0U;
+    dataservice_request_global_setting_set_t dreq;
+
+    /* read a request from the test socket. */
+    if (AGENTD_STATUS_SUCCESS != ipc_read_data_block(testsock, &val, &size))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* make working with the request more convenient. */
+    breq = (const uint8_t*)val;
+
+    /* the payload should be at least large enough for the method. */
+    if (size < sizeof(uint32_t))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* get the method. */
+    memcpy(&nmethod, breq, sizeof(uint32_t));
+    method = htonl(nmethod);
+
+    /* increment breq past command. */
+    breq += sizeof(uint32_t);
+
+    /* decrement size. */
+    size -= sizeof(uint32_t);
+
+    /* verify the method. */
+    if (DATASERVICE_API_METHOD_APP_GLOBAL_SETTING_WRITE != method)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* parse the requset payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_global_setting_set(
+            breq, size, &dreq))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* verify the request. */
+    if (
+        child_index != dreq.hdr.child_index || key != dreq.key || val_size != dreq.val_size || 0 != memcmp(gval, dreq.val, val_size))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* successful match. */
+    retval = true;
+    goto cleanup_val;
+
+cleanup_val:
+    free(val);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Return true if the next popped request matches this request.
+ *
+ * \param child_index       The child index for this request.
+ * \param txn_id            The transaction id for this request.
+ */
+bool mock_dataservice::mock_dataservice::
+    request_matches_transaction_drop(
+        uint32_t child_index, const uint8_t* txn_id)
+{
+    bool retval = false;
+    void* val = nullptr;
+    uint32_t size = 0U;
+    const uint8_t* breq = nullptr;
+    uint32_t nmethod = 0U, method = 0U;
+    dataservice_request_transaction_drop_t dreq;
+
+    /* read a request from the test socket. */
+    if (AGENTD_STATUS_SUCCESS != ipc_read_data_block(testsock, &val, &size))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* make working with the request more convenient. */
+    breq = (const uint8_t*)val;
+
+    /* the payload should be at least large enough for the method. */
+    if (size < sizeof(uint32_t))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* get the method. */
+    memcpy(&nmethod, breq, sizeof(uint32_t));
+    method = htonl(nmethod);
+
+    /* increment breq past command. */
+    breq += sizeof(uint32_t);
+
+    /* decrement size. */
+    size -= sizeof(uint32_t);
+
+    /* verify the method. */
+    if (DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_DROP != method)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* parse the requset payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_transaction_drop(
+            breq, size, &dreq))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* verify the request. */
+    if (
+        child_index != dreq.hdr.child_index || 0 != memcmp(txn_id, dreq.txn_id, 16))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* successful match. */
+    retval = true;
+    goto cleanup_val;
+
+cleanup_val:
+    free(val);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Return true if the next popped request matches this request.
+ *
+ * \param child_index       The child index for this request.
+ * \param txn_id            The transaction id for this request.
+ */
+bool mock_dataservice::mock_dataservice::
+    request_matches_transaction_get(
+        uint32_t child_index, const uint8_t* txn_id)
+{
+    bool retval = false;
+    void* val = nullptr;
+    uint32_t size = 0U;
+    const uint8_t* breq = nullptr;
+    uint32_t nmethod = 0U, method = 0U;
+    dataservice_request_transaction_get_t dreq;
+
+    /* read a request from the test socket. */
+    if (AGENTD_STATUS_SUCCESS != ipc_read_data_block(testsock, &val, &size))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* make working with the request more convenient. */
+    breq = (const uint8_t*)val;
+
+    /* the payload should be at least large enough for the method. */
+    if (size < sizeof(uint32_t))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* get the method. */
+    memcpy(&nmethod, breq, sizeof(uint32_t));
+    method = htonl(nmethod);
+
+    /* increment breq past command. */
+    breq += sizeof(uint32_t);
+
+    /* decrement size. */
+    size -= sizeof(uint32_t);
+
+    /* verify the method. */
+    if (DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_READ != method)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* parse the requset payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_transaction_get(
+            breq, size, &dreq))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* verify the request. */
+    if (
+        child_index != dreq.hdr.child_index || 0 != memcmp(txn_id, dreq.txn_id, 16))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* successful match. */
+    retval = true;
+    goto cleanup_val;
+
+cleanup_val:
+    free(val);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Return true if the next popped request matches this request.
+ *
+ * \param child_index       The child index for this request.
+ */
+bool mock_dataservice::mock_dataservice::
+    request_matches_transaction_get_first(
+        uint32_t child_index)
+{
+    bool retval = false;
+    void* val = nullptr;
+    uint32_t size = 0U;
+    const uint8_t* breq = nullptr;
+    uint32_t nmethod = 0U, method = 0U;
+    dataservice_request_transaction_get_first_t dreq;
+
+    /* read a request from the test socket. */
+    if (AGENTD_STATUS_SUCCESS != ipc_read_data_block(testsock, &val, &size))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* make working with the request more convenient. */
+    breq = (const uint8_t*)val;
+
+    /* the payload should be at least large enough for the method. */
+    if (size < sizeof(uint32_t))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* get the method. */
+    memcpy(&nmethod, breq, sizeof(uint32_t));
+    method = htonl(nmethod);
+
+    /* increment breq past command. */
+    breq += sizeof(uint32_t);
+
+    /* decrement size. */
+    size -= sizeof(uint32_t);
+
+    /* verify the method. */
+    if (DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_FIRST_READ != method)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* parse the requset payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_transaction_get_first(
+            breq, size, &dreq))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* verify the request. */
+    if (
+        child_index != dreq.hdr.child_index)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* successful match. */
+    retval = true;
+    goto cleanup_val;
+
+cleanup_val:
+    free(val);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Return true if the next popped request matches this request.
+ *
+ * \param child_index       The child index for this request.
+ * \param txn_id            The transaction id for this request.
+ * \param artifact_id       The artifact id for this request.
+ * \param cert_size         The certificate size for this request.
+ * \param cert              The certificate for this request.
+ */
+bool mock_dataservice::mock_dataservice::
+    request_matches_transaction_submit(
+        uint32_t child_index, const uint8_t* txn_id,
+        const uint8_t* artifact_id, size_t cert_size, const uint8_t* cert)
+{
+    bool retval = false;
+    void* val = nullptr;
+    uint32_t size = 0U;
+    const uint8_t* breq = nullptr;
+    uint32_t nmethod = 0U, method = 0U;
+    dataservice_request_transaction_submit_t dreq;
+
+    /* read a request from the test socket. */
+    if (AGENTD_STATUS_SUCCESS != ipc_read_data_block(testsock, &val, &size))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* make working with the request more convenient. */
+    breq = (const uint8_t*)val;
+
+    /* the payload should be at least large enough for the method. */
+    if (size < sizeof(uint32_t))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* get the method. */
+    memcpy(&nmethod, breq, sizeof(uint32_t));
+    method = htonl(nmethod);
+
+    /* increment breq past command. */
+    breq += sizeof(uint32_t);
+
+    /* decrement size. */
+    size -= sizeof(uint32_t);
+
+    /* verify the method. */
+    if (DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_SUBMIT != method)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* parse the requset payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_transaction_submit(
+            breq, size, &dreq))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* verify the request. */
+    if (
+        child_index != dreq.hdr.child_index || 0 != memcmp(txn_id, dreq.txn_id, 16) || 0 != memcmp(artifact_id, dreq.artifact_id, 16) || cert_size != dreq.cert_size || 0 != memcmp(cert, dreq.cert, cert_size))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* successful match. */
+    retval = true;
+    goto cleanup_val;
+
+cleanup_val:
+    free(val);
+
+done:
+    return retval;
+}
