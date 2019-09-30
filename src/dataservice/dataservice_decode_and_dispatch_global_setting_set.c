@@ -15,6 +15,7 @@
 #include <vpr/parameters.h>
 
 #include "dataservice_internal.h"
+#include "dataservice_protocol_internal.h"
 
 /**
  * \brief Decode and dispatch a global setting set request.
@@ -41,76 +42,54 @@ int dataservice_decode_and_dispatch_global_setting_set(
     size_t size)
 {
     int retval = 0;
+    bool dispose_dreq = false;
 
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != inst);
     MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != req);
 
-    /* default child_index. */
-    uint32_t child_index = 0U;
+    /* global setting get request structure. */
+    dataservice_request_global_setting_set_t dreq;
 
-    /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
-
-    /* the payload size should be greater than or equal to the child context
-     * size and the 64-bit global settings key. */
-    if (size <= sizeof(uint32_t) + sizeof(uint64_t))
+    /* parse the request payload. */
+    retval = dataservice_decode_request_global_setting_set(req, size, &dreq);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
         goto done;
     }
 
-    /* copy the index. */
-    uint32_t nchild_index;
-    memcpy(&nchild_index, breq, sizeof(uint32_t));
+    /* be sure to clean up dreq. */
+    dispose_dreq = true;
 
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
-
-    /* decode the index. */
-    child_index = ntohl(nchild_index);
-
-    /* check bounds. */
-    if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
+    /* look up the child context. */
+    dataservice_child_context_t* ctx = NULL;
+    retval = dataservice_child_context_lookup(&ctx, inst, dreq.hdr.child_index);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX;
         goto done;
     }
-
-    /* verify that this child context is open. */
-    if (NULL == inst->children[child_index].hdr.dispose)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID;
-        goto done;
-    }
-
-    /* get the global settings key. */
-    uint64_t nkey;
-    memcpy(&nkey, breq, sizeof(nkey));
-
-    /* decode the key. */
-    uint64_t key = ntohll(nkey);
-
-    /* increment breq and decrement size. */
-    breq += sizeof(uint64_t);
-    size -= sizeof(uint64_t);
 
     /* the value size should be greater than zero. */
-    MODEL_ASSERT(size > 0);
+    MODEL_ASSERT(val_size > 0);
 
     /* call the global settings set method. */
     retval =
         dataservice_global_settings_set(
-            &inst->children[child_index].ctx, key, (const char*)breq, size);
+            ctx, dreq.key, (const char*)dreq.val, dreq.val_size);
 
 done:
     /* write the status to the caller. */
     retval =
         dataservice_decode_and_dispatch_write_status(
-            sock, DATASERVICE_API_METHOD_APP_GLOBAL_SETTING_WRITE, child_index,
-            (uint32_t)retval, NULL, 0);
+            sock, DATASERVICE_API_METHOD_APP_GLOBAL_SETTING_WRITE,
+            dreq.hdr.child_index, (uint32_t)retval, NULL, 0);
+
+    /* clean up dreq. */
+    if (dispose_dreq)
+    {
+        dispose((disposable_t*)&dreq);
+    }
 
     return retval;
 }
