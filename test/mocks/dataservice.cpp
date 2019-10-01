@@ -40,6 +40,9 @@ mock_dataservice::mock_dataservice::mock_dataservice(int _datasock)
  */
 mock_dataservice::mock_dataservice::~mock_dataservice()
 {
+    if (-1 != datasock)
+        close(datasock);
+
     if (-1 != mocksock)
         close(mocksock);
 
@@ -77,12 +80,18 @@ void mock_dataservice::mock_dataservice::start()
     /* child */
     if (0 == mock_pid)
     {
+        close(testsock);
+        testsock = -1;
         mock_process();
         exit(0);
     }
     /* parent */
     else
     {
+        close(datasock);
+        datasock = -1;
+        close(mocksock);
+        mocksock = -1;
         running = true;
         return;
     }
@@ -102,9 +111,6 @@ void mock_dataservice::mock_dataservice::stop()
     /* only stop the mock dataservice if running. */
     if (!running)
         return;
-
-    /* close the mock socket, forcing the child process to exit. */
-    close(datasock);
 
     /* sleep for a sec to propagate the close. */
     usleep(10000);
@@ -330,6 +336,7 @@ void mock_dataservice::mock_dataservice::mock_process()
 
     /* close the socket. */
     close(datasock);
+    datasock = -1;
 }
 
 /**
