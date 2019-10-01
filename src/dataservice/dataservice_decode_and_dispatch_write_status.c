@@ -9,6 +9,7 @@
 
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/ipc.h>
+#include <agentd/modelcheck.h>
 #include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
@@ -71,21 +72,25 @@ int dataservice_decode_and_dispatch_write_status(
     }
 
     /* allocate memory for the response. */
-    uint32_t* resp = (uint32_t*)malloc(respsize);
+    uint8_t* resp = (uint8_t*)malloc(respsize);
     if (NULL == resp)
     {
         return AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
     }
 
     /* set the values for the response. */
-    resp[0] = htonl(method);
-    resp[1] = htonl(offset);
-    resp[2] = htonl(status);
+    uint32_t net_method = htonl(method);
+    uint32_t net_offset = htonl(offset);
+    uint32_t net_status = htonl(status);
+
+    memcpy(resp + 0 * sizeof(uint32_t), &net_method, sizeof(net_method));
+    memcpy(resp + 1 * sizeof(uint32_t), &net_offset, sizeof(net_offset));
+    memcpy(resp + 2 * sizeof(uint32_t), &net_status, sizeof(net_status));
 
     /* copy the data. */
     if (data != NULL)
     {
-        memcpy(resp + 3, data, data_size);
+        modelsafe_memcpy(resp + 3 * sizeof(uint32_t), data, data_size);
     }
 
     /* write the data packet. */
@@ -96,7 +101,7 @@ int dataservice_decode_and_dispatch_write_status(
     }
 
     /* clean up memory. */
-    memset(resp, 0, respsize);
+    modelsafe_memset(resp, 0, respsize);
     free(resp);
 
     /* return the status of the response write to the caller. */

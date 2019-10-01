@@ -15,6 +15,7 @@
 #include <vpr/parameters.h>
 
 #include "dataservice_internal.h"
+#include "dataservice_protocol_internal.h"
 
 /**
  * \brief Decode and dispatch a transaction submission request.
@@ -41,82 +42,57 @@ int dataservice_decode_and_dispatch_transaction_submit(
     size_t size)
 {
     int retval = 0;
+    bool dispose_dreq = false;
 
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != inst);
     MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != req);
 
-    /* default child_index. */
-    uint32_t child_index = 0U;
+    /* transaction submit request structure. */
+    dataservice_request_transaction_submit_t dreq;
 
-    /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
-
-    /* the payload size should be greater than the child context
-     * size and size of the two UUIDs. */
-    if (size <= sizeof(uint32_t) + 2 * 16)
+    /* parse the request. */
+    retval = dataservice_decode_request_transaction_submit(req, size, &dreq);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
         goto done;
     }
 
-    /* copy the index. */
-    uint32_t nchild_index;
-    memcpy(&nchild_index, breq, sizeof(uint32_t));
+    /* be sure to clean up dreq. */
+    dispose_dreq = true;
 
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
+    /* the certificate size should be greater than zero. */
+    MODEL_ASSERT(dreq.cert_size > 0);
 
-    /* decode the index. */
-    child_index = ntohl(nchild_index);
-
-    /* check bounds. */
-    if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
+    /* look up the child context. */
+    dataservice_child_context_t* ctx = NULL;
+    retval = dataservice_child_context_lookup(&ctx, inst, dreq.hdr.child_index);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX;
         goto done;
     }
-
-    /* verify that this child context is open. */
-    if (NULL == inst->children[child_index].hdr.dispose)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID;
-        goto done;
-    }
-
-    /* copy the transaction id. */
-    uint8_t txn_id[16];
-    memcpy(txn_id, breq, sizeof(txn_id));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(txn_id);
-    size -= sizeof(txn_id);
-
-    /* copy the artifact id. */
-    uint8_t artifact_id[16];
-    memcpy(artifact_id, breq, sizeof(artifact_id));
-
-    /* increment breq and decrement size. */
-    breq += sizeof(artifact_id);
-    size -= sizeof(artifact_id);
-
-    /* the value size should be greater than zero. */
-    MODEL_ASSERT(size > 0);
 
     /* call the transaction submit method. */
     retval =
         dataservice_transaction_submit(
-            &inst->children[child_index].ctx, NULL, txn_id, artifact_id,
-            breq, size);
+            ctx, NULL, dreq.txn_id, dreq.artifact_id, dreq.cert,
+            dreq.cert_size);
+
+    /* success. Fall through. */
 
 done:
     /* write the status to the caller. */
     retval =
         dataservice_decode_and_dispatch_write_status(
-            sock, DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_SUBMIT, child_index,
-            (uint32_t)retval, NULL, 0);
+            sock, DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_SUBMIT,
+            dreq.hdr.child_index, (uint32_t)retval, NULL, 0);
+
+    /* clean up dreq. */
+    if (dispose_dreq)
+    {
+        dispose((disposable_t*)&dreq);
+    }
 
     return retval;
 }

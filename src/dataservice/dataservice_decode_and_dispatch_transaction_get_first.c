@@ -15,6 +15,7 @@
 #include <vpr/parameters.h>
 
 #include "dataservice_internal.h"
+#include "dataservice_protocol_internal.h"
 
 /**
  * \brief Decode and dispatch a transaction get first data request.
@@ -41,7 +42,8 @@ int dataservice_decode_and_dispatch_transaction_get_first(
     size_t size)
 {
     int retval = 0;
-    uint8_t* payload_bytes = NULL;
+    bool dispose_dreq = false;
+    void* payload = NULL;
     size_t payload_size = 0U;
     uint8_t* txn_bytes = NULL;
     size_t txn_size = 0U;
@@ -51,41 +53,24 @@ int dataservice_decode_and_dispatch_transaction_get_first(
     MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != req);
 
-    /* default child_index. */
-    uint32_t child_index = 0U;
+    /* transaction get first request structure. */
+    dataservice_request_transaction_get_first_t dreq;
 
-    /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
-
-    /* the payload size should be equal to the child context */
-    if (size != sizeof(uint32_t))
+    /* decode the request payload. */
+    retval = dataservice_decode_request_transaction_get_first(req, size, &dreq);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = 1;
         goto done;
     }
 
-    /* copy the index. */
-    uint32_t nchild_index;
-    memcpy(&nchild_index, breq, sizeof(uint32_t));
+    /* be sure to clean up dreq. */
+    dispose_dreq = true;
 
-    /* increment breq and decrement size. */
-    breq += sizeof(uint32_t);
-    size -= sizeof(uint32_t);
-
-    /* decode the index. */
-    child_index = ntohl(nchild_index);
-
-    /* check bounds. */
-    if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
+    /* look up the child context. */
+    dataservice_child_context_t* ctx = NULL;
+    retval = dataservice_child_context_lookup(&ctx, inst, dreq.hdr.child_index);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX;
-        goto done;
-    }
-
-    /* verify that this child context is open. */
-    if (NULL == inst->children[child_index].hdr.dispose)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID;
         goto done;
     }
 
@@ -93,8 +78,7 @@ int dataservice_decode_and_dispatch_transaction_get_first(
     data_transaction_node_t node;
     retval =
         dataservice_transaction_get_first(
-            &inst->children[child_index].ctx, NULL, &node,
-            &txn_bytes, &txn_size);
+            ctx, NULL, &node, &txn_bytes, &txn_size);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         txn_bytes = NULL;
@@ -102,22 +86,14 @@ int dataservice_decode_and_dispatch_transaction_get_first(
     }
 
     /* create the payload. */
-    payload_size = 4 * 16 + txn_size;
-    payload_bytes = (uint8_t*)malloc(payload_size);
-    if (NULL == payload_bytes)
+    retval =
+        dataservice_encode_response_transaction_get_first(
+            &payload, &payload_size, node.key, node.prev, node.next,
+            node.artifact_id, txn_bytes, txn_size);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
         goto done;
     }
-
-    /* copy the node values to the payload. */
-    memcpy(payload_bytes, node.key, sizeof(node.key));
-    memcpy(payload_bytes + 16, node.prev, sizeof(node.prev));
-    memcpy(payload_bytes + 32, node.next, sizeof(node.next));
-    memcpy(payload_bytes + 48, node.artifact_id, sizeof(node.artifact_id));
-
-    /* copy the transaction data to the payload. */
-    memcpy(payload_bytes + 64, txn_bytes, txn_size);
 
     /* success. Fall through. */
 
@@ -126,13 +102,13 @@ done:
     retval =
         dataservice_decode_and_dispatch_write_status(
             sock, DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_FIRST_READ,
-            child_index, (uint32_t)retval, payload_bytes, payload_size);
+            dreq.hdr.child_index, (uint32_t)retval, payload, payload_size);
 
     /* clean up payload bytes. */
-    if (NULL != payload_bytes)
+    if (NULL != payload)
     {
-        memset(payload_bytes, 0, payload_size);
-        free(payload_bytes);
+        memset(payload, 0, payload_size);
+        free(payload);
     }
 
     /* clean up transaction bytes. */
@@ -140,6 +116,12 @@ done:
     {
         memset(txn_bytes, 0, txn_size);
         free(txn_bytes);
+    }
+
+    /* clean up dreq. */
+    if (dispose_dreq)
+    {
+        dispose((disposable_t*)&dreq);
     }
 
     return retval;

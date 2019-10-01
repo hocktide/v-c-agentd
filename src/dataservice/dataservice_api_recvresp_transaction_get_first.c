@@ -125,9 +125,7 @@ int dataservice_api_recvresp_transaction_get_first(
         /* size of the offset. */
         sizeof(uint32_t) +
         /* size of the status. */
-        sizeof(uint32_t) +
-        /* size of the node data */
-        id_arr_size;
+        sizeof(uint32_t);
     if (size < response_packet_size)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE;
@@ -149,13 +147,22 @@ int dataservice_api_recvresp_transaction_get_first(
     *status = ntohl(val[2]);
     if (AGENTD_STATUS_SUCCESS != *status)
     {
+        retval = AGENTD_STATUS_SUCCESS;
+        goto cleanup_val;
+    }
+
+    /* if successful, the size should be at least large enough to hold the
+     * id array. */
+    if (size < response_packet_size + id_arr_size)
+    {
+        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA;
         goto cleanup_val;
     }
 
     /* get the raw data. */
     const uint8_t* bval = (const uint8_t*)(val + 3);
     /* update data size. */
-    dat_size -= response_packet_size;
+    dat_size -= response_packet_size + id_arr_size;
 
     /* process the node data if the node is specified. */
     if (NULL != node)

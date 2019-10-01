@@ -139,7 +139,7 @@ int dataservice_database_open(
     if (0 != mdb_txn_commit(txn))
     {
         retval = AGENTD_ERROR_DATASERVICE_MDB_TXN_COMMIT_FAILURE;
-        goto rollback_txn;
+        goto close_environment;
     }
 
     /* success. */

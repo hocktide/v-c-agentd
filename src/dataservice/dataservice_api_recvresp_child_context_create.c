@@ -98,10 +98,8 @@ int dataservice_api_recvresp_child_context_create(
         /* size of the offset. */
         sizeof(uint32_t) +
         /* size of the status. */
-        sizeof(uint32_t) +
-        /* size of the child context index. */
         sizeof(uint32_t);
-    if (size != response_packet_size)
+    if (size < response_packet_size)
     {
         retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE;
         goto cleanup_val;
@@ -121,8 +119,20 @@ int dataservice_api_recvresp_child_context_create(
     /* get the status code. */
     *status = ntohl(val[2]);
 
-    /* get the child context index. */
-    *child = ntohl(val[3]);
+    /* if the call was successful, decode the child id. */
+    if (AGENTD_STATUS_SUCCESS == *status)
+    {
+        /* verify the increased payload size. */
+        if (size < response_packet_size + sizeof(uint32_t))
+        {
+            retval =
+                AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE;
+            goto cleanup_val;
+        }
+
+        /* get the child context index. */
+        *child = ntohl(val[3]);
+    }
 
     /* success. */
     retval = AGENTD_STATUS_SUCCESS;
