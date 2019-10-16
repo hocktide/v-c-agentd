@@ -429,3 +429,107 @@ TEST(dataservice_decode_test, response_child_context_close_decoded)
     /* the payload size is correct. */
     ASSERT_EQ(0U, dresp.hdr.payload_size);
 }
+
+/**
+ * Test that we check for sizes when decoding.
+ */
+TEST(dataservice_decode_test, response_global_settings_get_bad_sizes)
+{
+    uint8_t resp[100] = { 0 };
+    dataservice_response_global_settings_get_t dresp;
+
+    /* a zero size is invalid. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RESPONSE_PACKET_INVALID_SIZE,
+        dataservice_decode_response_global_settings_get(
+            resp, 0, &dresp));
+
+    /* a truncated size is invalid. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RESPONSE_PACKET_INVALID_SIZE,
+        dataservice_decode_response_global_settings_get(
+            resp, 2 * sizeof(uint32_t), &dresp));
+}
+
+/**
+ * Test that we perform null checks in the decode.
+ */
+TEST(dataservice_decode_test, response_global_settings_get_null_checks)
+{
+    uint8_t resp[100] = { 0 };
+    dataservice_response_global_settings_get_t dresp;
+
+    /* a null response packet pointer is invalid. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RESPONSE_INVALID_PARAMETER,
+        dataservice_decode_response_global_settings_get(
+            nullptr, 3 * sizeof(uint32_t), &dresp));
+
+    /* a null decoded response structure pointer is invalid. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RESPONSE_INVALID_PARAMETER,
+        dataservice_decode_response_global_settings_get(
+            resp, 3 * sizeof(uint32_t), nullptr));
+}
+
+/**
+ * Test that a response packet with an invalid method code returns an error.
+ */
+TEST(dataservice_decode_test, response_child_global_settings_get_bad_method_code)
+{
+    uint8_t resp[12] = {
+        /* bad method code. */
+        0x80, 0x00, 0x00, 0x00,
+
+        /* offset == 1023 */
+        0x00, 0x00, 0x03, 0xFF,
+
+        /* status == 0x12345678 */
+        0x12, 0x34, 0x56, 0x78
+    };
+    dataservice_response_global_settings_get_t dresp;
+
+    /* a valid response is successfully decoded. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE,
+        dataservice_decode_response_global_settings_get(
+            resp, sizeof(resp), &dresp));
+}
+
+/**
+ * Test that a response packet is successfully decoded.
+ */
+TEST(dataservice_decode_test, response_global_settings_get_decoded)
+{
+    uint8_t resp[15] = {
+        /* method code. */
+        0x00, 0x00, 0x00, 0x07,
+
+        /* offset == 1023 */
+        0x00, 0x00, 0x03, 0xFF,
+
+        /* status == AGENTD_STATUS_SUCCESS */
+        0x00, 0x00, 0x00, 0x00,
+
+        /* global setting data. */
+        0x01, 0x02, 0x03
+    };
+    dataservice_response_global_settings_get_t dresp;
+
+    /* a valid response is successfully decoded. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        dataservice_decode_response_global_settings_get(
+            resp, sizeof(resp), &dresp));
+
+    /* the disposer is set to the memset disposer. */
+    ASSERT_EQ(&dataservice_decode_response_memset_disposer,
+        dresp.hdr.hdr.dispose);
+    /* the method code is correct. */
+    ASSERT_EQ(DATASERVICE_API_METHOD_APP_GLOBAL_SETTING_READ,
+        dresp.hdr.method_code);
+    /* the offset is correct. */
+    ASSERT_EQ(1023U, dresp.hdr.offset);
+    /* the status is correct. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS, (int)dresp.hdr.status);
+    /* the payload size is correct. */
+    ASSERT_EQ(sizeof(dresp) - sizeof(dresp.hdr), dresp.hdr.payload_size);
+    /* the data pointer should be set correctly. */
+    ASSERT_EQ(resp + 12, dresp.data);
+    /* the data_size should be correct. */
+    ASSERT_EQ(3U, dresp.data_size);
+}
