@@ -1845,3 +1845,194 @@ TEST(dataservice_decode_test,
     /* the node key should match. */
     ASSERT_EQ(0, memcmp(EXPECTED_BLOCK_ID, dresp.block_id, 16));
 }
+
+/**
+ * Test that we check for sizes when decoding.
+ */
+TEST(dataservice_decode_test, response_artifact_get_bad_sizes)
+{
+    uint8_t resp[100] = { 0 };
+    dataservice_response_artifact_get_t dresp;
+
+    /* a zero size is invalid. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RESPONSE_PACKET_INVALID_SIZE,
+        dataservice_decode_response_artifact_get(
+            resp, 0, &dresp));
+
+    /* a truncated size is invalid. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RESPONSE_PACKET_INVALID_SIZE,
+        dataservice_decode_response_artifact_get(
+            resp, 2 * sizeof(uint32_t), &dresp));
+}
+
+/**
+ * Test that we perform null checks in the decode.
+ */
+TEST(dataservice_decode_test, response_artifact_get_null_checks)
+{
+    uint8_t resp[100] = { 0 };
+    dataservice_response_artifact_get_t dresp;
+
+    /* a null response packet pointer is invalid. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RESPONSE_INVALID_PARAMETER,
+        dataservice_decode_response_artifact_get(
+            nullptr, 3 * sizeof(uint32_t), &dresp));
+
+    /* a null decoded response structure pointer is invalid. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RESPONSE_INVALID_PARAMETER,
+        dataservice_decode_response_artifact_get(
+            resp, 3 * sizeof(uint32_t), nullptr));
+}
+
+/**
+ * Test that a response packet with an invalid method code returns an error.
+ */
+TEST(dataservice_decode_test, response_artifact_get_bad_method_code)
+{
+    uint8_t resp[12] = {
+        /* bad method code. */
+        0x80, 0x00, 0x00, 0x00,
+
+        /* offset == 1023 */
+        0x00, 0x00, 0x03, 0xFF,
+
+        /* status == 0x12345678 */
+        0x12, 0x34, 0x56, 0x78
+    };
+    dataservice_response_artifact_get_t dresp;
+
+    /* a valid response is successfully decoded. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE,
+        dataservice_decode_response_artifact_get(
+            resp, sizeof(resp), &dresp));
+}
+
+/**
+ * Test that a response packet is successfully decoded.
+ */
+TEST(dataservice_decode_test, response_artifact_get_decoded)
+{
+    uint8_t resp[12] = {
+        /* method code. */
+        0x00, 0x00, 0x00, 0x13,
+
+        /* offset == 1023 */
+        0x00, 0x00, 0x03, 0xFF,
+
+        /* status == 0x12345678 */
+        0x12, 0x34, 0x56, 0x78
+    };
+    dataservice_response_artifact_get_t dresp;
+
+    /* a valid response is successfully decoded. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        dataservice_decode_response_artifact_get(
+            resp, sizeof(resp), &dresp));
+
+    /* the disposer is set to the memset disposer. */
+    ASSERT_EQ(&dataservice_decode_response_memset_disposer,
+        dresp.hdr.hdr.dispose);
+    /* the method code is correct. */
+    ASSERT_EQ(DATASERVICE_API_METHOD_APP_ARTIFACT_READ,
+        dresp.hdr.method_code);
+    /* the offset is correct. */
+    ASSERT_EQ(1023U, dresp.hdr.offset);
+    /* the status is correct. */
+    ASSERT_EQ(0x12345678U, dresp.hdr.status);
+    /* the payload size is correct. */
+    ASSERT_EQ(0U, dresp.hdr.payload_size);
+}
+
+/**
+ * Test that a response packet is successfully decoded with a complete payload.
+ */
+TEST(dataservice_decode_test,
+    response_artifact_get_decoded_full_payload)
+{
+    const uint8_t EXPECTED_RECORD_KEY[] = {
+        0x66, 0x60, 0x2f, 0x1e, 0x39, 0x71, 0x44, 0xd3,
+        0xb9, 0x26, 0xbe, 0x73, 0xd8, 0x53, 0x19, 0x9f
+    };
+
+    const uint8_t EXPECTED_RECORD_TXN_FIRST[] = {
+        0x85, 0x02, 0x75, 0x5a, 0x98, 0xbb, 0x4a, 0xc7,
+        0xa7, 0xd5, 0x05, 0xa6, 0x5a, 0x60, 0x25, 0xcd
+    };
+
+    const uint8_t EXPECTED_RECORD_TXN_LATEST[] = {
+        0xef, 0x97, 0x82, 0xb4, 0xfe, 0xac, 0x4d, 0x39,
+        0x8c, 0x19, 0xb4, 0xd7, 0xc2, 0xfe, 0xdf, 0x2b
+    };
+
+    const uint64_t EXPECTED_RECORD_NET_HEIGHT_FIRST = htonll(12);
+
+    const uint64_t EXPECTED_RECORD_NET_HEIGHT_LATEST = htonll(71);
+
+    const uint32_t EXPECTED_RECORD_NET_STATE_LATEST = htonl(9);
+
+    uint8_t resp[80] = {
+        /* method code. */
+        0x00, 0x00, 0x00, 0x13,
+
+        /* offset == 1023 */
+        0x00, 0x00, 0x03, 0xFF,
+
+        /* status == AGENTD_STATUS_SUCCESS. */
+        0x00, 0x00, 0x00, 0x00,
+
+        /* record.key */
+        0x66, 0x60, 0x2f, 0x1e, 0x39, 0x71, 0x44, 0xd3,
+        0xb9, 0x26, 0xbe, 0x73, 0xd8, 0x53, 0x19, 0x9f,
+
+        /* record.txn_first */
+        0x85, 0x02, 0x75, 0x5a, 0x98, 0xbb, 0x4a, 0xc7,
+        0xa7, 0xd5, 0x05, 0xa6, 0x5a, 0x60, 0x25, 0xcd,
+
+        /* record.txn_latest */
+        0xef, 0x97, 0x82, 0xb4, 0xfe, 0xac, 0x4d, 0x39,
+        0x8c, 0x19, 0xb4, 0xd7, 0xc2, 0xfe, 0xdf, 0x2b,
+
+        /* record.net_height_first */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0c,
+
+        /* record.net_height_latest */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x47,
+
+        /* record.net_state_latest */
+        0x00, 0x00, 0x00, 0x09
+    };
+    dataservice_response_artifact_get_t dresp;
+
+    /* a valid response is successfully decoded. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        dataservice_decode_response_artifact_get(
+            resp, sizeof(resp), &dresp));
+
+    /* the disposer is set to the memset disposer. */
+    ASSERT_EQ(&dataservice_decode_response_memset_disposer,
+        dresp.hdr.hdr.dispose);
+    /* the method code is correct. */
+    ASSERT_EQ(DATASERVICE_API_METHOD_APP_ARTIFACT_READ,
+        dresp.hdr.method_code);
+    /* the offset is correct. */
+    ASSERT_EQ(1023U, dresp.hdr.offset);
+    /* the status is correct. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS, (int)dresp.hdr.status);
+    /* the payload size is correct. */
+    ASSERT_EQ(sizeof(dresp) - sizeof(dresp.hdr), dresp.hdr.payload_size);
+    /* the record key should match. */
+    ASSERT_EQ(0, memcmp(EXPECTED_RECORD_KEY, dresp.record.key, 16));
+    /* the record txn first should match. */
+    ASSERT_EQ(0, memcmp(EXPECTED_RECORD_TXN_FIRST, dresp.record.txn_first, 16));
+    /* the record txn latest should match. */
+    ASSERT_EQ(
+        0, memcmp(EXPECTED_RECORD_TXN_LATEST, dresp.record.txn_latest, 16));
+    /* the record net height first should match. */
+    ASSERT_EQ(EXPECTED_RECORD_NET_HEIGHT_FIRST, dresp.record.net_height_first);
+    /* the record net height latest should match. */
+    ASSERT_EQ(
+        EXPECTED_RECORD_NET_HEIGHT_LATEST, dresp.record.net_height_latest);
+    /* the record net state latest should match. */
+    ASSERT_EQ(
+        EXPECTED_RECORD_NET_STATE_LATEST, dresp.record.net_state_latest);
+}
