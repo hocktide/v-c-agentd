@@ -1,5 +1,5 @@
 /**
- * \file agentd/dataservice/private/dataservice.h
+ * \file agentd/dataservice/api.h
  *
  * \brief Internal API for the data service.
  *

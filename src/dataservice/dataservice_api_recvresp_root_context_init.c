@@ -8,6 +8,7 @@
 
 #include <arpa/inet.h>
 #include <agentd/dataservice/api.h>
+#include <agentd/dataservice/async_api.h>
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
@@ -61,19 +62,10 @@ int dataservice_api_recvresp_root_context_init(
     MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != status);
 
-    /* | Root context init response packet.                           | */
-    /* | --------------------------------------------- | ------------ | */
-    /* | DATA                                          | SIZE         | */
-    /* | --------------------------------------------- | ------------ | */
-    /* | DATASERVICE_API_METHOD_LL_ROOT_CONTEXT_CREATE | 4 bytes      | */
-    /* | offset                                        | 4 bytes      | */
-    /* | status                                        | 4 bytes      | */
-    /* | --------------------------------------------- | ------------ | */
-
     /* read a data packet from the socket. */
-    uint32_t* val = NULL;
+    void* val = NULL;
     uint32_t size = 0U;
-    retval = ipc_read_data_noblock(sock, (void**)&val, &size);
+    retval = ipc_read_data_noblock(sock, &val, &size);
     if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
     {
         goto done;
@@ -84,38 +76,26 @@ int dataservice_api_recvresp_root_context_init(
         goto done;
     }
 
-    /* the size should be equal to the size we expect. */
-    uint32_t response_packet_size =
-        /* size of the API method. */
-        sizeof(uint32_t) +
-        /* size of the offset. */
-        sizeof(uint32_t) +
-        /* size of the status. */
-        sizeof(uint32_t);
-    if (size != response_packet_size)
+    /* decode the response. */
+    dataservice_response_root_context_init_t dresp;
+    retval = dataservice_decode_response_root_context_init(val, size, &dresp);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE;
-        goto cleanup_val;
-    }
-
-    /* verify that the method code is the code we expect. */
-    uint32_t code = ntohl(val[0]);
-    if (DATASERVICE_API_METHOD_LL_ROOT_CONTEXT_CREATE != code)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE;
         goto cleanup_val;
     }
 
     /* get the offset. */
-    *offset = ntohl(val[1]);
+    *offset = dresp.hdr.offset;
 
     /* get the status code. */
-    *status = ntohl(val[2]);
+    *status = dresp.hdr.status;
 
     /* success. */
     retval = AGENTD_STATUS_SUCCESS;
+    goto cleanup_dresp;
 
-    /* fall-through. */
+cleanup_dresp:
+    dispose((disposable_t*)&dresp);
 
 cleanup_val:
     memset(val, 0, size);

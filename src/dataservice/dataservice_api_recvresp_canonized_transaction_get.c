@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <agentd/inet.h>
 #include <agentd/dataservice/api.h>
+#include <agentd/dataservice/async_api.h>
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
@@ -83,26 +84,10 @@ int dataservice_api_recvresp_canonized_transaction_get(
     MODEL_ASSERT(NULL != data);
     MODEL_ASSERT(NULL != data_size);
 
-    /* | Transaction get first response packet.                             | */
-    /* | --------------------------------------------------- | ------------ | */
-    /* | DATA                                                | SIZE         | */
-    /* | --------------------------------------------------- | ------------ | */
-    /* | DATASERVICE_API_METHOD_APP_TRANSACTION_READ         |  4 bytes     | */
-    /* | offset                                              |  4 bytes     | */
-    /* | status                                              |  4 bytes     | */
-    /* | node:                                               | 80 bytes     | */
-    /* |    key                                              | 16 bytes     | */
-    /* |    prev                                             | 16 bytes     | */
-    /* |    next                                             | 16 bytes     | */
-    /* |    artifact_id                                      | 16 bytes     | */
-    /* |    block_id                                         | 16 bytes     | */
-    /* | data                                                | n - 92 bytes | */
-    /* | --------------------------------------------------- | ------------ | */
-
     /* read a data packet from the socket. */
-    uint32_t* val = NULL;
+    void* val = NULL;
     uint32_t size = 0U;
-    retval = ipc_read_data_noblock(sock, (void**)&val, &size);
+    retval = ipc_read_data_noblock(sock, &val, &size);
     if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
     {
         goto done;
@@ -113,54 +98,26 @@ int dataservice_api_recvresp_canonized_transaction_get(
         goto done;
     }
 
-    /* set up data size for later. */
-    uint32_t dat_size = size;
-
-    /* the size should be greater than or equal to the size we expect. */
-    uint32_t response_packet_size =
-        /* size of the API method. */
-        sizeof(uint32_t) +
-        /* size of the offset. */
-        sizeof(uint32_t) +
-        /* size of the status. */
-        sizeof(uint32_t);
-    if (size < response_packet_size)
+    /* decode the response. */
+    dataservice_response_canonized_transaction_get_t dresp;
+    retval =
+        dataservice_decode_response_canonized_transaction_get(
+            val, size, &dresp);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE;
-        goto cleanup_val;
-    }
-
-    /* verify that the method code is the code we expect. */
-    uint32_t code = ntohl(val[0]);
-    if (DATASERVICE_API_METHOD_APP_TRANSACTION_READ != code)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE;
         goto cleanup_val;
     }
 
     /* get the offset. */
-    *offset = ntohl(val[1]);
+    *offset = dresp.hdr.offset;
 
     /* get the status code. */
-    *status = ntohl(val[2]);
+    *status = dresp.hdr.status;
     if (AGENTD_STATUS_SUCCESS != *status)
     {
         retval = AGENTD_STATUS_SUCCESS;
-        goto cleanup_val;
+        goto cleanup_dresp;
     }
-
-    /* if the node size is invalid, return an error code. */
-    /* 5*16 as above sizeof node (key + prev + next + artifact_id + block_id) */
-    if (dat_size < response_packet_size + 5 * 16)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA;
-        goto cleanup_val;
-    }
-
-    /* get the raw data. */
-    const uint8_t* bval = (const uint8_t*)(val + 3);
-    /* update data size. */
-    dat_size -= response_packet_size + 5 * 16;
 
     /* process the node data if the node is specified. */
     if (NULL != node)
@@ -169,43 +126,44 @@ int dataservice_api_recvresp_canonized_transaction_get(
         memset(node, 0, sizeof(data_transaction_node_t));
 
         /* copy the key. */
-        memcpy(node->key, bval, sizeof(node->key));
+        memcpy(node->key, dresp.node.key, sizeof(node->key));
 
         /* copy the prev. */
-        memcpy(node->prev, bval + 16, sizeof(node->prev));
+        memcpy(node->prev, dresp.node.prev, sizeof(node->prev));
 
         /* copy the next. */
-        memcpy(node->next, bval + 32, sizeof(node->next));
+        memcpy(node->next, dresp.node.next, sizeof(node->next));
 
         /* copy the artifact_id. */
-        memcpy(node->artifact_id, bval + 48, sizeof(node->artifact_id));
+        memcpy(
+            node->artifact_id, dresp.node.artifact_id,
+            sizeof(node->artifact_id));
 
         /* copy the block id. */
-        memcpy(node->block_id, bval + 64, sizeof(node->block_id));
+        memcpy(node->block_id, dresp.node.block_id, sizeof(node->block_id));
 
         /* set the size. */
-        node->net_txn_cert_size = htonll(dat_size);
+        node->net_txn_cert_size = dresp.node.net_txn_cert_size;
     }
 
-    /* get to the location of the data. */
-    bval += 5 * 16;
-
     /* allocate memory for the data. */
-    *data = malloc(dat_size);
+    *data = malloc(dresp.data_size);
     if (NULL == *data)
     {
         retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
-        goto cleanup_val;
+        goto cleanup_dresp;
     }
 
     /* copy data. */
-    memcpy(*data, bval, dat_size);
-    *data_size = dat_size;
+    memcpy(*data, dresp.data, dresp.data_size);
+    *data_size = dresp.data_size;
 
     /* success. */
     retval = AGENTD_STATUS_SUCCESS;
+    goto cleanup_dresp;
 
-    /* fall-through. */
+cleanup_dresp:
+    dispose((disposable_t*)&dresp);
 
 cleanup_val:
     memset(val, 0, size);
