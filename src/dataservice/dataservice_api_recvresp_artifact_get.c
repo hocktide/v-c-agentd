@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <agentd/inet.h>
 #include <agentd/dataservice/api.h>
+#include <agentd/dataservice/async_api.h>
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
@@ -73,22 +74,6 @@ int dataservice_api_recvresp_artifact_get(
     MODEL_ASSERT(NULL != status);
     MODEL_ASSERT(NULL != record);
 
-    /* | Artifact get response packet.                                      | */
-    /* | --------------------------------------------------- | ------------ | */
-    /* | DATA                                                | SIZE         | */
-    /* | --------------------------------------------------- | ------------ | */
-    /* | DATASERVICE_API_METHOD_APP_ARTIFACT_READ            |  4 bytes     | */
-    /* | offset                                              |  4 bytes     | */
-    /* | status                                              |  4 bytes     | */
-    /* | record:                                             | 68 bytes     | */
-    /* |    key                                              | 16 bytes     | */
-    /* |    txn_first                                        | 16 bytes     | */
-    /* |    txn_latest                                       | 16 bytes     | */
-    /* |    net_height_first                                 |  8 bytes     | */
-    /* |    net_height_latest                                |  8 bytes     | */
-    /* |    net_state_latest                                 |  4 bytes     | */
-    /* | --------------------------------------------------- | ------------ | */
-
     /* read a data packet from the socket. */
     uint32_t* val = NULL;
     uint32_t size = 0U;
@@ -103,86 +88,35 @@ int dataservice_api_recvresp_artifact_get(
         goto done;
     }
 
-    /* set up data size for later. */
-    uint32_t dat_size = size;
-
-    /* set up the artifact record size. */
-    uint32_t artifact_record_size = 68U;
-
-    /* the size should be equal to the size we expect. */
-    uint32_t response_packet_size =
-        /* size of the API method. */
-        sizeof(uint32_t) +
-        /* size of the offset. */
-        sizeof(uint32_t) +
-        /* size of the status. */
-        sizeof(uint32_t);
-    if (size < response_packet_size)
+    /* decode the response. */
+    dataservice_response_artifact_get_t dresp;
+    retval =
+        dataservice_decode_response_artifact_get(val, size, &dresp);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE;
-        goto cleanup_val;
-    }
-
-    /* verify that the method code is the code we expect. */
-    uint32_t code = ntohl(val[0]);
-    if (DATASERVICE_API_METHOD_APP_ARTIFACT_READ != code)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE;
         goto cleanup_val;
     }
 
     /* get the offset. */
-    *offset = ntohl(val[1]);
+    *offset = dresp.hdr.offset;
 
     /* get the status code. */
-    *status = ntohl(val[2]);
+    *status = dresp.hdr.status;
     if (0 != *status)
     {
         retval = AGENTD_STATUS_SUCCESS;
-        goto done;
+        goto cleanup_dresp;
     }
 
-    /* adjust the data size. */
-    dat_size -= response_packet_size;
-
-    /* if the record size is invalid, return an error code. */
-    if (artifact_record_size != dat_size)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA;
-        goto done;
-    }
-
-    /* get the raw data. */
-    const uint8_t* bval = (const uint8_t*)(val + 3);
-
-    /* clear the record. */
-    memset(record, 0, sizeof(data_artifact_record_t));
-
-    /* copy the key. */
-    memcpy(record->key, bval, sizeof(record->key));
-
-    /* copy the prev. */
-    memcpy(record->txn_first, bval + 16, sizeof(record->txn_first));
-
-    /* copy the next. */
-    memcpy(record->txn_latest, bval + 32, sizeof(record->txn_latest));
-
-    /* copy the first height. */
-    memcpy(&record->net_height_first, bval + 48,
-        sizeof(record->net_height_first));
-
-    /* copy the latest height. */
-    memcpy(&record->net_height_latest, bval + 56,
-        sizeof(record->net_height_latest));
-
-    /* copy the latest state. */
-    memcpy(&record->net_state_latest, bval + 64,
-        sizeof(record->net_state_latest));
+    /* copy the record. */
+    memcpy(record, &dresp.record, sizeof(*record));
 
     /* success. */
     retval = AGENTD_STATUS_SUCCESS;
+    goto cleanup_dresp;
 
-    /* fall-through. */
+cleanup_dresp:
+    dispose((disposable_t*)&dresp);
 
 cleanup_val:
     memset(val, 0, size);
