@@ -26,6 +26,7 @@ void private_command_protocolservice(bootstrap_config_t* UNUSED(bconf))
         unauthorized_protocol_service_event_loop(
             AGENTD_FD_UNAUTHORIZED_PROTOSVC_RANDOM,
             AGENTD_FD_UNAUTHORIZED_PROTOSVC_ACCEPT,
+            AGENTD_FD_UNAUTHORIZED_PROTOSVC_DATA,
             AGENTD_FD_UNAUTHORIZED_PROTOSVC_LOG);
 
     /* exit with the return code from the event loop. */

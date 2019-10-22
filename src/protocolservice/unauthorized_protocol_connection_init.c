@@ -51,6 +51,10 @@ int unauthorized_protocol_connection_init(
     conn->state = UPCS_READ_HANDSHAKE_REQ_FROM_CLIENT;
     conn->svc = svc;
 
+    /* by default, a connection is not associated with a dataservice
+     * child context. */
+    conn->dataservice_child_context = -1;
+
     /* attempt to make this socket non-blocking. */
     retval = ipc_make_noblock(sock, &conn->ctx, conn);
     if (AGENTD_STATUS_SUCCESS != retval)

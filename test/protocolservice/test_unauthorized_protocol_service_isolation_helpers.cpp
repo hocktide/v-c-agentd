@@ -8,6 +8,7 @@
 
 #include <agentd/protocolservice.h>
 #include <agentd/randomservice.h>
+#include <agentd/status_codes.h>
 #include <vpr/allocator/malloc_allocator.h>
 
 #include "test_unauthorized_protocol_service_isolation.h"
@@ -169,6 +170,9 @@ void unauthorized_protocol_service_isolation_test::SetUp()
             &bconf, &conf, rprotosock, logsock, acceptsock_srv, datasock_srv,
             &protopid, false);
 
+    /* create the mock dataservice. */
+    dataservice = make_unique<mock_dataservice::mock_dataservice>(datasock);
+
     /* if the spawn is successful, send the service the other half of a protocol
      * socket. */
     if (0 == proto_proc_status)
@@ -210,6 +214,7 @@ void unauthorized_protocol_service_isolation_test::TearDown()
     setenv("PATH", oldpath, 1);
 
     /* clean up. */
+    dataservice->stop();
     dispose((disposable_t*)&conf);
     dispose((disposable_t*)&bconf);
     close(logsock);
@@ -226,4 +231,92 @@ void unauthorized_protocol_service_isolation_test::TearDown()
         dispose((disposable_t*)&client_private_key);
     }
     dispose((disposable_t*)&alloc_opts);
+}
+
+/** \brief Helper to perform handshake, returning the shared secret. */
+int unauthorized_protocol_service_isolation_test::do_handshake(
+    vccrypt_buffer_t* shared_secret, uint64_t* server_iv,
+    uint64_t* client_iv)
+{
+    int retval = 0;
+    uint32_t offset, status;
+    vccrypt_buffer_t client_key_nonce;
+    vccrypt_buffer_t client_challenge_nonce;
+    vccrypt_buffer_t server_public_key;
+    vccrypt_buffer_t server_id;
+    vccrypt_buffer_t server_challenge_nonce;
+
+    /* we must have a valid crypto suite for this to work. */
+    if (!suite_initialized)
+    {
+        retval = 1;
+        goto done;
+    }
+
+    /* set the client and server IVs to sane start values. */
+    *server_iv = *client_iv = 0UL;
+
+    /* attempt to send the handshake request. */
+    retval =
+        protocolservice_api_sendreq_handshake_request_block(
+            protosock, &suite, authorized_entity_id, &client_key_nonce,
+            &client_challenge_nonce);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        goto done;
+    }
+
+    /* attempt to read the handshake response. */
+    retval =
+        protocolservice_api_recvresp_handshake_request_block(
+            protosock, &suite, &server_id, &client_private_key,
+            &server_public_key, &client_key_nonce, &client_challenge_nonce,
+            &server_challenge_nonce, shared_secret, &offset, &status);
+    if (AGENTD_STATUS_SUCCESS != retval || AGENTD_STATUS_SUCCESS != (int)status)
+    {
+        if (AGENTD_STATUS_SUCCESS == retval)
+            retval = (int)status;
+        goto cleanup_nonces;
+    }
+
+    /* attempt to send the handshake ack request. */
+    retval =
+        protocolservice_api_sendreq_handshake_ack_block(
+            protosock, &suite, client_iv, shared_secret,
+            &server_challenge_nonce);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        goto cleanup_request_buffers_on_fail;
+    }
+
+    /* receive the handshake ack response. */
+    retval =
+        protocolservice_api_recvresp_handshake_ack_block(
+            protosock, &suite, server_iv, shared_secret, &offset, &status);
+
+    /* use the status if I/O completed successfully. */
+    if (AGENTD_STATUS_SUCCESS == retval)
+        retval = (int)status;
+
+    /* if the remote call failed, clean up everything. */
+    if (AGENTD_STATUS_SUCCESS != retval)
+        goto cleanup_request_buffers_on_fail;
+
+    /* on success, clean up only the buffers we don't return to the caller. */
+    goto cleanup_request_buffers_on_success;
+
+cleanup_request_buffers_on_fail:
+    dispose((disposable_t*)shared_secret);
+
+cleanup_request_buffers_on_success:
+    dispose((disposable_t*)&server_public_key);
+    dispose((disposable_t*)&server_id);
+    dispose((disposable_t*)&server_challenge_nonce);
+
+cleanup_nonces:
+    dispose((disposable_t*)&client_key_nonce);
+    dispose((disposable_t*)&client_challenge_nonce);
+
+done:
+    return retval;
 }

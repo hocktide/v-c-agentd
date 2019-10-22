@@ -51,6 +51,8 @@ enum protocolservice_api_method_enum
  * \param randomsock    The socket to the RNG service.
  * \param protosock     The protocol service socket.  The protocol service
  *                      listens for connections on this socket.
+ * \param datasock      The data service socket.  The protocol service
+ *                      communicates with the dataservice using this socket.
  * \param logsock       The logging service socket.  The protocol service logs
  *                      on this socket.
  *
@@ -66,7 +68,7 @@ enum protocolservice_api_method_enum
  *            the protocol service event loop failed.
  */
 int unauthorized_protocol_service_event_loop(
-    int randomsock, int protosock, int logsock);
+    int randomsock, int protosock, int datasock, int logsock);
 
 /**
  * \brief Spawn an unauthorized protocol service process using the provided

@@ -6,6 +6,8 @@
  * \copyright 2019 Velo Payments, Inc.  All rights reserved.
  */
 
+#include <agentd/dataservice/api.h>
+#include <agentd/dataservice/async_api.h>
 #include <agentd/ipc.h>
 #include <agentd/status_codes.h>
 #include <agentd/protocolservice.h>
@@ -34,9 +36,21 @@ static void unauthorized_protocol_service_connection_handshake_req_read(
     unauthorized_protocol_connection_t* conn);
 static void unauthorized_protocol_service_connection_handshake_ack_read(
     unauthorized_protocol_connection_t* conn);
+static void unauthorized_protocol_service_command_read(
+    unauthorized_protocol_connection_t* conn);
+static void unauthorized_protocol_service_decode_and_dispatch(
+    unauthorized_protocol_connection_t* conn, uint32_t request_id,
+    uint32_t request_offset, const uint8_t* breq, size_t size);
+static void unauthorized_protocol_service_handle_request_latest_block_get(
+    unauthorized_protocol_connection_t* conn, uint32_t request_offset,
+    const uint8_t* breq, size_t size);
 static void unauthorized_protocol_service_random_read(
     ipc_socket_context_t* ctx, int event_flags, void* user_context);
 static void unauthorized_protocol_service_random_write(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+static void unauthorized_protocol_service_dataservice_read(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+static void unauthorized_protocol_service_dataservice_write(
     ipc_socket_context_t* ctx, int event_flags, void* user_context);
 static int unauthorized_protocol_service_get_entity_key(
     unauthorized_protocol_connection_t* conn);
@@ -47,6 +61,17 @@ static int unauthorized_protocol_service_write_handshake_request_response(
 static void unauthorized_protocol_service_error_response(
     unauthorized_protocol_connection_t* conn, int request_id, int status,
     uint32_t offset, bool encrypted);
+static void unauthorized_protocol_service_dataservice_request_child_context(
+    unauthorized_protocol_connection_t* conn);
+static void ups_dispatch_dataservice_response_child_context_create(
+    unauthorized_protocol_service_instance_t* svc, const void* resp,
+    size_t resp_size);
+static void ups_dispatch_dataservice_response_child_context_close(
+    unauthorized_protocol_service_instance_t* svc, const void* resp,
+    size_t resp_size);
+static void ups_dispatch_dataservice_response_block_id_latest_read(
+    unauthorized_protocol_service_instance_t* svc, const void* resp,
+    size_t resp_size);
 
 /**
  * \brief Event loop for the unauthorized protocol service.  This is the entry
@@ -56,6 +81,8 @@ static void unauthorized_protocol_service_error_response(
  * \param randomsock    The socket to the RNG service.
  * \param protosock     The protocol service socket.  The protocol service
  *                      listens for connections on this socket.
+ * \param datasock      The data service socket.  The protocol service
+ *                      communicates with the dataservice using this socket.
  * \param logsock       The logging service socket.  The protocol service logs
  *                      on this socket.
  *
@@ -71,20 +98,21 @@ static void unauthorized_protocol_service_error_response(
  *            the protocol service event loop failed.
  */
 int unauthorized_protocol_service_event_loop(
-    int randomsock, int protosock, int UNUSED(logsock))
+    int randomsock, int protosock, int datasock, int UNUSED(logsock))
 {
     int retval = 0;
     unauthorized_protocol_service_instance_t inst;
 
     /* parameter sanity checking. */
     MODEL_ASSERT(protosock >= 0);
+    MODEL_ASSERT(datasock >= 0);
     MODEL_ASSERT(logsock >= 0);
 
     /* initialize this instance. */
     /* TODO - get the number of connections from config. */
     retval =
         unauthorized_protocol_service_instance_init(
-            &inst, randomsock, protosock, 50);
+            &inst, randomsock, datasock, protosock, 50);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
@@ -107,6 +135,17 @@ int unauthorized_protocol_service_event_loop(
 
     /* add the random socket to the event loop. */
     if (AGENTD_STATUS_SUCCESS != ipc_event_loop_add(&inst.loop, &inst.random))
+    {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_ADD_FAILURE;
+        goto cleanup_inst;
+    }
+
+    /* set the read callback for the dataservice socket. */
+    ipc_set_readcb_noblock(
+        &inst.data, &unauthorized_protocol_service_dataservice_read, NULL);
+
+    /* add the data socket to the event loop. */
+    if (AGENTD_STATUS_SUCCESS != ipc_event_loop_add(&inst.loop, &inst.data))
     {
         retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_ADD_FAILURE;
         goto cleanup_inst;
@@ -224,8 +263,12 @@ static void unauthorized_protocol_service_connection_read(
             unauthorized_protocol_service_connection_handshake_ack_read(conn);
             break;
 
+        /* we expect to read a command request from the client. */
+        case APCS_READ_COMMAND_REQ_FROM_CLIENT:
+            unauthorized_protocol_service_command_read(conn);
+            break;
+
         default:
-            /* TODO - handle dispatch for other states. */
             break;
     }
 }
@@ -250,6 +293,11 @@ static void unauthorized_protocol_service_connection_handshake_req_read(
     int retval = ipc_read_data_noblock(&conn->ctx, &req, &size);
     if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
     {
+        return;
+    }
+    if (AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE == retval)
+    {
+        unauthorized_protocol_service_close_connection(conn);
         return;
     }
     if (AGENTD_STATUS_SUCCESS != retval)
@@ -388,6 +436,11 @@ static void unauthorized_protocol_service_connection_handshake_ack_read(
     {
         return;
     }
+    if (AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE == retval)
+    {
+        unauthorized_protocol_service_close_connection(conn);
+        return;
+    }
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         unauthorized_protocol_service_error_response(
@@ -436,6 +489,145 @@ cleanup_data:
 }
 
 /**
+ * \brief Attempt to read a command from the client.
+ *
+ * \param conn      The connection from which this command should be read.
+ */
+static void unauthorized_protocol_service_command_read(
+    unauthorized_protocol_connection_t* conn)
+{
+    void* req = NULL;
+    uint32_t size = 0U;
+    uint32_t request_id;
+    uint32_t request_offset;
+
+    /* attempt to read the command packet. */
+    int retval =
+        ipc_read_authed_data_noblock(
+            &conn->ctx, conn->client_iv, &req, &size, &conn->svc->suite,
+            &conn->shared_secret);
+    if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
+    {
+        return;
+    }
+    if (AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE == retval)
+    {
+        unauthorized_protocol_service_close_connection(conn);
+        return;
+    }
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        unauthorized_protocol_service_error_response(
+            conn, 0, AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST, 0, true);
+        return;
+    }
+
+    /* from here on, we are committed.  Don't call this callback again. */
+    ++conn->client_iv;
+    ipc_set_readcb_noblock(&conn->ctx, NULL, &conn->svc->loop);
+
+    /* set up the read buffer pointer. */
+    const uint8_t* breq = (const uint8_t*)req;
+
+    /* verify that the size matches what we expect. */
+    const size_t request_id_size = sizeof(request_id);
+    const size_t request_offset_size = sizeof(request_offset);
+    const size_t expected_size =
+        request_id_size + request_offset_size;
+    if (size < expected_size)
+    {
+        unauthorized_protocol_service_error_response(
+            conn, 0, AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST, 0, false);
+        goto cleanup_data;
+    }
+
+    /* read the request ID. */
+    memcpy(&request_id, breq, request_id_size);
+    breq += request_id_size;
+    request_id = ntohl(request_id);
+
+    /* read the request offset. */
+    memcpy(&request_offset, breq, request_offset_size);
+    breq += request_offset_size;
+    request_offset = ntohl(request_offset);
+
+    /* decode and dispatch this request. */
+    unauthorized_protocol_service_decode_and_dispatch(
+        conn, request_id, request_offset, breq, size - expected_size);
+
+    /* fall-through to clean up data. */
+cleanup_data:
+    memset(req, 0, size);
+    free(req);
+}
+
+/**
+ * \brief Decode and dispatch a request from the client.
+ *
+ * \param conn              The connection to close.
+ * \param request_id        The request ID to decode.
+ * \param request_offset    The offset of the request.
+ * \param breq              The bytestream of the request.
+ * \param size              The size of this request bytestream.
+ */
+static void unauthorized_protocol_service_decode_and_dispatch(
+    unauthorized_protocol_connection_t* conn, uint32_t request_id,
+    uint32_t request_offset, const uint8_t* breq, size_t size)
+{
+    /* decode the request id */
+    switch (request_id)
+    {
+        case UNAUTH_PROTOCOL_REQ_ID_LATEST_BLOCK_GET:
+            unauthorized_protocol_service_handle_request_latest_block_get(
+                conn, request_offset, breq, size);
+            break;
+
+        case UNAUTH_PROTOCOL_REQ_ID_CLOSE:
+            unauthorized_protocol_service_error_response(
+                conn, request_id, AGENTD_STATUS_SUCCESS, request_offset, true);
+            break;
+
+        /* TODO - replace with valid error code. */
+        default:
+            unauthorized_protocol_service_error_response(
+                conn, request_id, 8675309, request_offset, true);
+    }
+}
+
+/**
+ * \brief Handle a latest_block_get request.
+ *
+ * \param conn              The connection to close.
+ * \param request_offset    The offset of the request.
+ * \param breq              The bytestream of the request.
+ * \param size              The size of this request bytestream.
+ */
+static void unauthorized_protocol_service_handle_request_latest_block_get(
+    unauthorized_protocol_connection_t* conn, uint32_t request_offset,
+    const uint8_t* UNUSED(breq), size_t UNUSED(size))
+{
+    /* save the request offset. */
+    conn->current_request_offset = request_offset;
+
+    /* wait on the response from the "app" (dataservice) */
+    conn->state = APCS_READ_COMMAND_RESP_FROM_APP;
+
+    /* write the request to the dataservice using our child context. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_api_sendreq_latest_block_id_get(
+            &conn->svc->data, conn->dataservice_child_context))
+    {
+        /* TODO - handle error. */
+        return;
+    }
+
+    /* set the write callback for the dataservice socket. */
+    ipc_set_writecb_noblock(
+        &conn->svc->data, &unauthorized_protocol_service_dataservice_write,
+        &conn->svc->loop);
+}
+
+/**
  * \brief Close a connection, returning it to the free connection pool.
  *
  * \param conn          The connection to close.
@@ -446,7 +638,25 @@ static void unauthorized_protocol_service_close_connection(
     unauthorized_protocol_service_instance_t* svc =
         (unauthorized_protocol_service_instance_t*)conn->svc;
 
+    /* remove the connection from the event loop. */
     ipc_event_loop_remove(&svc->loop, &conn->ctx);
+
+    /* if still associated with a dataservice child context, remove it. */
+    if (conn->dataservice_child_context >= 0)
+    {
+        /* send a child context close request to the dataservice. */
+        dataservice_api_sendreq_child_context_close(
+            &svc->data, conn->dataservice_child_context);
+
+        /* set the write callback for the dataservice socket. */
+        ipc_set_writecb_noblock(
+            &svc->data, &unauthorized_protocol_service_dataservice_write,
+            &svc->loop);
+
+        svc->dataservice_child_map[conn->dataservice_child_context] = NULL;
+        conn->dataservice_child_context = -1;
+    }
+
     unauthorized_protocol_connection_remove(
         &svc->used_connection_head, conn);
     dispose((disposable_t*)conn);
@@ -737,6 +947,9 @@ static void unauthorized_protocol_service_error_response(
             ipc_write_authed_data_noblock(
                 &conn->ctx, conn->server_iv, payload, sizeof(payload),
                 &conn->svc->suite, &conn->shared_secret);
+
+        /* Update the server iv. */
+        ++conn->server_iv;
     }
     else
     {
@@ -788,6 +1001,13 @@ static void unauthorized_protocol_service_connection_write(
             unauthorized_protocol_service_close_connection(conn);
             return;
         }
+        /* force the write callback to happen again. */
+        else
+        {
+            ipc_set_writecb_noblock(
+                &conn->ctx, &unauthorized_protocol_service_connection_write,
+                &conn->svc->loop);
+        }
     }
     else
     {
@@ -807,10 +1027,19 @@ static void unauthorized_protocol_service_connection_write(
                     &conn->svc->loop);
                 return;
 
-            /* after writing the handshake ack response to the client, close the
-             * connection for now. */
+            /* after writing the handshake ack response to the client, set the
+             * state to authorized. */
             case UPCS_WRITE_HANDSHAKE_ACK_TO_CLIENT:
-                unauthorized_protocol_service_close_connection(conn);
+                unauthorized_protocol_service_dataservice_request_child_context(
+                    conn);
+                return;
+
+            /* after writing a command response to the client, reset. */
+            case APCS_WRITE_COMMAND_RESP_TO_CLIENT:
+                conn->state = APCS_READ_COMMAND_REQ_FROM_CLIENT;
+                ipc_set_readcb_noblock(
+                    &conn->ctx, &unauthorized_protocol_service_connection_read,
+                    &conn->svc->loop);
                 return;
 
             /* if we are in a forced unauthorized state, close the
@@ -857,7 +1086,7 @@ static void unauthorized_protocol_service_random_write(
 }
 
 /**
- * \brief Write data to the random service socket.
+ * \brief Read data from the random service socket.
  */
 static void unauthorized_protocol_service_random_read(
     ipc_socket_context_t* UNUSED(ctx), int UNUSED(event_flags),
@@ -973,4 +1202,282 @@ static void unauthorized_protocol_service_random_read(
 cleanup_resp:
     memset(resp, 0, resp_size);
     free(resp);
+}
+
+/**
+ * \brief Write data to the dataservice socket.
+ */
+static void unauthorized_protocol_service_dataservice_write(
+    ipc_socket_context_t* ctx, int UNUSED(event_flags), void* user_context)
+{
+    /* get the instance from the user context. */
+    unauthorized_protocol_service_instance_t* svc =
+        (unauthorized_protocol_service_instance_t*)user_context;
+
+    /* first, see if we still need to write data. */
+    if (ipc_socket_writebuffer_size(ctx) > 0)
+    {
+        /* attempt to write data. */
+        int bytes_written = ipc_socket_write_from_buffer(ctx);
+
+        /* was the socket closed, or was there an error? */
+        if (bytes_written == 0 || (bytes_written < 0 && (errno != EAGAIN && errno != EWOULDBLOCK)))
+        {
+            /* TODO - shut down the service.  This shouldn't happen. */
+            return;
+        }
+    }
+    else
+    {
+        ipc_set_writecb_noblock(&svc->data, NULL, &svc->loop);
+    }
+}
+
+/**
+ * \brief Read data from the data service socket.
+ */
+static void unauthorized_protocol_service_dataservice_read(
+    ipc_socket_context_t* UNUSED(ctx), int UNUSED(event_flags),
+    void* user_context)
+{
+    uint32_t* resp = NULL;
+    uint32_t resp_size = 0U;
+
+    /* get the instance from the user context. */
+    unauthorized_protocol_service_instance_t* svc =
+        (unauthorized_protocol_service_instance_t*)user_context;
+
+    /* attempt to read a response packet. */
+    int retval = ipc_read_data_noblock(&svc->data, (void**)&resp, &resp_size);
+    if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
+    {
+        return;
+    }
+    /* handle general failures from the data service socket read. */
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        /* TODO - shut down the service. */
+        return;
+    }
+
+    /* verify that the size is at least large enough for a method. */
+    if (resp_size < sizeof(uint32_t))
+    {
+        /* TODO - shut down service on corrupt data socket? */
+        goto cleanup_resp;
+    }
+
+    /* decode the method. */
+    uint32_t method = ntohl(resp[0]);
+
+    /* dispatch the method. */
+    switch (method)
+    {
+        /* child context create response. */
+        case DATASERVICE_API_METHOD_LL_CHILD_CONTEXT_CREATE:
+            ups_dispatch_dataservice_response_child_context_create(
+                svc, resp, resp_size);
+            break;
+
+        /* child context close response. */
+        case DATASERVICE_API_METHOD_LL_CHILD_CONTEXT_CLOSE:
+            ups_dispatch_dataservice_response_child_context_close(
+                svc, resp, resp_size);
+            break;
+
+        /* latest block read response. */
+        case DATASERVICE_API_METHOD_APP_BLOCK_ID_LATEST_READ:
+            ups_dispatch_dataservice_response_block_id_latest_read(
+                svc, resp, resp_size);
+            break;
+
+        /* unknown method. */
+        default:
+            /* TODO - if this happens after everything is decoded, log and shut
+             * down service. */
+            break;
+    }
+
+cleanup_resp:
+    memset(resp, 0, resp_size);
+    free(resp);
+}
+
+/**
+ * Handle a child_context_create response.
+ */
+static void ups_dispatch_dataservice_response_child_context_create(
+    unauthorized_protocol_service_instance_t* svc, const void* resp,
+    size_t resp_size)
+{
+    dataservice_response_child_context_create_t dresp;
+
+    /* decode the response. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_response_child_context_create(
+            resp, resp_size, &dresp))
+    {
+        /* TODO - handle failure. */
+        return;
+    }
+
+    /* TODO - select based on client ID. */
+    unauthorized_protocol_connection_t* conn =
+        svc->dataservice_context_create_head;
+    if (NULL == conn)
+    {
+        /* TODO - we should indicate an error here. */
+        goto cleanup_dresp;
+    }
+
+    /* remove the context from the dataservice wait queue and add to connection
+     * queue. */
+    unauthorized_protocol_connection_remove(
+        &svc->dataservice_context_create_head, conn);
+    unauthorized_protocol_connection_push_front(
+        &svc->used_connection_head, conn);
+
+    /* save the context in the connection. */
+    conn->dataservice_child_context = dresp.child;
+
+    /* save the connection to the context array. */
+    svc->dataservice_child_map[dresp.child] = conn;
+
+    /* evolve the state of the connection. */
+    conn->state = APCS_READ_COMMAND_REQ_FROM_CLIENT;
+
+    /* set connection read callback to read request from client. */
+    ipc_set_readcb_noblock(
+        &conn->ctx, &unauthorized_protocol_service_connection_read,
+        &conn->svc->loop);
+
+cleanup_dresp:
+    dispose((disposable_t*)&dresp);
+}
+
+/**
+ * Handle a child_context_close response.
+ */
+static void ups_dispatch_dataservice_response_child_context_close(
+    unauthorized_protocol_service_instance_t* svc, const void* resp,
+    size_t resp_size)
+{
+    (void)svc;
+    (void)resp;
+    (void)resp_size;
+}
+
+#include <stdio.h>
+
+/**
+ * Handle a block_id_latest_read response.
+ */
+static void ups_dispatch_dataservice_response_block_id_latest_read(
+    unauthorized_protocol_service_instance_t* svc, const void* resp,
+    size_t resp_size)
+{
+    dataservice_response_latest_block_id_get_t dresp;
+
+    /* decode the response. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_response_latest_block_id_get(
+            resp, resp_size, &dresp))
+    {
+        /* TODO - handle failure. */
+        return;
+    }
+
+    /* get the connection associated with this child id. */
+    unauthorized_protocol_connection_t* conn =
+        svc->dataservice_child_map[dresp.hdr.offset];
+    if (NULL == conn)
+    {
+        /* TODO - how do we handle a failure here? */
+        goto cleanup_dresp;
+    }
+
+    /* build the payload. */
+    uint32_t net_method = htonl(UNAUTH_PROTOCOL_REQ_ID_LATEST_BLOCK_GET);
+    uint32_t net_status = dresp.hdr.status;
+    uint32_t net_offset = conn->current_request_offset;
+    uint8_t payload[3 * sizeof(uint32_t) + 16];
+    memcpy(payload, &net_method, 4);
+    memcpy(payload + 4, &net_status, 4);
+    memcpy(payload + 8, &net_offset, 4);
+    memcpy(payload + 12, dresp.block_id, 16);
+
+    /* attempt to write this payload to the socket. */
+    if (AGENTD_STATUS_SUCCESS !=
+        ipc_write_authed_data_noblock(
+            &conn->ctx, conn->server_iv, payload, sizeof(payload),
+            &conn->svc->suite, &conn->shared_secret))
+    {
+        unauthorized_protocol_service_close_connection(conn);
+        goto cleanup_dresp;
+    }
+
+    /* Update the server iv on success. */
+    ++conn->server_iv;
+
+    /* evolve connection state. */
+    conn->state = APCS_WRITE_COMMAND_RESP_TO_CLIENT;
+
+    /* set the write callback. */
+    ipc_set_writecb_noblock(
+        &conn->ctx, &unauthorized_protocol_service_connection_write,
+        &conn->svc->loop);
+
+    /* success. */
+
+cleanup_dresp:
+    dispose((disposable_t*)&dresp);
+}
+
+/**
+ * \brief Request that a dataservice child context be created.
+ *
+ * \param conn      The connection to be assigned a child context when this
+ *                  request completes.
+ *
+ * This connection is pushed to the dataservice context create list, where it
+ * will remain until the next dataservice context create request completes.
+ */
+static void unauthorized_protocol_service_dataservice_request_child_context(
+    unauthorized_protocol_connection_t* conn)
+{
+    unauthorized_protocol_service_instance_t* svc =
+        (unauthorized_protocol_service_instance_t*)conn->svc;
+
+    /* remove the connection from the connection list. */
+    unauthorized_protocol_connection_remove(
+        &svc->used_connection_head, conn);
+    /* place the connection onto the dataservice connection wait head. */
+    unauthorized_protocol_connection_push_front(
+        &svc->dataservice_context_create_head, conn);
+
+    /* set the client connection state to wait for the child context. */
+    conn->state = APCS_DATASERVICE_CHILD_CONTEXT_WAIT;
+
+    /* TODO - derive bitset from client authorization. */
+    BITCAP_INIT_FALSE(conn->dataservice_caps);
+    BITCAP_SET_TRUE(
+        conn->dataservice_caps, DATASERVICE_API_CAP_APP_BLOCK_ID_LATEST_READ);
+    BITCAP_SET_TRUE(
+        conn->dataservice_caps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
+
+    /*
+     * TODO - we need a way to tie a unique ID (i.e. client UUID) to the client
+     * context to ensure that we can't get a race to escalate privileges.  For
+     * now, clients have 100% access to the API.  THIS IS DEMO ONLY AND NOT
+     * PRODUCTION HARDENED.
+     */
+
+    /* send a child context create request to the dataservice. */
+    dataservice_api_sendreq_child_context_create(
+        &svc->data, conn->dataservice_caps, sizeof(conn->dataservice_caps));
+
+    /* set the write callback for the dataservice socket. */
+    ipc_set_writecb_noblock(
+        &svc->data, &unauthorized_protocol_service_dataservice_write,
+        &svc->loop);
 }
