@@ -53,6 +53,11 @@ void private_command_listenservice(bootstrap_config_t* bconf);
 void private_command_protocolservice(bootstrap_config_t* bconf);
 
 /**
+ * \brief Run the random service instance.
+ */
+void private_command_randomservice(bootstrap_config_t* bconf);
+
+/**
  * \brief Run the the supervisor.
  */
 void private_command_supervisor(bootstrap_config_t* bconf);

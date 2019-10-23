@@ -506,8 +506,8 @@ bool mock_dataservice::mock_dataservice::mock_read_and_dispatch()
 
         default:
             mock_write_status(
-                method, 0U, AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_BAD,
-                nullptr, 0);
+                method, 0U,
+                AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_BAD, nullptr, 0);
             retval = false;
             break;
     }
@@ -676,7 +676,7 @@ bool mock_dataservice::mock_dataservice::
 
 done:
     mock_write_status(
-        DATASERVICE_API_METHOD_LL_CHILD_CONTEXT_CLOSE, 0U,
+        DATASERVICE_API_METHOD_LL_CHILD_CONTEXT_CLOSE, dreq.hdr.child_index,
         status, payload.data(), payload.size());
 
     return retval;
@@ -724,7 +724,7 @@ bool mock_dataservice::mock_dataservice::
 
 done:
     mock_write_status(
-        DATASERVICE_API_METHOD_APP_GLOBAL_SETTING_READ, 0U,
+        DATASERVICE_API_METHOD_APP_GLOBAL_SETTING_READ, dreq.hdr.child_index,
         status, payload.data(), payload.size());
 
     return retval;
@@ -772,7 +772,7 @@ bool mock_dataservice::mock_dataservice::
 
 done:
     mock_write_status(
-        DATASERVICE_API_METHOD_APP_GLOBAL_SETTING_WRITE, 0U,
+        DATASERVICE_API_METHOD_APP_GLOBAL_SETTING_WRITE, dreq.hdr.child_index,
         status, payload.data(), payload.size());
 
     return retval;
@@ -820,7 +820,7 @@ bool mock_dataservice::mock_dataservice::
 
 done:
     mock_write_status(
-        DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_SUBMIT, 0U,
+        DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_SUBMIT, dreq.hdr.child_index,
         status, payload.data(), payload.size());
 
     return retval;
@@ -868,8 +868,8 @@ bool mock_dataservice::mock_dataservice::
 
 done:
     mock_write_status(
-        DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_FIRST_READ, 0U,
-        status, payload.data(), payload.size());
+        DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_FIRST_READ,
+        dreq.hdr.child_index, status, payload.data(), payload.size());
 
     return retval;
 }
@@ -916,7 +916,7 @@ bool mock_dataservice::mock_dataservice::
 
 done:
     mock_write_status(
-        DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_READ, 0U,
+        DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_READ, dreq.hdr.child_index,
         status, payload.data(), payload.size());
 
     return retval;
@@ -964,7 +964,7 @@ bool mock_dataservice::mock_dataservice::
 
 done:
     mock_write_status(
-        DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_DROP, 0U,
+        DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_DROP, dreq.hdr.child_index,
         status, payload.data(), payload.size());
 
     return retval;
@@ -1012,7 +1012,7 @@ bool mock_dataservice::mock_dataservice::
 
 done:
     mock_write_status(
-        DATASERVICE_API_METHOD_APP_ARTIFACT_READ, 0U,
+        DATASERVICE_API_METHOD_APP_ARTIFACT_READ, dreq.hdr.child_index,
         status, payload.data(), payload.size());
 
     return retval;
@@ -1060,7 +1060,7 @@ bool mock_dataservice::mock_dataservice::
 
 done:
     mock_write_status(
-        DATASERVICE_API_METHOD_APP_BLOCK_WRITE, 0U,
+        DATASERVICE_API_METHOD_APP_BLOCK_WRITE, dreq.hdr.child_index,
         status, payload.data(), payload.size());
 
     return retval;
@@ -1108,7 +1108,7 @@ bool mock_dataservice::mock_dataservice::
 
 done:
     mock_write_status(
-        DATASERVICE_API_METHOD_APP_BLOCK_READ, 0U,
+        DATASERVICE_API_METHOD_APP_BLOCK_READ, dreq.hdr.child_index,
         status, payload.data(), payload.size());
 
     return retval;
@@ -1156,7 +1156,7 @@ bool mock_dataservice::mock_dataservice::
 
 done:
     mock_write_status(
-        DATASERVICE_API_METHOD_APP_BLOCK_ID_BY_HEIGHT_READ, 0U,
+        DATASERVICE_API_METHOD_APP_BLOCK_ID_BY_HEIGHT_READ, dreq.hdr.child_index,
         status, payload.data(), payload.size());
 
     return retval;
@@ -1204,7 +1204,7 @@ bool mock_dataservice::mock_dataservice::
 
 done:
     mock_write_status(
-        DATASERVICE_API_METHOD_APP_BLOCK_ID_LATEST_READ, 0U,
+        DATASERVICE_API_METHOD_APP_BLOCK_ID_LATEST_READ, dreq.hdr.child_index,
         status, payload.data(), payload.size());
 
     return retval;
@@ -1252,7 +1252,7 @@ bool mock_dataservice::mock_dataservice::
 
 done:
     mock_write_status(
-        DATASERVICE_API_METHOD_APP_TRANSACTION_READ, 0U,
+        DATASERVICE_API_METHOD_APP_TRANSACTION_READ, dreq.hdr.child_index,
         status, payload.data(), payload.size());
 
     return retval;

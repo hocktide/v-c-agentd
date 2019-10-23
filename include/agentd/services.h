@@ -3,7 +3,7 @@
  *
  * \brief Service enumeration.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_SERVICES_HEADER_GUARD
@@ -78,6 +78,11 @@ enum agentd_services
      * \brief Listen Service.
      */
     AGENTD_SERVICE_LISTEN = 0x0BU,
+
+    /**
+     * \brief Random Service.
+     */
+    AGENTD_SERVICE_RANDOM = 0x0CU,
 };
 
 /* make this header C++ friendly. */

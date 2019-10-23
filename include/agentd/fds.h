@@ -105,6 +105,35 @@ extern "C" {
  */
 #define AGENTD_FD_UNAUTHORIZED_PROTOSVC_DATA ((int)2)
 
+/**
+ * \brief File descriptor for the unauthorized protocol service random socket.
+ * Used by the unauthorized protocol service private command.
+ */
+#define AGENTD_FD_UNAUTHORIZED_PROTOSVC_RANDOM ((int)3)
+
+/******************************************************************************/
+/* Random Service                                                             */
+/******************************************************************************/
+
+/**
+ * \brief File descriptor for the random device.
+ * Used by the random service private command.
+ */
+#define AGENTD_FD_RANDOM_SERVICE_RANDOM_DEVICE ((int)0)
+
+/**
+ * \brief File descriptor for the shared socket between the protocol service and
+ * the random service.
+ * Used by the random service private command.
+ */
+#define AGENTD_FD_RANDOM_SERVICE_PROTOCOL_SERVICE ((int)1)
+
+/**
+ * \brief File descriptor for the random service log socket.
+ * Used by the random service private command.
+ */
+#define AGENTD_FD_RANDOM_SERVICE_LOG_SOCKET ((int)2)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

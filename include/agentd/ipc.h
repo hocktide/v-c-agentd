@@ -11,6 +11,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <vccrypt/suite.h>
 #include <vpr/disposable.h>
@@ -448,6 +450,12 @@ int ipc_event_loop_init(ipc_event_loop_context_t* loop);
  * is the caller's responsibility to remove this socket from the event loop and
  * to dispose the socket.
  *
+ * If either the read or write callbacks are set when this method is called,
+ * they will be added as persistent callbacks.  If this is not desired behavior,
+ * wait to add the read or write callbacks until *AFTER* adding the socket to
+ * the event loop.  The persistent callback behavior is backwards compatible to
+ * other code in agentd expecting this behavior.
+ *
  * \param loop          The event loop context to which this socket is added.
  * \param sock          The socket context to add to the event loop.
  *
@@ -455,8 +463,6 @@ int ipc_event_loop_init(ipc_event_loop_context_t* loop);
  *      - AGENTD_STATUS_SUCCESS on success.
  *      - AGENTD_ERROR_IPC_INVALID_ARGUMENT if the socket context has already
  *        been added to an event loop.
- *      - AGENTD_ERROR_IPC_MISSING_CALLBACK if either a read or write callback
- *        has not been set.
  *      - AGENTD_ERROR_IPC_EVBUFFER_NEW_FAILURE if a new event buffer could not
  *        be created.
  *      - AGENTD_ERROR_IPC_EVENT_NEW_FAILURE if a new event could not be
@@ -586,26 +592,96 @@ ssize_t ipc_socket_read_to_buffer(ipc_socket_context_t* sock);
 /**
  * \brief Set the read event callback for a non-blocking socket.
  *
- * \note This method can only be called BEFORE a socket has been added to the
- * event loop.  Otherwise, the callback will not be properly set.
+ * \note If this method is called BEFORE the socket is added to the event loop,
+ * it will be added as a persistent callback.  Otherwise, it is a one-shot
+ * callback.
  *
  * \param sock          The socket to set.
- * \param cb            The callback to set.
+ * \param cb            The callback to set.  Set to NULL to disable callback.
+ * \param loop          Optional loop context.  If set, this callback will be
+ *                      added to the loop context.
  */
 void ipc_set_readcb_noblock(
-    ipc_socket_context_t* sock, ipc_socket_event_cb_t cb);
+    ipc_socket_context_t* sock, ipc_socket_event_cb_t cb,
+    ipc_event_loop_context_t* loop);
 
 /**
  * \brief Set the write event callback for a non-blocking socket.
  *
- * \note This method can only be called BEFORE a socket has been added to the
- * event loop.  Otherwise, the callback will not be properly set.
+ * \note If this method is called BEFORE the socket is added to the event loop,
+ * it will be added as a persistent callback.  Otherwise, it is a one-shot
+ * callback.
  *
  * \param sock          The socket to set.
  * \param cb            The callback to set.
+ * \param loop          Optional loop context.  If set, this callback will be
+ *                      added to the loop context.
  */
 void ipc_set_writecb_noblock(
-    ipc_socket_context_t* sock, ipc_socket_event_cb_t cb);
+    ipc_socket_context_t* sock, ipc_socket_event_cb_t cb,
+    ipc_event_loop_context_t* loop);
+
+/**
+ * \brief Accept a connection from a listen socket.
+ *
+ * On success, the socket specified by sock contains a connection to a remote
+ * peer.  The address parameter contains data about the peer.
+ *
+ * \param ctx           The non-blocking socket context from which a connection
+ *                      is accepted.
+ * \param sock          A pointer to a socket descriptor that is populated with
+ *                      the socket connection to the remote peer on success.
+ * \param addr          A pointer to the buffer to hold the peer address.  This
+ *                      is populated with the peer address on success.
+ * \param addrsize      The value pointed to by addrsize should be set to the
+ *                      maximum value of this buffer.  It is set to the number
+ *                      of bytes used by the address on success.
+ *
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if this operation would cause the socket
+ *        to block.
+ *      - AGENTD_ERROR_IPC_ACCEPT_NOBLOCK_FAILURE if accepting this socket
+ *        failed.
+ */
+int ipc_accept_noblock(
+    ipc_socket_context_t* ctx, int* sock, struct sockaddr* addr,
+    socklen_t* addrsize);
+
+/**
+ * \brief Send a socket descriptor to the unix domain peer.
+ *
+ * On success, the socket sendsock is sent over the unix domain socket sock.
+ * The caller maintains the local socket handle, and this should be closed by
+ * the caller.
+ *
+ * \param sock          The unix domain socket through which sendsock should be
+ *                      sent.
+ * \param sendsock      The socket to send to the peer.
+ *
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BLOCK_FAILURE if this operation failed.
+ */
+int ipc_sendsocket_block(int sock, int sendsock);
+
+/**
+ * \brief Receive a socket descriptor from the unix domain peer.
+ *
+ * On success, the socket recvsock is received from the unix domain socket.
+ * The caller owns the local socket handle recvsock and must close it when no
+ * longer needed.
+ *
+ * \param ctx           The unix domain socket from which recvsock should be
+ *                      received.
+ * \param recvsock      The socket to receive from the peer.
+ *
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WOULD_BLOCK if this operation would block.
+ *      - AGENTD_ERROR_IPC_READ_BLOCK_FAILURE if this operation failed.
+ */
+int ipc_receivesocket_noblock(ipc_socket_context_t* ctx, int* recvsock);
 
 /**
  * \brief Write a raw data packet to a non-blocking socket.

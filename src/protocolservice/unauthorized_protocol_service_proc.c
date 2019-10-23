@@ -32,6 +32,7 @@
  *
  * \param bconf         The bootstrap configuration for this service.
  * \param conf          The configuration for this service.
+ * \param randomsock    Socket used to communicate with the random service.
  * \param logsock       Socket used to communicate with the logger.
  * \param acceptsock    Socket used to receive accepted peers.
  * \param datasock      Socket used to communicate with the data service.
@@ -63,8 +64,8 @@
  *        process survived execution (weird!).      
  */
 int unauthorized_protocol_proc(
-    const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,
-    int acceptsock, int datasock, pid_t* protopid, bool runsecure)
+    const bootstrap_config_t* bconf, const agent_config_t* conf, int randomsock,
+    int logsock, int acceptsock, int datasock, pid_t* protopid, bool runsecure)
 {
     int retval = 1;
     uid_t uid;
@@ -133,7 +134,7 @@ int unauthorized_protocol_proc(
         /* move the fds out of the way. */
         if (AGENTD_STATUS_SUCCESS !=
             privsep_protect_descriptors(
-                &acceptsock, &logsock, &datasock, NULL))
+                &randomsock, &acceptsock, &logsock, &datasock, NULL))
         {
             retval = AGENTD_ERROR_CONFIG_PRIVSEP_SETFDS_FAILURE;
             goto done;
@@ -151,6 +152,7 @@ int unauthorized_protocol_proc(
         /* close standard file descriptors and set fds. */
         retval =
             privsep_setfds(
+                randomsock, /* ==> */ AGENTD_FD_UNAUTHORIZED_PROTOSVC_RANDOM,
                 acceptsock, /* ==> */ AGENTD_FD_UNAUTHORIZED_PROTOSVC_ACCEPT,
                 logsock, /* ==> */ AGENTD_FD_UNAUTHORIZED_PROTOSVC_LOG,
                 datasock, /* ==> */ AGENTD_FD_UNAUTHORIZED_PROTOSVC_DATA,

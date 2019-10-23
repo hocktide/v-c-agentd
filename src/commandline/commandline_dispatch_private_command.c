@@ -42,6 +42,12 @@ void commandline_dispatch_private_command(
         bootstrap_config_set_private_command(
             bconf, private_command_listenservice);
     }
+    /* is this the random service private command? */
+    else if (!strcmp(command, "random"))
+    {
+        bootstrap_config_set_private_command(
+            bconf, private_command_randomservice);
+    }
     /* is this the supervisor command? */
     else if (!strcmp(command, "supervisor"))
     {

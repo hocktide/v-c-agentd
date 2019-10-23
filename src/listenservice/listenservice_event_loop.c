@@ -21,8 +21,6 @@
 static int count_listen_sockets(int listenstart);
 static void listenservice_ipc_accept(
     ipc_socket_context_t* ctx, int event_flags, void* user_context);
-static void listenservice_ipc_write(
-    ipc_socket_context_t* ctx, int event_flags, void* user_context);
 
 /**
  * \brief Event loop for the unauthorized listen service.  This is the entry
@@ -31,6 +29,7 @@ static void listenservice_ipc_write(
  *
  * \param logsock       The logging service socket.  The listen service logs
  *                      on this socket.
+ * \param acceptsock    The socket to which newly accepted sockets are sent.
  * \param listenstart   The first socket to which this service will listen.  The
  *                      listen service will iterate from this socket until it
  *                      encounters a closed descriptor and use each as a listen
@@ -47,7 +46,8 @@ static void listenservice_ipc_write(
  *          - AGENTD_ERROR_LISTENSERVICE_IPC_EVENT_LOOP_RUN_FAILURE if running
  *            the listen service event loop failed.
  */
-int listenservice_event_loop(int UNUSED(logsock), int listenstart)
+int listenservice_event_loop(
+    int UNUSED(logsock), int acceptsock, int listenstart)
 {
     int retval = 0;
     ipc_socket_context_t* listensockets;
@@ -81,6 +81,7 @@ int listenservice_event_loop(int UNUSED(logsock), int listenstart)
     memset(&instance, 0, sizeof(instance));
     /* set a reference to the event loop in the instance. */
     instance.loop_context = &loop;
+    instance.acceptsock = acceptsock;
 
     /* on these signals, leave the event loop and shut down gracefully. */
     ipc_exit_loop_on_signal(&loop, SIGHUP);
@@ -99,8 +100,8 @@ int listenservice_event_loop(int UNUSED(logsock), int listenstart)
         }
 
         /* set the read, write, and error callbacks for the data socket. */
-        ipc_set_readcb_noblock(listensockets + i, &listenservice_ipc_accept);
-        ipc_set_writecb_noblock(listensockets + i, &listenservice_ipc_write);
+        ipc_set_readcb_noblock(
+            listensockets + i, &listenservice_ipc_accept, NULL);
 
         /* add the listen socket to the event loop. */
         if (AGENTD_STATUS_SUCCESS !=
@@ -182,13 +183,13 @@ static int count_listen_sockets(int listenstart)
  * \param user_context  The user context for this data socket.
  */
 static void listenservice_ipc_accept(
-    ipc_socket_context_t* UNUSED(ctx), int UNUSED(event_flags),
-    void* UNUSED(user_context))
+    ipc_socket_context_t* ctx, int UNUSED(event_flags),
+    void* user_context)
 {
-#if 0
     ssize_t retval = 0;
-    void* req;
-    uint32_t size = 0;
+    int sock = 0;
+    struct sockaddr_in peer;
+    socklen_t peersize = sizeof(peer);
     listenservice_instance_t* instance =
         (listenservice_instance_t*)user_context;
 
@@ -201,28 +202,22 @@ static void listenservice_ipc_accept(
     if (instance->listenservice_force_exit)
         return;
 
-    /* attempt to read a request. */
-    retval = ipc_accept_noblock(ctx, &req, &size);
-    switch (retval)
+    /* attempt to accept a socket. */
+    retval =
+        ipc_accept_noblock(ctx, &sock, (struct sockaddr*)&peer, &peersize);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        /* on success, dispatch the socket. */
-        case 0:
-            write(retval, "Hello\n", 6);
-            close(retval);
-            break;
+        return;
     }
-#endif
-}
 
-/**
- * \brief Handle write events on the listen socket.
- *
- * \param ctx           The non-blocking socket context.
- * \param event_flags   The event that triggered this callback.
- * \param user_context  The user context for this data socket.
- */
-static void listenservice_ipc_write(
-    ipc_socket_context_t* UNUSED(ctx), int UNUSED(event_flags),
-    void* UNUSED(user_context))
-{
+    /* attempt to send this socket to the protocol service. */
+    retval =
+        ipc_sendsocket_block(instance->acceptsock, sock);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        goto cleanup_socket;
+    }
+
+cleanup_socket:
+    close(sock);
 }

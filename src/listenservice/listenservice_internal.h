@@ -25,7 +25,7 @@ typedef struct listenservice_instance
 {
     ipc_event_loop_context_t* loop_context;
     bool listenservice_force_exit;
-    int protosock;
+    int acceptsock;
 } listenservice_instance_t;
 
 /* make this header C++ friendly. */

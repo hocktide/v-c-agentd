@@ -88,6 +88,36 @@ extern "C" {
 #define AGENTD_ERROR_PROTOCOLSERVICE_PRIVSEP_EXEC_SURVIVAL_WEIRDNESS \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_PROTOCOL, 0x000CU)
 
+/**
+ * \brief Initializing the event loop failed.
+ */
+#define AGENTD_ERROR_PROTOCOLSERVICE_IPC_EVENT_LOOP_INIT_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_PROTOCOL, 0x000DU)
+
+/**
+ * \brief A malformed request was encountered.
+ */
+#define AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_PROTOCOL, 0x000EU)
+
+/**
+ * \brief A malformed response was encountered.
+ */
+#define AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_RESPONSE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_PROTOCOL, 0x000FU)
+
+/**
+ * \brief The entity is not authorized for this operation.
+ */
+#define AGENTD_ERROR_PROTOCOLSERVICE_UNAUTHORIZED \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_PROTOCOL, 0x0010U)
+
+/**
+ * \brief An error occurred when attempting to get random data.
+ */
+#define AGENTD_ERROR_PROTOCOLSERVICE_PRNG_REQUEST_FAILURE \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_PROTOCOL, 0x0011U)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

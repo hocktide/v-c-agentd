@@ -22,6 +22,7 @@ void private_command_listenservice(bootstrap_config_t* UNUSED(bconf))
     int retval =
         listenservice_event_loop(
             AGENTD_FD_LISTENSERVICE_LOG,
+            AGENTD_FD_LISTENSERVICE_ACCEPT,
             AGENTD_FD_LISTENSERVICE_SOCK_START);
 
     /* exit with the return code from the event loop. */

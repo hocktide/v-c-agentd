@@ -82,8 +82,7 @@ int dataservice_event_loop(int datasock, int UNUSED(logsock))
     instance->loop_context = &loop;
 
     /* set the read, write, and error callbacks for the data socket. */
-    ipc_set_readcb_noblock(&data, &dataservice_ipc_read);
-    ipc_set_writecb_noblock(&data, &dataservice_ipc_write);
+    ipc_set_readcb_noblock(&data, &dataservice_ipc_read, NULL);
 
     /* on these signals, leave the event loop and shut down gracefully. */
     ipc_exit_loop_on_signal(&loop, SIGHUP);
@@ -168,7 +167,7 @@ static void dataservice_ipc_read(
 
         /* Wait for more data on the socket. */
         case AGENTD_ERROR_IPC_WOULD_BLOCK:
-            return;
+            break;
 
         /* any other error code indicates that we should no longer trust the
          * socket. */
@@ -178,8 +177,12 @@ static void dataservice_ipc_read(
             break;
     }
 
-    /* kick the write callback to ensure that it runs at least once. */
-    dataservice_ipc_write(ctx, IPC_SOCKET_EVENT_WRITE, user_context);
+    /* fire up the write callback if there is data to write. */
+    if (ipc_socket_writebuffer_size(ctx) > 0)
+    {
+        ipc_set_writecb_noblock(
+            ctx, &dataservice_ipc_write, instance->loop_context);
+    }
 }
 
 /**
@@ -219,6 +222,12 @@ static void dataservice_ipc_write(
                 goto exit_failure;
             }
         }
+    }
+    else
+    {
+        /* disable callback if there is no more data to write. */
+        ipc_set_writecb_noblock(
+            ctx, &dataservice_ipc_write, instance->loop_context);
     }
 
     /* success. */
