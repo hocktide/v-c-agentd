@@ -22,7 +22,7 @@
  * \param suite                     The crypto suite to use to verify this
  *                                  response.
  * \param server_iv                 Pointer to receive the updated server IV.
- * \param shared_secret             The sharde secret key for this response.
+ * \param shared_secret             The shared secret key for this response.
  * \param offset                    The offset for this response.
  * \param status                    The status for this response.
  *

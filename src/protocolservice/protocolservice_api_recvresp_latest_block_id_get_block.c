@@ -23,7 +23,7 @@
  *                                  response.
  * \param server_iv                 Pointer to the server IV, updated by this
  *                                  call.
- * \param shared_secret             The sharde secret key for this response.
+ * \param shared_secret             The shared secret key for this response.
  * \param offset                    The offset for this response.
  * \param status                    The status for this response.
  * \param block_id                  A pointer to the buffer to receive the

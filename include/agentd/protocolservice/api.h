@@ -153,7 +153,7 @@ int protocolservice_api_sendreq_handshake_ack_block(
  * \param suite                     The crypto suite to use to verify this
  *                                  response.
  * \param server_iv                 Pointer to receive the updated server IV.
- * \param shared_secret             The sharde secret key for this response.
+ * \param shared_secret             The shared secret key for this response.
  * \param offset                    The offset for this response.
  * \param status                    The status for this response.
  *
@@ -212,7 +212,7 @@ int protocolservice_api_sendreq_latest_block_id_get_block(
  *                                  response.
  * \param server_iv                 Pointer to the server IV, updated by this
  *                                  call.
- * \param shared_secret             The sharde secret key for this response.
+ * \param shared_secret             The shared secret key for this response.
  * \param offset                    The offset for this response.
  * \param status                    The status for this response.
  * \param block_id                  A pointer to the buffer to receive the
@@ -280,7 +280,7 @@ int protocolservice_api_sendreq_close(
  *                                  response.
  * \param server_iv                 Pointer to the server IV, updated by this
  *                                  call.
- * \param shared_secret             The sharde secret key for this response.
+ * \param shared_secret             The shared secret key for this response.
  *
  * After the response has been successfully received, this socket can be closed.
  *
