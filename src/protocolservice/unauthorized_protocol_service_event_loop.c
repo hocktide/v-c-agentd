@@ -44,6 +44,9 @@ static void unauthorized_protocol_service_decode_and_dispatch(
 static void unauthorized_protocol_service_handle_request_latest_block_get(
     unauthorized_protocol_connection_t* conn, uint32_t request_offset,
     const uint8_t* breq, size_t size);
+static void unauthorized_protocol_service_handle_request_transaction_submit(
+    unauthorized_protocol_connection_t* conn, uint32_t request_offset,
+    const uint8_t* breq, size_t size);
 static void unauthorized_protocol_service_random_read(
     ipc_socket_context_t* ctx, int event_flags, void* user_context);
 static void unauthorized_protocol_service_random_write(
@@ -70,6 +73,9 @@ static void ups_dispatch_dataservice_response_child_context_close(
     unauthorized_protocol_service_instance_t* svc, const void* resp,
     size_t resp_size);
 static void ups_dispatch_dataservice_response_block_id_latest_read(
+    unauthorized_protocol_service_instance_t* svc, const void* resp,
+    size_t resp_size);
+static void ups_dispatch_dataservice_response_transaction_submit(
     unauthorized_protocol_service_instance_t* svc, const void* resp,
     size_t resp_size);
 
@@ -293,6 +299,9 @@ static void unauthorized_protocol_service_connection_handshake_req_read(
     int retval = ipc_read_data_noblock(&conn->ctx, &req, &size);
     if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
     {
+        ipc_set_readcb_noblock(
+            &conn->ctx, &unauthorized_protocol_service_connection_read,
+            &conn->svc->loop);
         return;
     }
     if (AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE == retval)
@@ -434,6 +443,9 @@ static void unauthorized_protocol_service_connection_handshake_ack_read(
             &conn->shared_secret);
     if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
     {
+        ipc_set_readcb_noblock(
+            &conn->ctx, &unauthorized_protocol_service_connection_read,
+            &conn->svc->loop);
         return;
     }
     if (AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE == retval)
@@ -508,6 +520,9 @@ static void unauthorized_protocol_service_command_read(
             &conn->shared_secret);
     if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
     {
+        ipc_set_readcb_noblock(
+            &conn->ctx, &unauthorized_protocol_service_connection_read,
+            &conn->svc->loop);
         return;
     }
     if (AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE == retval)
@@ -587,6 +602,11 @@ static void unauthorized_protocol_service_decode_and_dispatch(
                 conn, request_id, AGENTD_STATUS_SUCCESS, request_offset, true);
             break;
 
+        case UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_SUBMIT:
+            unauthorized_protocol_service_handle_request_transaction_submit(
+                conn, request_offset, breq, size);
+            break;
+
         /* TODO - replace with valid error code. */
         default:
             unauthorized_protocol_service_error_response(
@@ -606,6 +626,8 @@ static void unauthorized_protocol_service_handle_request_latest_block_get(
     unauthorized_protocol_connection_t* conn, uint32_t request_offset,
     const uint8_t* UNUSED(breq), size_t UNUSED(size))
 {
+    int retval;
+
     /* save the request offset. */
     conn->current_request_offset = request_offset;
 
@@ -613,11 +635,15 @@ static void unauthorized_protocol_service_handle_request_latest_block_get(
     conn->state = APCS_READ_COMMAND_RESP_FROM_APP;
 
     /* write the request to the dataservice using our child context. */
-    if (AGENTD_STATUS_SUCCESS !=
+    retval =
         dataservice_api_sendreq_latest_block_id_get(
-            &conn->svc->data, conn->dataservice_child_context))
+            &conn->svc->data, conn->dataservice_child_context);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        /* TODO - handle error. */
+        unauthorized_protocol_service_error_response(
+            conn, UNAUTH_PROTOCOL_REQ_ID_LATEST_BLOCK_GET,
+            retval,
+            request_offset, true);
         return;
     }
 
@@ -625,6 +651,88 @@ static void unauthorized_protocol_service_handle_request_latest_block_get(
     ipc_set_writecb_noblock(
         &conn->svc->data, &unauthorized_protocol_service_dataservice_write,
         &conn->svc->loop);
+}
+
+#define MAX_TRANSACTION_CERTIFICATE_SIZE 32767
+
+/**
+ * \brief Handle a transaction submit request.
+ *
+ * \param conn              The connection to close.
+ * \param request_offset    The offset of the request.
+ * \param breq              The bytestream of the request.
+ * \param size              The size of this request bytestream.
+ */
+static void unauthorized_protocol_service_handle_request_transaction_submit(
+    unauthorized_protocol_connection_t* conn, uint32_t request_offset,
+    const uint8_t* breq, size_t size)
+{
+    int retval;
+    uint8_t txn_id[16];
+    uint8_t artifact_id[16];
+
+    /* compute the id sizes. */
+    const size_t id_size = sizeof(txn_id) + sizeof(artifact_id);
+
+    /* verify that the size is at least large enough for the UUIDs. */
+    if (size < id_size)
+    {
+        unauthorized_protocol_service_error_response(
+            conn, UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_SUBMIT,
+            AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST,
+            request_offset, true);
+        return;
+    }
+
+    /* decode the txn_id. */
+    memcpy(txn_id, breq, sizeof(txn_id));
+
+    /* decode the artifact_id. */
+    memcpy(artifact_id, breq + sizeof(txn_id), sizeof(artifact_id));
+
+    /* scroll past these ids. */
+    breq += id_size;
+    size -= id_size;
+
+    /* if the transaction cert size is too large, report an error. */
+    if (size > MAX_TRANSACTION_CERTIFICATE_SIZE)
+    {
+        unauthorized_protocol_service_error_response(
+            conn, UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_SUBMIT,
+            AGENTD_ERROR_PROTOCOLSERVICE_TRANSACTION_VERIFICATION,
+            request_offset, true);
+        goto cleanup_ids;
+    }
+
+    /* save the request offset. */
+    conn->current_request_offset = request_offset;
+
+    /* wait on the response from the "app" (dataservice) */
+    conn->state = APCS_READ_COMMAND_RESP_FROM_APP;
+
+    /* write the request to the dataservice using our child context. */
+    /* TODO - this needs to go to the application service. */
+    retval =
+        dataservice_api_sendreq_transaction_submit(
+            &conn->svc->data, conn->dataservice_child_context, txn_id,
+            artifact_id, breq, size);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        unauthorized_protocol_service_error_response(
+            conn, UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_SUBMIT,
+            retval,
+            request_offset, true);
+        goto cleanup_ids;
+    }
+
+    /* set the write callback for the dataservice socket. */
+    ipc_set_writecb_noblock(
+        &conn->svc->data, &unauthorized_protocol_service_dataservice_write,
+        &conn->svc->loop);
+
+cleanup_ids:
+    memset(txn_id, 0, sizeof(txn_id));
+    memset(artifact_id, 0, sizeof(artifact_id));
 }
 
 /**
@@ -1291,6 +1399,12 @@ static void unauthorized_protocol_service_dataservice_read(
                 svc, resp, resp_size);
             break;
 
+        /* transaction submit response. */
+        case DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_SUBMIT:
+            ups_dispatch_dataservice_response_transaction_submit(
+                svc, resp, resp_size);
+            break;
+
         /* unknown method. */
         default:
             /* TODO - if this happens after everything is decoded, log and shut
@@ -1405,6 +1519,69 @@ static void ups_dispatch_dataservice_response_block_id_latest_read(
     memcpy(payload + 4, &net_status, 4);
     memcpy(payload + 8, &net_offset, 4);
     memcpy(payload + 12, dresp.block_id, 16);
+
+    /* attempt to write this payload to the socket. */
+    if (AGENTD_STATUS_SUCCESS !=
+        ipc_write_authed_data_noblock(
+            &conn->ctx, conn->server_iv, payload, sizeof(payload),
+            &conn->svc->suite, &conn->shared_secret))
+    {
+        unauthorized_protocol_service_close_connection(conn);
+        goto cleanup_dresp;
+    }
+
+    /* Update the server iv on success. */
+    ++conn->server_iv;
+
+    /* evolve connection state. */
+    conn->state = APCS_WRITE_COMMAND_RESP_TO_CLIENT;
+
+    /* set the write callback. */
+    ipc_set_writecb_noblock(
+        &conn->ctx, &unauthorized_protocol_service_connection_write,
+        &conn->svc->loop);
+
+    /* success. */
+
+cleanup_dresp:
+    dispose((disposable_t*)&dresp);
+}
+
+/**
+ * Handle a transaction submit response.
+ */
+static void ups_dispatch_dataservice_response_transaction_submit(
+    unauthorized_protocol_service_instance_t* svc, const void* resp,
+    size_t resp_size)
+{
+    dataservice_response_transaction_submit_t dresp;
+
+    /* decode the response. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_response_transaction_submit(
+            resp, resp_size, &dresp))
+    {
+        /* TODO - handle failure. */
+        return;
+    }
+
+    /* get the connection associated with this child id. */
+    unauthorized_protocol_connection_t* conn =
+        svc->dataservice_child_map[dresp.hdr.offset];
+    if (NULL == conn)
+    {
+        /* TODO - how do we handle a failure here? */
+        goto cleanup_dresp;
+    }
+
+    /* build the payload. */
+    uint32_t net_method = htonl(UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_SUBMIT);
+    uint32_t net_status = dresp.hdr.status;
+    uint32_t net_offset = conn->current_request_offset;
+    uint8_t payload[3 * sizeof(uint32_t)];
+    memcpy(payload, &net_method, 4);
+    memcpy(payload + 4, &net_status, 4);
+    memcpy(payload + 8, &net_offset, 4);
 
     /* attempt to write this payload to the socket. */
     if (AGENTD_STATUS_SUCCESS !=

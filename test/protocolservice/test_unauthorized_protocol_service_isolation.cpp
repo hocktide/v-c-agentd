@@ -531,39 +531,10 @@ TEST_F(unauthorized_protocol_service_isolation_test,
         0xb2, 0xf3, 0xfa, 0x16, 0x75, 0x9f, 0x4d, 0x4a,
         0xaf, 0x6b, 0xf7, 0x68, 0x14, 0x35, 0x7d, 0x21
     };
-    const uint32_t EXPECTED_CHILD_INDEX = 17U;
     vccrypt_buffer_t shared_secret;
 
-    /* mock the child context create call. */
-    dataservice->register_callback_child_context_create(
-        [&](const dataservice_request_child_context_create_t&,
-            std::ostream& payout) {
-            void* payload = nullptr;
-            size_t payload_size = 0U;
-
-            int retval =
-                dataservice_encode_response_child_context_create(
-                    &payload, &payload_size, EXPECTED_CHILD_INDEX);
-            if (AGENTD_STATUS_SUCCESS != retval)
-                return retval;
-
-            /* make sure to clean up memory when we fall out of scope. */
-            unique_ptr<void, decltype(free)*> cleanup(payload, &free);
-
-            /* write the payload. */
-            payout.write((const char*)payload, payload_size);
-
-            /* success. */
-            return AGENTD_STATUS_SUCCESS;
-        });
-
-    /* mock the child context close call. */
-    dataservice->register_callback_child_context_close(
-        [&](const dataservice_request_child_context_close_t&,
-            std::ostream&) {
-            /* success. */
-            return AGENTD_STATUS_SUCCESS;
-        });
+    /* register dataservice helper mocks. */
+    ASSERT_EQ(0, dataservice_mock_register_helper());
 
     /* mock the latest block id api call. */
     dataservice->register_callback_block_id_latest_read(
@@ -632,25 +603,183 @@ TEST_F(unauthorized_protocol_service_isolation_test,
     /* stop the mock. */
     dataservice->stop();
 
-    /* a child context should have been created. */
-    BITCAP(testbits, DATASERVICE_API_CAP_BITS_MAX);
-    BITCAP_INIT_FALSE(testbits);
-    BITCAP_SET_TRUE(testbits, DATASERVICE_API_CAP_APP_BLOCK_ID_LATEST_READ);
-    BITCAP_SET_TRUE(testbits, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
-    EXPECT_TRUE(
-        dataservice->request_matches_child_context_create(testbits));
+    /* verify proper connection setup. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_setup());
 
     /* a latest block_id call should have been made. */
     EXPECT_TRUE(
         dataservice->request_matches_block_id_latest_read(
             EXPECTED_CHILD_INDEX));
 
-    /* the child index should have been closed. */
-    EXPECT_TRUE(
-        dataservice->request_matches_child_context_close(
-            EXPECTED_CHILD_INDEX));
+    /* verify proper connection teardown. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_teardown());
 
     /* clean up. */
     dispose((disposable_t*)&block_id);
     dispose((disposable_t*)&shared_secret);
+}
+
+/**
+ * Test that a request to submit a transaction that is too large fails with an
+ * AGENTD_ERROR_PROTOCOLSERVICE_TRANSACTION_VERIFICATION.
+ */
+TEST_F(unauthorized_protocol_service_isolation_test,
+    transaction_submit_big_certificate)
+{
+    uint32_t offset, status;
+    uint64_t client_iv = 0;
+    uint64_t server_iv = 0;
+    const uint8_t EXPECTED_TRANSACTION_ID[16] = {
+        0x64, 0x91, 0xf1, 0xcf, 0x34, 0xbb, 0x42, 0x15,
+        0x9b, 0xc5, 0x49, 0x1e, 0x7a, 0x46, 0xcd, 0x69
+    };
+    const uint8_t EXPECTED_ARTIFACT_ID[16] = {
+        0xc0, 0x9d, 0x7a, 0xed, 0x7a, 0xef, 0x4b, 0x15,
+        0x9a, 0xdd, 0xd2, 0x03, 0x59, 0xbc, 0xc8, 0x3a
+    };
+    vccrypt_buffer_t shared_secret;
+    vccrypt_buffer_t cert;
+
+    /* create the certificate buffer. */
+    ASSERT_EQ(VCCRYPT_STATUS_SUCCESS,
+        vccrypt_buffer_init(&cert, &alloc_opts, 32768));
+    memset(cert.data, 0xFE, cert.size);
+
+    /* register dataservice helper mocks. */
+    ASSERT_EQ(0, dataservice_mock_register_helper());
+
+    /* start the mock. */
+    dataservice->start();
+
+    /* do the handshake, populating the shared secret on success. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        do_handshake(&shared_secret, &server_iv, &client_iv));
+
+    /* send the submission request. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_transaction_submit(
+            protosock, &suite, &client_iv, &shared_secret,
+            EXPECTED_TRANSACTION_ID, EXPECTED_ARTIFACT_ID,
+            &cert));
+
+    /* get the response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_transaction_submit(
+            protosock, &suite, &server_iv, &shared_secret, &offset,
+            &status));
+
+    /* the status should indicate failure. */
+    ASSERT_EQ(
+        AGENTD_ERROR_PROTOCOLSERVICE_TRANSACTION_VERIFICATION, (int)status);
+
+    /* close the socket */
+    close(protosock);
+
+    /* stop the mock. */
+    dataservice->stop();
+
+    /* verify proper connection setup. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_setup());
+
+    /* verify proper connection teardown. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_teardown());
+
+    /* clean up. */
+    dispose((disposable_t*)&shared_secret);
+    dispose((disposable_t*)&cert);
+}
+
+/**
+ * Test that a request to submit a transaction goes through our mock.
+ */
+TEST_F(unauthorized_protocol_service_isolation_test,
+    transaction_submit_happy_path)
+{
+    uint32_t offset, status;
+    uint64_t client_iv = 0;
+    uint64_t server_iv = 0;
+    const uint8_t EXPECTED_TRANSACTION_ID[16] = {
+        0x64, 0x91, 0xf1, 0xcf, 0x34, 0xbb, 0x42, 0x15,
+        0x9b, 0xc5, 0x49, 0x1e, 0x7a, 0x46, 0xcd, 0x69
+    };
+    const uint8_t EXPECTED_ARTIFACT_ID[16] = {
+        0xc0, 0x9d, 0x7a, 0xed, 0x7a, 0xef, 0x4b, 0x15,
+        0x9a, 0xdd, 0xd2, 0x03, 0x59, 0xbc, 0xc8, 0x3a
+    };
+    vccrypt_buffer_t shared_secret;
+    vccrypt_buffer_t cert;
+
+    /* create the certificate buffer. */
+    ASSERT_EQ(VCCRYPT_STATUS_SUCCESS,
+        vccrypt_buffer_init(&cert, &alloc_opts, 5000));
+    memset(cert.data, 0xFE, cert.size);
+
+    /* register dataservice helper mocks. */
+    ASSERT_EQ(0, dataservice_mock_register_helper());
+
+    /* mock the transaction submit api call. */
+    dataservice->register_callback_transaction_submit(
+        [&](const dataservice_request_transaction_submit_t&,
+            std::ostream&) {
+            /* success. */
+            return AGENTD_STATUS_SUCCESS;
+        });
+
+    /* start the mock. */
+    dataservice->start();
+
+    /* do the handshake, populating the shared secret on success. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        do_handshake(&shared_secret, &server_iv, &client_iv));
+
+    /* send the submission request. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_transaction_submit(
+            protosock, &suite, &client_iv, &shared_secret,
+            EXPECTED_TRANSACTION_ID, EXPECTED_ARTIFACT_ID,
+            &cert));
+
+    /* get the response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_transaction_submit(
+            protosock, &suite, &server_iv, &shared_secret, &offset,
+            &status));
+
+    /* the status should indicate success. */
+    ASSERT_EQ(
+        AGENTD_STATUS_SUCCESS, (int)status);
+    /* the offset should be zero. */
+    ASSERT_EQ(0U, offset);
+
+    /* send the close request. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_close(
+            protosock, &suite, &client_iv, &shared_secret));
+
+    /* get the close response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_close(
+            protosock, &suite, &server_iv, &shared_secret));
+
+    /* close the socket */
+    close(protosock);
+
+    /* stop the mock. */
+    dataservice->stop();
+
+    /* verify proper connection setup. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_setup());
+
+    /* a transaction submit call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_transaction_submit(
+            EXPECTED_CHILD_INDEX, EXPECTED_TRANSACTION_ID, EXPECTED_ARTIFACT_ID,
+            cert.size, (const uint8_t*)cert.data));
+
+    /* verify proper connection teardown. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_teardown());
+
+    /* clean up. */
+    dispose((disposable_t*)&shared_secret);
+    dispose((disposable_t*)&cert);
 }
