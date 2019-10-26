@@ -80,6 +80,9 @@ const uint8_t unauthorized_protocol_service_isolation_test::agent_privkey[32] = 
 const char* unauthorized_protocol_service_isolation_test::agent_privkey_string =
     "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb";
 
+const uint32_t
+    unauthorized_protocol_service_isolation_test::EXPECTED_CHILD_INDEX = 17U;
+
 void unauthorized_protocol_service_isolation_test::SetUp()
 {
     vccrypt_suite_register_velo_v1();
@@ -319,4 +322,65 @@ cleanup_nonces:
 
 done:
     return retval;
+}
+
+int unauthorized_protocol_service_isolation_test::dataservice_mock_register_helper()
+{
+    /* mock the child context create call. */
+    dataservice->register_callback_child_context_create(
+        [&](const dataservice_request_child_context_create_t&,
+            std::ostream& payout) {
+            void* payload = nullptr;
+            size_t payload_size = 0U;
+
+            int retval =
+                dataservice_encode_response_child_context_create(
+                    &payload, &payload_size, EXPECTED_CHILD_INDEX);
+            if (AGENTD_STATUS_SUCCESS != retval)
+                return retval;
+
+            /* make sure to clean up memory when we fall out of scope. */
+            unique_ptr<void, decltype(free)*> cleanup(payload, &free);
+
+            /* write the payload. */
+            payout.write((const char*)payload, payload_size);
+
+            /* success. */
+            return AGENTD_STATUS_SUCCESS;
+        });
+
+    /* mock the child context close call. */
+    dataservice->register_callback_child_context_close(
+        [&](const dataservice_request_child_context_close_t&,
+            std::ostream&) {
+            /* success. */
+            return AGENTD_STATUS_SUCCESS;
+        });
+
+    return 0;
+}
+
+int unauthorized_protocol_service_isolation_test::
+    dataservice_mock_valid_connection_setup()
+{
+    /* a child context should have been created. */
+    BITCAP(testbits, DATASERVICE_API_CAP_BITS_MAX);
+    BITCAP_INIT_FALSE(testbits);
+    BITCAP_SET_TRUE(testbits, DATASERVICE_API_CAP_APP_BLOCK_ID_LATEST_READ);
+    BITCAP_SET_TRUE(testbits, DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(testbits, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
+    if (!dataservice->request_matches_child_context_create(testbits))
+        return 1;
+
+    return 0;
+}
+
+int unauthorized_protocol_service_isolation_test::
+    dataservice_mock_valid_connection_teardown()
+{
+    /* the child index should have been closed. */
+    if (!dataservice->request_matches_child_context_close(EXPECTED_CHILD_INDEX))
+        return 1;
+
+    return 0;
 }
