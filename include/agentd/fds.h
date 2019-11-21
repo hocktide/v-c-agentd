@@ -134,6 +134,22 @@ extern "C" {
  */
 #define AGENTD_FD_RANDOM_SERVICE_LOG_SOCKET ((int)2)
 
+/******************************************************************************/
+/* Consensus Service                                                          */
+/******************************************************************************/
+
+/**
+ * \brief File descriptor for the unauthorized protocol service log socket.
+ * Used by the unauthorized protocol service private command.
+ */
+#define AGENTD_FD_CONSENSUS_SVC_LOG ((int)0)
+
+/**
+ * \brief File descriptor for the unauthorized protocol service data socket.
+ * Used by the unauthorized protocol service private command.
+ */
+#define AGENTD_FD_CONSENSUS_SVC_DATA ((int)1)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

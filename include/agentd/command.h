@@ -38,6 +38,11 @@ int command_readconfig(struct bootstrap_config* bconf);
 void private_command_readconfig(bootstrap_config_t* bconf);
 
 /**
+ * \brief Run a consensus service instance.
+ */
+void private_command_consensus_service(bootstrap_config_t* bconf);
+
+/**
  * \brief Run a data service instance.
  */
 void private_command_dataservice(bootstrap_config_t* bconf);

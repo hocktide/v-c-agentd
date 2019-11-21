@@ -44,10 +44,10 @@ INCLUDES=$(foreach d,$(INCDIRS),$(wildcard $(d)/*.h))
 SRCDIR=$(CURDIR)/src
 DIRS=$(SRCDIR) $(SRCDIR)/agentd $(SRCDIR)/bootstrap_config \
     $(SRCDIR)/command $(SRCDIR)/commandline $(SRCDIR)/config \
-    $(SRCDIR)/dataservice $(SRCDIR)/listenservice $(SRCDIR)/inet $(SRCDIR)/ipc \
-    $(SRCDIR)/path $(SRCDIR)/privsep $(SRCDIR)/process \
-    $(SRCDIR)/protocolservice $(SRCDIR)/randomservice $(SRCDIR)/string \
-    $(SRCDIR)/supervisor
+    $(SRCDIR)/consensus $(SRCDIR)/dataservice $(SRCDIR)/listenservice \
+    $(SRCDIR)/inet $(SRCDIR)/ipc $(SRCDIR)/path $(SRCDIR)/privsep \
+    $(SRCDIR)/process $(SRCDIR)/protocolservice $(SRCDIR)/randomservice \
+    $(SRCDIR)/string $(SRCDIR)/supervisor
 SOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.c))
 YACCSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.y))
 LEXSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.l))

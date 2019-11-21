@@ -11,6 +11,7 @@
 
 #include <agentd/services.h>
 #include <agentd/status_codes/config.h>
+#include <agentd/status_codes/consensus.h>
 #include <agentd/status_codes/dataservice.h>
 #include <agentd/status_codes/general.h>
 #include <agentd/status_codes/ipc.h>
