@@ -27,6 +27,7 @@ extern "C" {
  *                      communicates with the dataservice using this socket.
  * \param logsock       The logging service socket.  The protocol service logs
  *                      on this socket.
+ * \param controlsock   The socket used to control the consensus service.
  *
  * \returns a status code on service exit indicating a normal or abnormal exit.
  *          - AGENTD_STATUS_SUCCESS on normal exit.
@@ -40,7 +41,7 @@ extern "C" {
  *            running the protocol service event loop failed.
  */
 int consensus_service_event_loop(
-    int datasock, int logsock);
+    int datasock, int logsock, int controlsock);
 
 /**
  * \brief Spawn a consensus service process using the provided config structure
@@ -53,6 +54,7 @@ int consensus_service_event_loop(
  * \param conf          The configuration for this service.
  * \param logsock       Socket used to communicate with the logger.
  * \param datasock      Socket used to communicate with the data service.
+ * \param controlsock   Socket used to control the consensus service.
  * \param consensuspid  Pointer to the consensus service pid, to be updated on
  *                      the successful completion of this function.
  * \param runsecure     Set to false if we are not being run in secure mode.
@@ -82,7 +84,7 @@ int consensus_service_event_loop(
  */
 int start_consensus_proc(
     const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,
-    int datasock, pid_t* consensuspid, bool runsecure);
+    int datasock, int controlsock, pid_t* consensuspid, bool runsecure);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

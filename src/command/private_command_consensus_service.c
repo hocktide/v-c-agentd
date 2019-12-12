@@ -24,8 +24,9 @@ void private_command_consensus_service(bootstrap_config_t* UNUSED(bconf))
     /* run the event loop for the consensus service. */
     int retval =
         consensus_service_event_loop(
-            AGENTD_FD_UNAUTHORIZED_PROTOSVC_DATA,
-            AGENTD_FD_UNAUTHORIZED_PROTOSVC_LOG);
+            AGENTD_FD_CONSENSUS_SVC_DATA,
+            AGENTD_FD_CONSENSUS_SVC_LOG,
+            AGENTD_FD_CONSENSUS_SVC_CONTROL);
 
     /* exit with the return code from the event loop. */
     exit(retval);

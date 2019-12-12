@@ -139,6 +139,10 @@ int supervisor_create_protocol_service(
  *                              valid for the lifetime of the service.
  * \param data_socket           The data socket descriptor.
  * \param log_socket            The log socket descriptor.
+ * \param control_socket        The control socket descriptor, to be updated to
+ *                              the control socket for this process on
+ *                              successful completion of this method.
+ * 
  *
  * \returns a status indicating success or failure.
  *          - AGENTD_STATUS_SUCCESS on success.
@@ -146,7 +150,8 @@ int supervisor_create_protocol_service(
  */
 int supervisor_create_consensus_service(
     process_t** svc, const bootstrap_config_t* bconf,
-    const agent_config_t* conf, int* data_socket, int* log_socket);
+    const agent_config_t* conf, int* data_socket, int* log_socket,
+    int* control_socket);
 
 /**
  * \brief Install the signal handler for the supervisor.

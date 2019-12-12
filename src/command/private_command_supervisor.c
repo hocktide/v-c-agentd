@@ -124,6 +124,7 @@ static int supervisor_run(const bootstrap_config_t* bconf)
     int consensus_svc_data_sock = -1;
     int consensus_svc_log_sock = -1;
     int consensus_svc_log_dummy_sock = -1;
+    int consensus_svc_control_sock = -1;
 
     /* read config. */
     TRY_OR_FAIL(config_read_proc(bconf, &conf), done);
@@ -204,7 +205,7 @@ static int supervisor_run(const bootstrap_config_t* bconf)
     TRY_OR_FAIL(
         supervisor_create_consensus_service(
             &consensus_service, bconf, &conf, &consensus_svc_data_sock,
-            &consensus_svc_log_sock),
+            &consensus_svc_log_sock, &consensus_svc_control_sock),
         cleanup_data_service_for_consensus_service);
 
     /* if we've made it this far, attempt to start each service. */
@@ -269,6 +270,7 @@ done:
     CLOSE_IF_VALID(consensus_svc_data_sock);
     CLOSE_IF_VALID(consensus_svc_log_sock);
     CLOSE_IF_VALID(consensus_svc_log_dummy_sock);
+    CLOSE_IF_VALID(consensus_svc_control_sock);
 
     return retval;
 }

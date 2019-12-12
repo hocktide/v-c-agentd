@@ -59,10 +59,10 @@ INCLUDES+=$(foreach d,$(DIRS),$(wildcard $(d)/*.h))
 #agentd test files
 TESTDIR=$(CURDIR)/test
 TESTDIRS=$(TESTDIR) $(TESTDIR)/bitcap $(TESTDIR)/bootstrap_config \
-    $(TESTDIR)/commandline $(TESTDIR)/config $(TESTDIR)/dataservice \
-    $(TESTDIR)/ipc $(TESTDIR)/mocks $(TESTDIR)/mocks/dataservice \
-    $(TESTDIR)/path $(TESTDIR)/protocolservice $(TESTDIR)/randomservice \
-    $(TESTDIR)/status_codes $(TESTDIR)/string
+    $(TESTDIR)/commandline $(TESTDIR)/config $(TESTDIR)/consensus \
+    $(TESTDIR)/dataservice $(TESTDIR)/ipc $(TESTDIR)/mocks \
+    $(TESTDIR)/mocks/dataservice $(TESTDIR)/path $(TESTDIR)/protocolservice \
+    $(TESTDIR)/randomservice $(TESTDIR)/status_codes $(TESTDIR)/string
 TEST_BUILD_DIR=$(HOST_CHECKED_BUILD_DIR)/test
 TEST_DIRS=$(filter-out $(TESTDIR), \
     $(patsubst $(TESTDIR)/%,$(TEST_BUILD_DIR)/%,$(TESTDIRS)))
