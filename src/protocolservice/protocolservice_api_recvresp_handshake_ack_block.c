@@ -22,7 +22,7 @@
  * \param suite                     The crypto suite to use to verify this
  *                                  response.
  * \param server_iv                 Pointer to receive the updated server IV.
- * \param shared_secret             The sharde secret key for this response.
+ * \param shared_secret             The shared secret key for this response.
  * \param offset                    The offset for this response.
  * \param status                    The status for this response.
  *
@@ -73,6 +73,9 @@ int protocolservice_api_recvresp_handshake_ack_block(
     {
         goto done;
     }
+
+    /* update the server_iv on successful read. */
+    *server_iv += 1;
 
     /* verify that the response is the correct size. */
     if (3 * sizeof(uint32_t) != size)

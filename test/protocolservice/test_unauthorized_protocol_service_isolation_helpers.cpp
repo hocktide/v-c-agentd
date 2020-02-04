@@ -8,6 +8,7 @@
 
 #include <agentd/protocolservice.h>
 #include <agentd/randomservice.h>
+#include <agentd/status_codes.h>
 #include <vpr/allocator/malloc_allocator.h>
 
 #include "test_unauthorized_protocol_service_isolation.h"
@@ -78,6 +79,9 @@ const uint8_t unauthorized_protocol_service_isolation_test::agent_privkey[32] = 
 
 const char* unauthorized_protocol_service_isolation_test::agent_privkey_string =
     "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb";
+
+const uint32_t
+    unauthorized_protocol_service_isolation_test::EXPECTED_CHILD_INDEX = 17U;
 
 void unauthorized_protocol_service_isolation_test::SetUp()
 {
@@ -169,6 +173,9 @@ void unauthorized_protocol_service_isolation_test::SetUp()
             &bconf, &conf, rprotosock, logsock, acceptsock_srv, datasock_srv,
             &protopid, false);
 
+    /* create the mock dataservice. */
+    dataservice = make_unique<mock_dataservice::mock_dataservice>(datasock);
+
     /* if the spawn is successful, send the service the other half of a protocol
      * socket. */
     if (0 == proto_proc_status)
@@ -210,6 +217,7 @@ void unauthorized_protocol_service_isolation_test::TearDown()
     setenv("PATH", oldpath, 1);
 
     /* clean up. */
+    dataservice->stop();
     dispose((disposable_t*)&conf);
     dispose((disposable_t*)&bconf);
     close(logsock);
@@ -226,4 +234,153 @@ void unauthorized_protocol_service_isolation_test::TearDown()
         dispose((disposable_t*)&client_private_key);
     }
     dispose((disposable_t*)&alloc_opts);
+}
+
+/** \brief Helper to perform handshake, returning the shared secret. */
+int unauthorized_protocol_service_isolation_test::do_handshake(
+    vccrypt_buffer_t* shared_secret, uint64_t* server_iv,
+    uint64_t* client_iv)
+{
+    int retval = 0;
+    uint32_t offset, status;
+    vccrypt_buffer_t client_key_nonce;
+    vccrypt_buffer_t client_challenge_nonce;
+    vccrypt_buffer_t server_public_key;
+    vccrypt_buffer_t server_id;
+    vccrypt_buffer_t server_challenge_nonce;
+
+    /* we must have a valid crypto suite for this to work. */
+    if (!suite_initialized)
+    {
+        retval = 1;
+        goto done;
+    }
+
+    /* set the client and server IVs to sane start values. */
+    *server_iv = *client_iv = 0UL;
+
+    /* attempt to send the handshake request. */
+    retval =
+        protocolservice_api_sendreq_handshake_request_block(
+            protosock, &suite, authorized_entity_id, &client_key_nonce,
+            &client_challenge_nonce);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        goto done;
+    }
+
+    /* attempt to read the handshake response. */
+    retval =
+        protocolservice_api_recvresp_handshake_request_block(
+            protosock, &suite, &server_id, &client_private_key,
+            &server_public_key, &client_key_nonce, &client_challenge_nonce,
+            &server_challenge_nonce, shared_secret, &offset, &status);
+    if (AGENTD_STATUS_SUCCESS != retval || AGENTD_STATUS_SUCCESS != (int)status)
+    {
+        if (AGENTD_STATUS_SUCCESS == retval)
+            retval = (int)status;
+        goto cleanup_nonces;
+    }
+
+    /* attempt to send the handshake ack request. */
+    retval =
+        protocolservice_api_sendreq_handshake_ack_block(
+            protosock, &suite, client_iv, shared_secret,
+            &server_challenge_nonce);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        goto cleanup_request_buffers_on_fail;
+    }
+
+    /* receive the handshake ack response. */
+    retval =
+        protocolservice_api_recvresp_handshake_ack_block(
+            protosock, &suite, server_iv, shared_secret, &offset, &status);
+
+    /* use the status if I/O completed successfully. */
+    if (AGENTD_STATUS_SUCCESS == retval)
+        retval = (int)status;
+
+    /* if the remote call failed, clean up everything. */
+    if (AGENTD_STATUS_SUCCESS != retval)
+        goto cleanup_request_buffers_on_fail;
+
+    /* on success, clean up only the buffers we don't return to the caller. */
+    goto cleanup_request_buffers_on_success;
+
+cleanup_request_buffers_on_fail:
+    dispose((disposable_t*)shared_secret);
+
+cleanup_request_buffers_on_success:
+    dispose((disposable_t*)&server_public_key);
+    dispose((disposable_t*)&server_id);
+    dispose((disposable_t*)&server_challenge_nonce);
+
+cleanup_nonces:
+    dispose((disposable_t*)&client_key_nonce);
+    dispose((disposable_t*)&client_challenge_nonce);
+
+done:
+    return retval;
+}
+
+int unauthorized_protocol_service_isolation_test::dataservice_mock_register_helper()
+{
+    /* mock the child context create call. */
+    dataservice->register_callback_child_context_create(
+        [&](const dataservice_request_child_context_create_t&,
+            std::ostream& payout) {
+            void* payload = nullptr;
+            size_t payload_size = 0U;
+
+            int retval =
+                dataservice_encode_response_child_context_create(
+                    &payload, &payload_size, EXPECTED_CHILD_INDEX);
+            if (AGENTD_STATUS_SUCCESS != retval)
+                return retval;
+
+            /* make sure to clean up memory when we fall out of scope. */
+            unique_ptr<void, decltype(free)*> cleanup(payload, &free);
+
+            /* write the payload. */
+            payout.write((const char*)payload, payload_size);
+
+            /* success. */
+            return AGENTD_STATUS_SUCCESS;
+        });
+
+    /* mock the child context close call. */
+    dataservice->register_callback_child_context_close(
+        [&](const dataservice_request_child_context_close_t&,
+            std::ostream&) {
+            /* success. */
+            return AGENTD_STATUS_SUCCESS;
+        });
+
+    return 0;
+}
+
+int unauthorized_protocol_service_isolation_test::
+    dataservice_mock_valid_connection_setup()
+{
+    /* a child context should have been created. */
+    BITCAP(testbits, DATASERVICE_API_CAP_BITS_MAX);
+    BITCAP_INIT_FALSE(testbits);
+    BITCAP_SET_TRUE(testbits, DATASERVICE_API_CAP_APP_BLOCK_ID_LATEST_READ);
+    BITCAP_SET_TRUE(testbits, DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
+    BITCAP_SET_TRUE(testbits, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
+    if (!dataservice->request_matches_child_context_create(testbits))
+        return 1;
+
+    return 0;
+}
+
+int unauthorized_protocol_service_isolation_test::
+    dataservice_mock_valid_connection_teardown()
+{
+    /* the child index should have been closed. */
+    if (!dataservice->request_matches_child_context_close(EXPECTED_CHILD_INDEX))
+        return 1;
+
+    return 0;
 }

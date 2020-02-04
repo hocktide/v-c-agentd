@@ -118,6 +118,12 @@ extern "C" {
 #define AGENTD_ERROR_PROTOCOLSERVICE_PRNG_REQUEST_FAILURE \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_PROTOCOL, 0x0011U)
 
+/**
+ * \brief An error occurred when attempting to verify a transaction.
+ */
+#define AGENTD_ERROR_PROTOCOLSERVICE_TRANSACTION_VERIFICATION \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_PROTOCOL, 0x0012U)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <agentd/inet.h>
 #include <agentd/dataservice/api.h>
+#include <agentd/dataservice/async_api.h>
 #include <agentd/dataservice/private/dataservice.h>
 #include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
@@ -74,16 +75,6 @@ int dataservice_api_recvresp_block_id_by_height_get(
     MODEL_ASSERT(NULL != status);
     MODEL_ASSERT(NULL != block_id);
 
-    /* | Block get by height response packet.                               | */
-    /* | --------------------------------------------------- | ------------ | */
-    /* | DATA                                                | SIZE         | */
-    /* | --------------------------------------------------- | ------------ | */
-    /* | DATASERVICE_API_METHOD_APP_BLOCK_ID_BY_HEIGHT_READ  |  4 bytes     | */
-    /* | offset                                              |  4 bytes     | */
-    /* | status                                              |  4 bytes     | */
-    /* | block_id                                            | 16 bytes     | */
-    /* | --------------------------------------------------- | ------------ | */
-
     /* read a data packet from the socket. */
     uint32_t* val = NULL;
     uint32_t size = 0U;
@@ -98,46 +89,35 @@ int dataservice_api_recvresp_block_id_by_height_get(
         goto done;
     }
 
-    /* the size should be equal to the size we expect. */
-    uint32_t response_packet_size =
-        /* size of the API method. */
-        sizeof(uint32_t) +
-        /* size of the offset. */
-        sizeof(uint32_t) +
-        /* size of the status. */
-        sizeof(uint32_t) +
-        /* size of the block id. */
-        16;
-    if (size != response_packet_size)
+    /* decode the response. */
+    dataservice_response_block_id_by_height_get_t dresp;
+    retval =
+        dataservice_decode_response_block_id_by_height_get(val, size, &dresp);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_DATA_PACKET_SIZE;
-        goto cleanup_val;
-    }
-
-    /* verify that the method code is the code we expect. */
-    uint32_t code = ntohl(val[0]);
-    if (DATASERVICE_API_METHOD_APP_BLOCK_ID_BY_HEIGHT_READ != code)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE;
         goto cleanup_val;
     }
 
     /* get the offset. */
-    *offset = ntohl(val[1]);
+    *offset = dresp.hdr.offset;
 
     /* get the status code. */
-    *status = ntohl(val[2]);
+    *status = dresp.hdr.status;
 
-    /* get the raw data. */
-    const uint8_t* bval = (const uint8_t*)(val + 3);
+    /* if the status code is successful, then the block id will be in this
+     * payload. */
+    if (AGENTD_STATUS_SUCCESS != (int)dresp.hdr.status)
+        goto cleanup_dresp;
 
     /* copy the block id. */
-    memcpy(block_id, bval, 16);
+    memcpy(block_id, dresp.block_id, 16);
 
     /* success. */
     retval = AGENTD_STATUS_SUCCESS;
+    goto cleanup_dresp;
 
-    /* fall-through. */
+cleanup_dresp:
+    dispose((disposable_t*)&dresp);
 
 cleanup_val:
     memset(val, 0, size);

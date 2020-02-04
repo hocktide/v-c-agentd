@@ -31,20 +31,23 @@ static int convert_hexstring(
  *
  * \param inst          The service instance to initialize.
  * \param random        The random socket to use for this instance.
+ * \param data          The dataservice socket to use for this instance.
  * \param proto         The protocol socket to use for this instance.
  * \param max_socks     The maximum number of socket connections to accept.
  *
  * \returns a status code indicating success or failure.
  */
 int unauthorized_protocol_service_instance_init(
-    unauthorized_protocol_service_instance_t* inst, int random, int proto,
-    size_t max_socks)
+    unauthorized_protocol_service_instance_t* inst, int random, int data,
+    int proto, size_t max_socks)
 {
     int retval = AGENTD_STATUS_SUCCESS;
 
     /* parameter sanity checks. */
     MODEL_ASSERT(NULL != inst);
     MODEL_ASSERT(proto >= 0);
+    MODEL_ASSERT(random >= 0);
+    MODEL_ASSERT(data >= 0);
     MODEL_ASSERT(max_socks > 0);
 
     /* Set up the instance basics. */
@@ -114,11 +117,18 @@ int unauthorized_protocol_service_instance_init(
         goto cleanup_proto;
     }
 
+    /* set the data socket to non-blocking. */
+    if (AGENTD_STATUS_SUCCESS != ipc_make_noblock(data, &inst->data, inst))
+    {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_MAKE_NOBLOCK_FAILURE;
+        goto cleanup_random;
+    }
+
     /* initialize the IPC event loop instance. */
     if (AGENTD_STATUS_SUCCESS != ipc_event_loop_init(&inst->loop))
     {
         retval = AGENTD_ERROR_PROTOCOLSERVICE_IPC_MAKE_NOBLOCK_FAILURE;
-        goto cleanup_random;
+        goto cleanup_data;
     }
 
     /* on these signals, leave the event loop and shut down gracefully. */
@@ -161,6 +171,9 @@ int unauthorized_protocol_service_instance_init(
 cleanup_loop:
     dispose((disposable_t*)&inst->loop);
 
+cleanup_data:
+    dispose((disposable_t*)&inst->data);
+
 cleanup_random:
     dispose((disposable_t*)&inst->random);
 
@@ -194,6 +207,16 @@ static void unauthorized_protocol_service_instance_dispose(void* disposable)
     /* parameter sanity checks. */
     MODEL_ASSERT(NULL != inst);
 
+    /* dispose of connections waiting for a free dataservice context. */
+    for (unauthorized_protocol_connection_t* i =
+             inst->dataservice_context_create_head;
+         i != NULL;)
+    {
+        unauthorized_protocol_connection_t* next = i->next;
+        dispose((disposable_t*)i);
+        i = next;
+    }
+
     /* dispose of used conections. */
     for (unauthorized_protocol_connection_t* i = inst->used_connection_head;
          i != NULL;)
@@ -214,6 +237,9 @@ static void unauthorized_protocol_service_instance_dispose(void* disposable)
 
     /* dispose of the random socket. */
     dispose((disposable_t*)&inst->random);
+
+    /* dispose of the data socket. */
+    dispose((disposable_t*)&inst->data);
 
     /* dispose of the loop. */
     dispose((disposable_t*)&inst->loop);

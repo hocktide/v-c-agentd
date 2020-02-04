@@ -14,6 +14,7 @@
 #include <vpr/parameters.h>
 
 #include "dataservice_internal.h"
+#include "dataservice_protocol_internal.h"
 
 /**
  * \brief Decode and dispatch a child context close request.
@@ -40,48 +41,36 @@ int dataservice_decode_and_dispatch_child_context_close(
     size_t size)
 {
     int retval = 0;
+    bool dispose_dreq = false;
 
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != inst);
     MODEL_ASSERT(NULL != sock);
     MODEL_ASSERT(NULL != req);
 
-    /* default child_index. */
-    uint32_t child_index = 0U;
+    /* child context close request structure. */
+    dataservice_request_child_context_close_t dreq;
 
-    /* make working with the request more convenient. */
-    uint8_t* breq = (uint8_t*)req;
-
-    /* the payload size should be equal to the size of a child context index. */
-    if (size != sizeof(uint32_t))
+    /* parse the request payload. */
+    retval = dataservice_decode_request_child_context_close(req, size, &dreq);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
         goto done;
     }
 
-    /* copy the index. */
-    uint32_t nchild_index;
-    memcpy(&nchild_index, breq, sizeof(uint32_t));
+    /* be sure to clean up dreq. */
+    dispose_dreq = true;
 
-    /* decode the index. */
-    child_index = ntohl(nchild_index);
-
-    /* check bounds. */
-    if (child_index >= DATASERVICE_MAX_CHILD_CONTEXTS)
+    /* look up the child context. */
+    dataservice_child_context_t* ctx = NULL;
+    retval = dataservice_child_context_lookup(&ctx, inst, dreq.hdr.child_index);
+    if (AGENTD_STATUS_SUCCESS != retval)
     {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_BAD_INDEX;
-        goto done;
-    }
-
-    /* verify that this child context is open. */
-    if (NULL == inst->children[child_index].hdr.dispose)
-    {
-        retval = AGENTD_ERROR_DATASERVICE_CHILD_CONTEXT_INVALID;
         goto done;
     }
 
     /* call the child context close method. */
-    retval = dataservice_child_context_close(&inst->children[child_index].ctx);
+    retval = dataservice_child_context_close(ctx);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         retval = AGENTD_ERROR_DATASERVICE_CHILD_DETAILS_DELETE_FAILURE;
@@ -89,14 +78,22 @@ int dataservice_decode_and_dispatch_child_context_close(
     }
 
     /* clean up the child instance. */
-    dataservice_child_details_delete(inst, child_index);
+    dataservice_child_details_delete(inst, dreq.hdr.child_index);
 
-    /* success. */
-    goto done;
+    /* success. Fall through. */
 
 done:
     /* write the status to output. */
-    return dataservice_decode_and_dispatch_write_status(
-        sock, DATASERVICE_API_METHOD_LL_CHILD_CONTEXT_CLOSE, child_index,
-        (uint32_t)retval, NULL, 0);
+    retval =
+        dataservice_decode_and_dispatch_write_status(
+            sock, DATASERVICE_API_METHOD_LL_CHILD_CONTEXT_CLOSE,
+            dreq.hdr.child_index, (uint32_t)retval, NULL, 0);
+
+    /* clean up dreq. */
+    if (dispose_dreq)
+    {
+        dispose((disposable_t*)&dreq);
+    }
+
+    return retval;
 }

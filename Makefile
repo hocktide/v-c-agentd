@@ -33,6 +33,13 @@ GTEST_OBJ=$(TEST_BUILD_DIR)/gtest-all.o
 LIBEVENT_DIR?=$(CURDIR)/lib/vcblockchain/lib/libevent
 LIBEVENT_CFLAGS=-I $(LIBEVENT_DIR)/include
 
+#agentd include files
+INCDIR=$(CURDIR)/include
+INCDIRS=$(INCDIR) $(INCDIR)/agentd $(INCDIR)/agentd/status_codes \
+    $(INCDIR)/agentd/dataservice $(INCDIR)/agentd/dataservice/private \
+    $(INCDIR)/agentd/supervisor
+INCLUDES=$(foreach d,$(INCDIRS),$(wildcard $(d)/*.h))
+
 #agentd source files
 SRCDIR=$(CURDIR)/src
 DIRS=$(SRCDIR) $(SRCDIR)/agentd $(SRCDIR)/authservice \
@@ -52,7 +59,7 @@ STRIPPED_LEXSOURCES=$(patsubst $(SRCDIR)/%,%,$(LEXSOURCES))
 TESTDIR=$(CURDIR)/test
 TESTDIRS=$(TESTDIR) $(TESTDIR)/authservice $(TESTDIR)/bitcap \
 	$(TESTDIR)/bootstrap_config $(TESTDIR)/commandline $(TESTDIR)/config \
-	$(TESTDIR)/dataservice $(TESTDIR)/ipc $(TESTDIR)/path \
+	$(TESTDIR)/dataservice $(TESTDIR)/mocks $(TESTDIR)/ipc $(TESTDIR)/path \
 	$(TESTDIR)/protocolservice $(TESTDIR)/randomservice \
 	$(TESTDIR)/status_codes $(TESTDIR)/string
 TEST_BUILD_DIR=$(HOST_CHECKED_BUILD_DIR)/test
@@ -259,7 +266,7 @@ $(GTEST_OBJ): $(GTEST_DIR)/src/gtest-all.cc
 	$(HOST_RELEASE_CXX) $(TEST_CXXFLAGS) -c -o $@ $<
 
 #Test build objects
-$(TEST_BUILD_DIR)/%.o: $(TESTDIR)/%.cpp
+$(TEST_BUILD_DIR)/%.o: $(TESTDIR)/%.cpp $(INCLUDES)
 	mkdir -p $(dir $@)
 	$(HOST_RELEASE_CXX) $(TEST_CXXFLAGS) -c -o $@ $<
 
@@ -269,7 +276,7 @@ $(HOST_CHECKED_COBJECTS): $(HOST_CHECKED_LEXOBJECTS)
 $(HOST_CHECKED_COBJECTS): $(HOST_CHECKED_YACCOBJECTS)
 
 #Host checked build objects
-$(HOST_CHECKED_BUILD_DIR)/%.o: $(SRCDIR)/%.c
+$(HOST_CHECKED_BUILD_DIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
 	mkdir -p $(dir $@)
 	$(HOST_CHECKED_CC) $(HOST_CHECKED_CFLAGS) -c -o $@ $<
 
@@ -284,12 +291,12 @@ $(HOST_DEBUG_COBJECTS): $(HOST_DEBUG_LEXOBJECTS)
 $(HOST_DEBUG_COBJECTS): $(HOST_DEBUG_YACCOBJECTS)
 
 #Host release build objects
-$(HOST_RELEASE_BUILD_DIR)/%.o: $(SRCDIR)/%.c
+$(HOST_RELEASE_BUILD_DIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
 	mkdir -p $(dir $@)
 	$(HOST_RELEASE_CC) $(HOST_RELEASE_CFLAGS) -c -o $@ $<
 
 #Host debug build objects
-$(HOST_DEBUG_BUILD_DIR)/%.o: $(SRCDIR)/%.c
+$(HOST_DEBUG_BUILD_DIR)/%.o: $(SRCDIR)/%.c $(INCLUDES)
 	mkdir -p $(dir $@)
 	$(HOST_DEBUG_CC) $(HOST_DEBUG_CFLAGS) -c -o $@ $<
 
@@ -345,27 +352,27 @@ $(HRBD)/%.yy.o: $(HOST_RELEASE_YACCHEADERS)
 #objects.
 $(HDBD)/%.yy.o: $(HOST_DEBUG_YACCHEADERS)
 
-$(HCBD)/%.yy.o: $(HCBD)/%.yy.c
+$(HCBD)/%.yy.o: $(HCBD)/%.yy.c $(INCLUDES)
 	mkdir -p $(dir $@)
 	$(HOST_CHECKED_CC) $(HOST_CHECKED_LEXCOMPAT_CFLAGS) -c -o $@ $<
 
-$(HRBD)/%.yy.o: $(HRBD)/%.yy.c
+$(HRBD)/%.yy.o: $(HRBD)/%.yy.c $(INCLUDES)
 	mkdir -p $(dir $@)
 	$(HOST_RELEASE_CC) $(HOST_RELEASE_LEXCOMPAT_CFLAGS) -c -o $@ $<
 
-$(HDBD)/%.yy.o: $(HDBD)/%.yy.c
+$(HDBD)/%.yy.o: $(HDBD)/%.yy.c $(INCLUDES)
 	mkdir -p $(dir $@)
 	$(HOST_DEBUG_CC) $(HOST_DEBUG_LEXCOMPAT_CFLAGS) -c -o $@ $<
 
-$(HCBD)/%.tab.o: $(HCBD)/%.tab.c
+$(HCBD)/%.tab.o: $(HCBD)/%.tab.c $(INCLUDES)
 	mkdir -p $(dir $@)
 	$(HOST_CHECKED_CC) $(HOST_CHECKED_LEXCOMPAT_CFLAGS) -c -o $@ $<
 
-$(HRBD)/%.tab.o: $(HRBD)/%.tab.c
+$(HRBD)/%.tab.o: $(HRBD)/%.tab.c $(INCLUDES)
 	mkdir -p $(dir $@)
 	$(HOST_RELEASE_CC) $(HOST_RELEASE_LEXCOMPAT_CFLAGS) -c -o $@ $<
 
-$(HDBD)/%.tab.o: $(HDBD)/%.tab.c
+$(HDBD)/%.tab.o: $(HDBD)/%.tab.c $(INCLUDES)
 	mkdir -p $(dir $@)
 	$(HOST_DEBUG_CC) $(HOST_DEBUG_LEXCOMPAT_CFLAGS) -c -o $@ $<
 
