@@ -42,27 +42,26 @@ INCLUDES=$(foreach d,$(INCDIRS),$(wildcard $(d)/*.h))
 
 #agentd source files
 SRCDIR=$(CURDIR)/src
-DIRS=$(SRCDIR) $(SRCDIR)/agentd $(SRCDIR)/bootstrap_config \
-    $(SRCDIR)/command $(SRCDIR)/commandline $(SRCDIR)/config \
-    $(SRCDIR)/dataservice $(SRCDIR)/listenservice $(SRCDIR)/inet $(SRCDIR)/ipc \
-    $(SRCDIR)/path $(SRCDIR)/privsep $(SRCDIR)/process \
-    $(SRCDIR)/protocolservice $(SRCDIR)/randomservice $(SRCDIR)/string \
-    $(SRCDIR)/supervisor
+DIRS=$(SRCDIR) $(SRCDIR)/agentd $(SRCDIR)/authservice \
+    $(SRCDIR)/bootstrap_config $(SRCDIR)/command $(SRCDIR)/commandline \
+    $(SRCDIR)/config $(SRCDIR)/dataservice $(SRCDIR)/listenservice \
+    $(SRCDIR)/inet $(SRCDIR)/ipc $(SRCDIR)/path $(SRCDIR)/privsep \
+    $(SRCDIR)/process $(SRCDIR)/protocolservice $(SRCDIR)/randomservice \
+    $(SRCDIR)/string $(SRCDIR)/supervisor
 SOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.c))
 YACCSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.y))
 LEXSOURCES=$(foreach d,$(DIRS),$(wildcard $(d)/*.l))
 STRIPPED_SOURCES=$(patsubst $(SRCDIR)/%,%,$(SOURCES))
 STRIPPED_YACCSOURCES=$(patsubst $(SRCDIR)/%,%,$(YACCSOURCES))
 STRIPPED_LEXSOURCES=$(patsubst $(SRCDIR)/%,%,$(LEXSOURCES))
-INCLUDES+=$(foreach d,$(DIRS),$(wildcard $(d)/*.h))
 
 #agentd test files
 TESTDIR=$(CURDIR)/test
-TESTDIRS=$(TESTDIR) $(TESTDIR)/bitcap $(TESTDIR)/bootstrap_config \
-    $(TESTDIR)/commandline $(TESTDIR)/config $(TESTDIR)/dataservice \
-    $(TESTDIR)/ipc $(TESTDIR)/mocks $(TESTDIR)/mocks/dataservice \
-    $(TESTDIR)/path $(TESTDIR)/protocolservice $(TESTDIR)/randomservice \
-    $(TESTDIR)/status_codes $(TESTDIR)/string
+TESTDIRS=$(TESTDIR) $(TESTDIR)/authservice $(TESTDIR)/bitcap \
+	$(TESTDIR)/bootstrap_config $(TESTDIR)/commandline $(TESTDIR)/config \
+	$(TESTDIR)/dataservice $(TESTDIR)/mocks $(TESTDIR)/ipc $(TESTDIR)/path \
+	$(TESTDIR)/protocolservice $(TESTDIR)/randomservice \
+	$(TESTDIR)/status_codes $(TESTDIR)/string
 TEST_BUILD_DIR=$(HOST_CHECKED_BUILD_DIR)/test
 TEST_DIRS=$(filter-out $(TESTDIR), \
     $(patsubst $(TESTDIR)/%,$(TEST_BUILD_DIR)/%,$(TESTDIRS)))
@@ -389,7 +388,9 @@ $(TESTAGENTD): vcblockchain-build $(HOST_CHECKED_OBJECTS) $(TEST_OBJECTS) $(GTES
         --coverage
 
 model-check:
-	$(foreach n, $(MODEL_MAKEFILES), (cd models && $(MAKE) -f $(n)) &&) true
+	for n in $(MODEL_MAKEFILES); do \
+	    (cd models && $(MAKE) -f $$n) \
+	done
 
 clean: vcblockchain-clean
 	rm -rf $(BUILD_DIR)

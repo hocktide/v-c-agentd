@@ -48,7 +48,7 @@ enum agentd_services
     /**
      * \brief Auth Service.
      */
-    AGENTD_SERVICE_AUTH = 0x05U,
+    AGENTD_SERVICE_AUTHSERVICE = 0x05U,
 
     /**
      * \brief Log Service.

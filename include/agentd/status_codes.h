@@ -10,6 +10,7 @@
 #define AGENTD_STATUS_CODES_HEADER_GUARD
 
 #include <agentd/services.h>
+#include <agentd/status_codes/authservice.h>
 #include <agentd/status_codes/config.h>
 #include <agentd/status_codes/dataservice.h>
 #include <agentd/status_codes/general.h>

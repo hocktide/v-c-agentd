@@ -1,7 +1,7 @@
 /**
  * \file agentd/dataservice/api.h
  *
- * \brief Internal API for the data service.
+ * \brief API for the data service.
  *
  * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
  */
