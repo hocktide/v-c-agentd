@@ -106,6 +106,7 @@ static int supervisor_run(const bootstrap_config_t* bconf)
     process_t* data_for_auth_protocol_service;
     process_t* data_for_consensus_service;
     process_t* protocol_service;
+    process_t* auth_service;
     process_t* consensus_service;
 
     int random_svc_log_sock = -1;
@@ -121,6 +122,9 @@ static int supervisor_run(const bootstrap_config_t* bconf)
     int unauth_protocol_svc_random_sock = -1;
     int unauth_protocol_svc_accept_sock = -1;
     int auth_protocol_svc_data_sock = -1;
+    int auth_svc_sock = -1;
+    int auth_svc_log_sock = -1;
+    int auth_svc_log_dummy_sock = -1;
     int consensus_svc_data_sock = -1;
     int consensus_svc_log_sock = -1;
     int consensus_svc_log_dummy_sock = -1;
@@ -164,6 +168,12 @@ static int supervisor_run(const bootstrap_config_t* bconf)
             &consensus_svc_log_sock,
             &consensus_svc_log_dummy_sock),
         cleanup_config);
+    TRY_OR_FAIL(
+        ipc_socketpair(
+            AF_UNIX, SOCK_STREAM, 0,
+            &auth_svc_log_sock,
+            &auth_svc_log_dummy_sock),
+        cleanup_config);
 
     /* create random service. */
     TRY_OR_FAIL(
@@ -194,12 +204,19 @@ static int supervisor_run(const bootstrap_config_t* bconf)
             &unauth_protocol_svc_log_sock),
         cleanup_data_for_auth_protocol_service);
 
+    /* create auth service */
+    TRY_OR_FAIL(
+        supervisor_create_auth_service(
+            &auth_service, bconf, &conf, &auth_svc_sock,
+            &auth_svc_log_sock),
+        cleanup_protocol_service);
+
     /* create data service for consensus service. */
     TRY_OR_FAIL(
         supervisor_create_data_service_for_consensus_service(
             &data_for_consensus_service, bconf, &conf,
             &consensus_svc_data_sock, &data_for_consensus_svc_log_sock),
-        cleanup_protocol_service);
+        cleanup_auth_service);
 
     /* create consensus service. */
     TRY_OR_FAIL(
@@ -215,6 +232,7 @@ static int supervisor_run(const bootstrap_config_t* bconf)
     START_PROCESS(listener_service, quiesce_data_processes);
 
     START_PROCESS(protocol_service, quiesce_data_processes);
+    START_PROCESS(auth_service, quiesce_data_processes);
     START_PROCESS(consensus_service, quiesce_data_processes);
 
     /* wait until we get a signal, and then restart / terminate. */
@@ -224,6 +242,7 @@ static int supervisor_run(const bootstrap_config_t* bconf)
     sleep(5);
 
     /* quiesce the higher-level processes first. */
+    process_stop(auth_service);
     process_stop(listener_service);
     process_stop(protocol_service);
     process_stop(consensus_service);
@@ -237,6 +256,9 @@ cleanup_consensus_service:
 
 cleanup_data_service_for_consensus_service:
     CLEANUP_PROCESS(data_for_consensus_service);
+
+cleanup_auth_service:
+    CLEANUP_PROCESS(auth_service);
 
 cleanup_protocol_service:
     CLEANUP_PROCESS(protocol_service);
@@ -262,11 +284,14 @@ done:
     CLOSE_IF_VALID(unauth_protocol_svc_log_dummy_sock);
     CLOSE_IF_VALID(data_for_auth_protocol_svc_log_sock);
     CLOSE_IF_VALID(data_for_auth_protocol_svc_log_dummy_sock);
+    CLOSE_IF_VALID(auth_svc_log_sock);
+    CLOSE_IF_VALID(auth_svc_log_dummy_sock);
     CLOSE_IF_VALID(data_for_consensus_svc_log_sock);
     CLOSE_IF_VALID(data_for_consensus_svc_log_dummy_sock);
     CLOSE_IF_VALID(unauth_protocol_svc_random_sock);
     CLOSE_IF_VALID(unauth_protocol_svc_accept_sock);
     CLOSE_IF_VALID(auth_protocol_svc_data_sock);
+    CLOSE_IF_VALID(auth_svc_sock);
     CLOSE_IF_VALID(consensus_svc_data_sock);
     CLOSE_IF_VALID(consensus_svc_log_sock);
     CLOSE_IF_VALID(consensus_svc_log_dummy_sock);

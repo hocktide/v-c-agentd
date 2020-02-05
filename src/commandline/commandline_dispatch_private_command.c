@@ -60,6 +60,12 @@ void commandline_dispatch_private_command(
         bootstrap_config_set_private_command(
             bconf, private_command_protocolservice);
     }
+    /* is this the auth service private command? */
+    else if (!strcmp(command, "authservice"))
+    {
+        bootstrap_config_set_private_command(
+            bconf, private_command_authservice);
+    }
     /* is this the consensus service private command? */
     else if (!strcmp(command, "consensus_service"))
     {

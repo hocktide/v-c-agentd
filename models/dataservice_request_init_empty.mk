@@ -11,7 +11,7 @@ ALL:
 	--div-by-zero-check --signed-overflow-check --unsigned-overflow-check \
     --pointer-overflow-check --conversion-check \
 	--conversion-check --trace --stop-on-fail -DCBMC \
-    --object-bits 16 --drop-unused-functions \
+    --drop-unused-functions \
     --unwind 10 \
     --unwindset __builtin___memset_chk.0:60 \
 	-I $(VCMODEL_DIR)/include -I ../include -I $(VPR_DIR)/include \

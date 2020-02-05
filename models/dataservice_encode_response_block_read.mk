@@ -12,7 +12,7 @@ include $(MODEL_CHECK_DIR)/model_check.mk
 ALL:
 	$(CBMC) --bounds-check --pointer-check --memory-leak-check \
 	--div-by-zero-check --pointer-overflow-check --trace --stop-on-fail -DCBMC \
-    --object-bits 16 --drop-unused-functions \
+    --drop-unused-functions \
     --unwind 10 \
     --unwindset __builtin___memset_chk.0:60 \
 	-I $(VCMODEL_DIR)/include -I ../include -I $(VPR_DIR)/include \
