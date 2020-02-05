@@ -388,9 +388,7 @@ $(TESTAGENTD): vcblockchain-build $(HOST_CHECKED_OBJECTS) $(TEST_OBJECTS) $(GTES
         --coverage
 
 model-check:
-	for n in $(MODEL_MAKEFILES); do \
-	    (cd models && $(MAKE) -f $$n) \
-	done
+	$(foreach n, $(MODEL_MAKEFILES), (cd models && $(MAKE) -f $(n)) &&) true
 
 clean: vcblockchain-clean
 	rm -rf $(BUILD_DIR)

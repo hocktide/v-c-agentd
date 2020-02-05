@@ -13,7 +13,7 @@ ALL:
 	$(CBMC) --bounds-check --pointer-check --memory-leak-check \
 	--div-by-zero-check --signed-overflow-check --unsigned-overflow-check \
     --pointer-overflow-check --conversion-check --trace --stop-on-fail -DCBMC \
-    --object-bits 16 --drop-unused-functions \
+    --drop-unused-functions \
     --unwind 10 \
     --unwindset __builtin___memset_chk.0:60 \
 	-I $(VCMODEL_DIR)/include -I ../include -I $(VPR_DIR)/include \
@@ -21,6 +21,7 @@ ALL:
 	-I $(LMDB_DIR) \
 	$(MODEL_CHECK_SOURCES) \
 	$(VPR_DIR)/src/disposable/dispose.c \
+	shadow/sys/htonl.c \
 	../src/inet/htonll.c \
     ../src/dataservice/dataservice_decode_and_dispatch_write_status.c \
 	shadow/ipc/ipc_write_data_noblock.c \
