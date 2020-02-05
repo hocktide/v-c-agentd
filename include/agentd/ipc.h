@@ -37,6 +37,10 @@ extern "C" {
 /* forward decl for ipc_socket_context. */
 struct ipc_socket_context;
 
+/* forward decl for ipc_timer_context_t. */
+struct ipc_timer_context;
+typedef struct ipc_timer_context ipc_timer_context_t;
+
 /**
  * \brief Socket event flags.
  */
@@ -72,6 +76,15 @@ typedef void (*ipc_socket_event_cb_t)(
     struct ipc_socket_context* ctx, int event_flags, void* user_context);
 
 /**
+ * \brief Callback method for an IPC timer event.
+ *
+ * \param timer         The timer context in which this event occurred.
+ * \param user_context  The user context associated with this timer.
+ */
+typedef void (*ipc_timer_event_cb_t)(
+    ipc_timer_context_t* timer, void* user_context);
+
+/**
  * \brief Socket context used for asynchronous (non-blocking) I/O.  Contains an
  * opaque reference to the underlying async I/O implementation.
  *
@@ -86,6 +99,18 @@ typedef struct ipc_socket_context
     void* impl;
     void* user_context;
 } ipc_socket_context_t;
+
+/**
+ * \brief Timer context used for building one-shot timers.
+ */
+struct ipc_timer_context
+{
+    disposable_t hdr;
+    uint64_t milliseconds;
+    void* impl;
+    ipc_timer_event_cb_t callback;
+    void* user_context;
+};
 
 /**
  * \brief IPC Event Loop context.
@@ -1022,6 +1047,45 @@ int ipc_read_uint8_noblock(ipc_socket_context_t* sock, uint8_t* val);
  *        from the read buffer failed.
  */
 int ipc_read_int8_noblock(ipc_socket_context_t* sock, int8_t* val);
+
+/**
+ * \brief Initialize a timer.
+ *
+ * On success, sd is a one-shot timer of the given duration which can be added
+ * to the event loop.
+ *
+ * \param timer         The timer to initialize.
+ * \param milliseconds  The number of milliseconds before the timer expires.
+ * \param cb            The callback to use when this timer expires.
+ * \param user_context  The user context for this timer.
+ *
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition
+ *        occurred during this operation.
+ */
+int ipc_timer_init(
+    ipc_timer_context_t* timer, uint64_t milliseconds, ipc_timer_event_cb_t cb,
+    void* user_context);
+
+/**
+ * \brief Add a timer to the event loop.
+ *
+ * On success, the event loop will notify the callback associated with this
+ * timer when it goes off.
+ *
+ * \param loop          The event loop context to which this timer is added.
+ * \param timer         The timer context to add to the event loop.
+ *
+ * \returns A status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_INVALID_ARGUMENT if the timer context has already
+ *        been added to an event loop.
+ *      - AGENTD_ERROR_IPC_EVENT_ADD_FAILURE if the event cannot be added to the
+ *        event loop.
+ */
+int ipc_event_loop_add_timer(
+    ipc_event_loop_context_t* loop, ipc_timer_context_t* timer);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

@@ -11,9 +11,10 @@
 #include <agentd/status_codes.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <gtest/gtest.h>
 #include <stdint.h>
 #include <sys/socket.h>
-#include <gtest/gtest.h>
+#include <time.h>
 #include <vpr/disposable.h>
 
 #include "test_ipc.h"
@@ -1759,4 +1760,80 @@ TEST_F(ipc_test, ipc_write_authed_noblock_success)
     close(lhs);
     close(rhs);
     dispose((disposable_t*)&key);
+}
+
+static void test_timer_cb(ipc_timer_context_t*, void* user_context)
+{
+    function<void()>* func = (function<void()>*)user_context;
+
+    (*func)();
+}
+
+/**
+ * \brief It is possible to create a timer and have it fire.
+ */
+TEST_F(ipc_test, ipc_timer)
+{
+    int lhs, rhs;
+    bool callback_called = false;
+    timespec start_time;
+    timespec callback_time;
+    timespec expected_time;
+    ipc_timer_context_t timer;
+
+    function<void()> callback = [&]() {
+        ASSERT_EQ(0, clock_gettime(CLOCK_REALTIME, &callback_time));
+        callback_called = true;
+    };
+
+    /* create a socket pair for testing. */
+    ASSERT_EQ(0, ipc_socketpair(AF_UNIX, SOCK_STREAM, 0, &lhs, &rhs));
+
+    /* set up the loop, using one of the sockets as a hack. */
+    timermode_setup(lhs);
+
+    /* initialize the timer event. */
+    ASSERT_EQ(0, ipc_timer_init(&timer, 250, &test_timer_cb, &callback));
+
+    /* add the timer to the loop. */
+    ASSERT_EQ(0, ipc_event_loop_add_timer(&loop, &timer));
+
+    /* get the current time. */
+    ASSERT_EQ(0, clock_gettime(CLOCK_REALTIME, &start_time));
+
+    /* run the loop. */
+    timermode();
+
+    /* verify that the callback was called. */
+    ASSERT_TRUE(callback_called);
+
+    /* we expect the callback to happen at least 250 milliseconds after
+     * start_time. */
+    memcpy(&expected_time, &start_time, sizeof(timespec));
+    expected_time.tv_nsec += 250 * 1000 * 1000;
+    expected_time.tv_sec += expected_time.tv_nsec / (1000 * 1000 * 1000);
+    expected_time.tv_nsec %= 1000 * 1000 * 1000;
+
+    /* the callback time should be greater than or equal to the expected time.*/
+    EXPECT_TRUE(
+        ((callback_time.tv_sec == expected_time.tv_sec)
+                ? (callback_time.tv_nsec >= expected_time.tv_nsec)
+                : (callback_time.tv_sec >= expected_time.tv_sec)));
+
+    /* reset for a second run. */
+    callback_called = false;
+
+    /* run again. */
+    timermode();
+
+    /* a timer is a single-shot timer. */
+    EXPECT_FALSE(callback_called);
+
+    /* tear down the loop. */
+    timermode_teardown();
+
+    /* clean up. */
+    close(lhs);
+    close(rhs);
+    dispose((disposable_t*)&timer);
 }

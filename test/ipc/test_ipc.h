@@ -20,6 +20,14 @@
 #include <functional>
 
 /**
+ * test timer context struct.
+ */
+struct test_timer_context
+{
+    std::function<void()> onTimer;
+};
+
+/**
  * The dataservice isolation test class deals with the drudgery of communicating
  * with the data service.  It provides a registration mechanism so that
  * data can be sent to the data service and received from the data service.
@@ -35,6 +43,12 @@ protected:
         std::function<void()> onRead, std::function<void()> onWrite);
     static void nonblock_read(ipc_socket_context_t*, int, void* ctx);
     static void nonblock_write(ipc_socket_context_t*, int, void* ctx);
+
+    void timermode_setup(int dummysock);
+    void timermode();
+    void timermode_teardown();
+
+    static void timer_cb(ipc_timer_context_t*, void* ctx);
 
     ipc_socket_context_t nonblockdatasock;
     bool nonblockdatasock_configured;
