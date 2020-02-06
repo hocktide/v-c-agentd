@@ -38,6 +38,10 @@ int ipc_read_uint64_block(int sock, uint64_t* val)
     uint32_t size = 0U;
     uint64_t nval = 0U;
 
+    /* parameter sanity checks. */
+    MODEL_ASSERT(sock >= 0);
+    MODEL_ASSERT(NULL != val);
+
     /* attempt to read the type info. */
     if (sizeof(type) != read(sock, &type, sizeof(type)))
         return AGENTD_ERROR_IPC_READ_BLOCK_FAILURE;
