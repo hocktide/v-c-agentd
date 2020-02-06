@@ -29,6 +29,8 @@
  */
 int ipc_make_block(int sock)
 {
+    MODEL_ASSERT(sock >= 0);
+
     /* get the flags for this socket. */
     int flags = fcntl(sock, F_GETFL);
     if (0 > flags)

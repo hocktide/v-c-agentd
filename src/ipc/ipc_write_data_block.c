@@ -30,6 +30,10 @@
  */
 int ipc_write_data_block(int sock, const void* val, uint32_t size)
 {
+    /* parameter sanity check. */
+    MODEL_ASSERT(sock >= 0);
+    MODEL_ASSERT(NULL != val);
+
     uint8_t typeval = IPC_DATA_TYPE_DATA_PACKET;
 
     /* attempt to write the type to the socket. */

@@ -29,6 +29,9 @@
  */
 int ipc_write_uint8_block(int sock, uint8_t val)
 {
+    /* parameter sanity checks. */
+    MODEL_ASSERT(sock >= 0);
+
     uint8_t typeval = IPC_DATA_TYPE_UINT8;
 
     /* attempt to write the type to the socket. */

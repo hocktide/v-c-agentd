@@ -38,6 +38,11 @@
  */
 int ipc_read_data_block(int sock, void** val, uint32_t* size)
 {
+    /* parameter sanity checks. */
+    MODEL_ASSERT(sock >= 0);
+    MODEL_ASSERT(NULL != val);
+    MODEL_ASSERT(NULL != size);
+
     uint8_t type = 0U;
     uint32_t nsize = 0U;
 

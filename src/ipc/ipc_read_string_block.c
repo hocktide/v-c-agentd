@@ -32,6 +32,8 @@
  *        failed.
  *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read from
  *        the socket was unexpected.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if the data size is too
+ *        large.
  *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
  *        out-of-memory error.
  */
@@ -40,6 +42,10 @@ int ipc_read_string_block(int sock, char** val)
     uint8_t type = 0U;
     uint32_t nsize = 0U;
     uint32_t size = 0U;
+
+    /* parameter sanity checks. */
+    MODEL_ASSERT(sock >= 0);
+    MODEL_ASSERT(NULL != val);
 
     /* attempt to read the type info. */
     if (sizeof(type) != read(sock, &type, sizeof(type)))
@@ -55,6 +61,10 @@ int ipc_read_string_block(int sock, char** val)
 
     /* convert the size to host byte order. */
     size = ntohl(nsize);
+
+    /* cap the maximum string size at 10 MB. */
+    if (size > (10 * 1024 * 1024))
+        return AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE;
 
     /* attempt to allocate memory for this string. */
     *val = (char*)malloc(size + 1);

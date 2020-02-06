@@ -371,6 +371,8 @@ int ipc_read_authed_data_block(
  *        failed.
  *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read from
  *        the socket was unexpected.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_SIZE if the data size is too
+ *        large.
  *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
  *        out-of-memory error.
  */
