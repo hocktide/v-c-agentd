@@ -281,6 +281,20 @@ void mock_dataservice::mock_dataservice::register_callback_transaction_drop(
 }
 
 /**
+ * \brief Register a mock callback for transaction_promote.
+ *
+ * \param cb                The callback to register.
+ */
+void mock_dataservice::mock_dataservice::register_callback_transaction_promote(
+    function<
+        int(const dataservice_request_transaction_promote_t&,
+            ostream&)>
+        cb)
+{
+    transaction_promote_callback = cb;
+}
+
+/**
  * \brief Register a mock callback for transaction_get.
  *
  * \param cb                The callback to register.
@@ -459,6 +473,13 @@ bool mock_dataservice::mock_dataservice::mock_read_and_dispatch()
         case DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_DROP:
             retval =
                 mock_decode_and_dispatch_transaction_drop(
+                    breq, payload_size);
+            break;
+
+        /* handle transaction promote. */
+        case DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_PROMOTE:
+            retval =
+                mock_decode_and_dispatch_transaction_promote(
                     breq, payload_size);
             break;
 
@@ -965,6 +986,54 @@ bool mock_dataservice::mock_dataservice::
 done:
     mock_write_status(
         DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_DROP, dreq.hdr.child_index,
+        status, payload.data(), payload.size());
+
+    return retval;
+}
+
+/**
+ * \brief Mock for the transaction promote call.
+ *
+ * \param req       The request payload.
+ * \param size      The request payload size.
+ *
+ * \returns true if the request could be processed and false otherwise.
+ */
+bool mock_dataservice::mock_dataservice::
+    mock_decode_and_dispatch_transaction_promote(
+        const void* request, size_t payload_size)
+{
+    bool retval = false;
+    dataservice_request_transaction_promote_t dreq;
+    stringstream payout;
+    string payload;
+    uint32_t status = AGENTD_ERROR_DATASERVICE_NOT_FOUND;
+
+    /* parse the request payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_transaction_promote(
+            request, payload_size, &dreq))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* if the mock callback is set, call it. */
+    if (!!transaction_promote_callback)
+    {
+        status = transaction_promote_callback(dreq, payout);
+    }
+
+    /* get the payload if set. */
+    payload = payout.str();
+
+    /* success. */
+    retval = true;
+    goto done;
+
+done:
+    mock_write_status(
+        DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_PROMOTE, dreq.hdr.child_index,
         status, payload.data(), payload.size());
 
     return retval;
@@ -2105,6 +2174,85 @@ bool mock_dataservice::mock_dataservice::
     /* parse the requset payload. */
     if (AGENTD_STATUS_SUCCESS !=
         dataservice_decode_request_transaction_drop(
+            breq, size, &dreq))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* verify the request. */
+    if (
+        child_index != dreq.hdr.child_index || 0 != memcmp(txn_id, dreq.txn_id, 16))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* successful match. */
+    retval = true;
+    goto cleanup_val;
+
+cleanup_val:
+    free(val);
+
+done:
+    return retval;
+}
+
+/**
+ * \brief Return true if the next popped request matches this request.
+ *
+ * \param child_index       The child index for this request.
+ * \param txn_id            The transaction id for this request.
+ */
+bool mock_dataservice::mock_dataservice::
+    request_matches_transaction_promote(
+        uint32_t child_index, const uint8_t* txn_id)
+{
+    bool retval = false;
+    void* val = nullptr;
+    uint32_t size = 0U;
+    const uint8_t* breq = nullptr;
+    uint32_t nmethod = 0U, method = 0U;
+    dataservice_request_transaction_promote_t dreq;
+
+    /* read a request from the test socket. */
+    if (AGENTD_STATUS_SUCCESS != ipc_read_data_block(testsock, &val, &size))
+    {
+        retval = false;
+        goto done;
+    }
+
+    /* make working with the request more convenient. */
+    breq = (const uint8_t*)val;
+
+    /* the payload should be at least large enough for the method. */
+    if (size < sizeof(uint32_t))
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* get the method. */
+    memcpy(&nmethod, breq, sizeof(uint32_t));
+    method = htonl(nmethod);
+
+    /* increment breq past command. */
+    breq += sizeof(uint32_t);
+
+    /* decrement size. */
+    size -= sizeof(uint32_t);
+
+    /* verify the method. */
+    if (DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_PROMOTE != method)
+    {
+        retval = false;
+        goto cleanup_val;
+    }
+
+    /* parse the requset payload. */
+    if (AGENTD_STATUS_SUCCESS !=
+        dataservice_decode_request_transaction_promote(
             breq, size, &dreq))
     {
         retval = false;

@@ -134,6 +134,9 @@ int dataservice_api_recvresp_transaction_get(
 
         /* set the size. */
         node->net_txn_cert_size = dresp.node.net_txn_cert_size;
+
+        /* set the transaction state. */
+        node->net_txn_state = dresp.node.net_txn_state;
     }
 
     /* allocate memory for the data. */

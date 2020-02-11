@@ -55,6 +55,7 @@ int dataservice_decode_response_canonized_transaction_get(
     /* |    next                                             | 16 bytes     | */
     /* |    artifact_id                                      | 16 bytes     | */
     /* |    block_id                                         | 16 bytes     | */
+    /* |    net_txn_state                                    |  4 bytes     | */
     /* | data                                                | n - 92 bytes | */
     /* | --------------------------------------------------- | ------------ | */
 
@@ -69,7 +70,7 @@ int dataservice_decode_response_canonized_transaction_get(
     const uint32_t* val = (const uint32_t*)resp;
 
     /* the size of the id array. */
-    uint32_t id_arr_size = 5 * 16;
+    uint32_t id_arr_size = 5 * 16 + 4;
 
     /* set up data size for later. */
     uint32_t dat_size = size;
@@ -135,6 +136,11 @@ int dataservice_decode_response_canonized_transaction_get(
 
     /* copy the block_id. */
     memcpy(dresp->node.block_id, bval + 64, sizeof(dresp->node.block_id));
+
+    /* copy the state. */
+    memcpy(
+        &dresp->node.net_txn_state, bval + 80,
+        sizeof(dresp->node.net_txn_state));
 
     /* set the size. */
     dresp->node.net_txn_cert_size = htonll(dat_size);

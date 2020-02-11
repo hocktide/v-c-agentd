@@ -16,11 +16,12 @@ int main(int argc, char* argv[])
     const uint8_t block_id[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     const uint8_t cert[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     size_t cert_size = 16;
+    uint32_t net_state = htonl(DATASERVICE_TRANSACTION_NODE_STATE_CANONIZED);
 
     int retval =
         dataservice_encode_response_canonized_transaction_get(
             &payload, &payload_size, txn_id, prev_id, next_id, artifact_id,
-            block_id, cert, cert_size);
+            block_id, net_state, cert, cert_size);
     if (AGENTD_STATUS_SUCCESS != retval)
         return 0;
 

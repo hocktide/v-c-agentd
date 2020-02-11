@@ -108,6 +108,11 @@ enum dataservice_api_cap_enum
     DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT,
 
     /**
+     * \brief Capability to promote a submitted transaction to attested.
+     */
+    DATASERVICE_API_CAP_APP_PQ_TRANSACTION_PROMOTE,
+
+    /**
      * \brief Capability to read the first transaction from the process queue.
      */
     DATASERVICE_API_CAP_APP_PQ_TRANSACTION_FIRST_READ,
@@ -265,6 +270,11 @@ enum dataservice_api_method_enum
      * \brief Submit a transaction to the process queue.
      */
     DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_SUBMIT,
+
+    /**
+     * \brief Promote a transaction in the process queue to attested.
+     */
+    DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_PROMOTE,
 
     /**
      * \brief Read the first transaction from the process queue.

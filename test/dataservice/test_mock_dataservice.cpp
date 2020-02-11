@@ -1319,6 +1319,8 @@ TEST_F(mock_dataservice_test, canonized_transaction_get_override)
     };
     const uint8_t EXPECTED_CERT[5] = { 0x05, 0x04, 0x03, 0x02, 0x01 };
     const size_t EXPECTED_CERT_SIZE = sizeof(EXPECTED_CERT);
+    const uint32_t EXPECTED_NET_TXN_STATE =
+        ntohl(DATASERVICE_TRANSACTION_NODE_STATE_CANONIZED);
     data_transaction_node_t txn_node;
     void* data = nullptr;
     size_t data_size = 0U;
@@ -1334,7 +1336,7 @@ TEST_F(mock_dataservice_test, canonized_transaction_get_override)
                 dataservice_encode_response_canonized_transaction_get(
                     &payload, &payload_size, EXPECTED_TXN_ID, EXPECTED_PREV_ID,
                     EXPECTED_NEXT_ID, EXPECTED_ARTIFACT_ID, EXPECTED_BLOCK_ID,
-                    EXPECTED_CERT, EXPECTED_CERT_SIZE);
+                    EXPECTED_NET_TXN_STATE, EXPECTED_CERT, EXPECTED_CERT_SIZE);
             if (AGENTD_STATUS_SUCCESS != retval)
                 return retval;
 
@@ -2227,6 +2229,202 @@ TEST_F(mock_dataservice_test, transaction_drop_override)
 }
 
 /**
+ * If the transaction promote mock is not set, then
+ * the AGENTD_ERROR_DATASERVICE_NOT_FOUND status is returned.
+ */
+TEST_F(mock_dataservice_test, default_transaction_promote)
+{
+    uint32_t child_context = 1023;
+    uint32_t offset = 0U;
+    uint32_t status = 0U;
+    const uint8_t EXPECTED_TXN_ID[16] = {
+        0x3a, 0x38, 0x9f, 0x37, 0x39, 0xf0, 0x41, 0x28,
+        0xbd, 0x31, 0x01, 0xfa, 0xca, 0x83, 0xdb, 0xae
+    };
+
+    /* start the mock dataservice. */
+    mock->start();
+
+    /* we should be able to send and receive the request / resp */
+    int sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    int recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_transaction_promote(
+                        &nonblockdatasock, &offset, &status);
+
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_transaction_promote(
+                        &nonblockdatasock, child_context, EXPECTED_TXN_ID);
+            }
+        });
+
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS, sendreq_status);
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS, recvresp_status);
+
+    /* the status code for an empty mock should be
+     * AGENTD_ERROR_DATASERVICE_NOT_FOUND. */
+    EXPECT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND, (int)status);
+}
+
+/**
+ * Test that we can match against the sent transaction promote request.
+ */
+TEST_F(mock_dataservice_test, matches_transaction_promote)
+{
+    uint32_t child_context = 1023;
+    uint32_t offset = 0U;
+    uint32_t status = 0U;
+    const uint8_t EXPECTED_TXN_ID[16] = {
+        0x3a, 0x38, 0x9f, 0x37, 0x39, 0xf0, 0x41, 0x28,
+        0xbd, 0x31, 0x01, 0xfa, 0xca, 0x83, 0xdb, 0xae
+    };
+
+    /* start the mock dataservice. */
+    mock->start();
+
+    /* we should be able to send and receive the request / resp */
+    int sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    int recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_transaction_promote(
+                        &nonblockdatasock, &offset, &status);
+
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_transaction_promote(
+                        &nonblockdatasock, child_context, EXPECTED_TXN_ID);
+            }
+        });
+
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS, sendreq_status);
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS, recvresp_status);
+
+    /* the status code for an empty mock should be
+     * AGENTD_ERROR_DATASERVICE_NOT_FOUND. */
+    EXPECT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND, (int)status);
+
+    /* stop the mock to ensure that the remote test logging socket is closed. */
+    mock->stop();
+
+    /* we can match the request we sent. */
+    EXPECT_TRUE(
+        mock->request_matches_transaction_promote(
+            child_context, EXPECTED_TXN_ID));
+}
+
+/**
+ * Test that we can fail to match against the transaction promote request.
+ */
+TEST_F(mock_dataservice_test, no_match_transaction_promote)
+{
+    uint32_t child_context = 1023;
+    const uint8_t EXPECTED_TXN_ID[16] = {
+        0x3a, 0x38, 0x9f, 0x37, 0x39, 0xf0, 0x41, 0x28,
+        0xbd, 0x31, 0x01, 0xfa, 0xca, 0x83, 0xdb, 0xae
+    };
+
+    /* start the mock dataservice. */
+    mock->start();
+
+    /* stop the mock to ensure that the remote test logging socket is closed. */
+    mock->stop();
+
+    /* we can match the request we sent. */
+    EXPECT_FALSE(
+        mock->request_matches_transaction_promote(
+            child_context, EXPECTED_TXN_ID));
+}
+
+/**
+ * If the transaction promote mock is set, then
+ * the status code and data it returns is returned in the api call.
+ */
+TEST_F(mock_dataservice_test, transaction_promote_override)
+{
+    uint32_t child_context = 1023;
+    uint32_t offset = 0U;
+    uint32_t status = 0U;
+    const uint8_t EXPECTED_TXN_ID[16] = {
+        0x3a, 0x38, 0x9f, 0x37, 0x39, 0xf0, 0x41, 0x28,
+        0xbd, 0x31, 0x01, 0xfa, 0xca, 0x83, 0xdb, 0xae
+    };
+
+    /* mock the transaction promote api call. */
+    mock->register_callback_transaction_promote(
+        [&](const dataservice_request_transaction_promote_t&,
+            std::ostream&) {
+            /* success. */
+            return AGENTD_STATUS_SUCCESS;
+        });
+
+    /* start the mock dataservice. */
+    mock->start();
+
+    /* we should be able to send and receive the request / resp */
+    int sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    int recvresp_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
+    nonblockmode(
+        /* onRead. */
+        [&]() {
+            if (recvresp_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
+            {
+                recvresp_status =
+                    dataservice_api_recvresp_transaction_promote(
+                        &nonblockdatasock, &offset, &status);
+
+                if (recvresp_status != AGENTD_ERROR_IPC_WOULD_BLOCK)
+                {
+                    ipc_exit_loop(&loop);
+                }
+            }
+        },
+        /* onWrite. */
+        [&]() {
+            if (sendreq_status == AGENTD_ERROR_IPC_WOULD_BLOCK)
+            {
+                sendreq_status =
+                    dataservice_api_sendreq_transaction_promote(
+                        &nonblockdatasock, child_context, EXPECTED_TXN_ID);
+            }
+        });
+
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS, sendreq_status);
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS, recvresp_status);
+
+    /* the mock returns success. */
+    EXPECT_EQ(AGENTD_STATUS_SUCCESS, (int)status);
+}
+
+/**
  * If the transaction get mock is not set,
  * the AGENTD_ERROR_DATASERVICE_NOT_FOUND status is returned.
  */
@@ -2397,6 +2595,8 @@ TEST_F(mock_dataservice_test, transaction_get_override)
     };
     const uint8_t EXPECTED_CERT[5] = { 0x05, 0x04, 0x03, 0x02, 0x01 };
     const size_t EXPECTED_CERT_SIZE = sizeof(EXPECTED_CERT);
+    const uint32_t EXPECTED_NET_TXN_STATE =
+        ntohl(DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED);
     data_transaction_node_t txn_node;
     void* data = nullptr;
     size_t data_size = 0U;
@@ -2412,7 +2612,7 @@ TEST_F(mock_dataservice_test, transaction_get_override)
                 dataservice_encode_response_transaction_get(
                     &payload, &payload_size, EXPECTED_TXN_ID, EXPECTED_PREV_ID,
                     EXPECTED_NEXT_ID, EXPECTED_ARTIFACT_ID,
-                    EXPECTED_CERT, EXPECTED_CERT_SIZE);
+                    EXPECTED_NET_TXN_STATE, EXPECTED_CERT, EXPECTED_CERT_SIZE);
             if (AGENTD_STATUS_SUCCESS != retval)
                 return retval;
 
@@ -2468,6 +2668,7 @@ TEST_F(mock_dataservice_test, transaction_get_override)
     EXPECT_EQ(0, memcmp(EXPECTED_PREV_ID, txn_node.prev, 16));
     EXPECT_EQ(0, memcmp(EXPECTED_NEXT_ID, txn_node.next, 16));
     EXPECT_EQ(0, memcmp(EXPECTED_ARTIFACT_ID, txn_node.artifact_id, 16));
+    EXPECT_EQ(EXPECTED_NET_TXN_STATE, txn_node.net_txn_state);
     EXPECT_EQ((int64_t)EXPECTED_CERT_SIZE, ntohll(txn_node.net_txn_cert_size));
     ASSERT_EQ(EXPECTED_CERT_SIZE, data_size);
     ASSERT_NE(nullptr, data);
@@ -2633,6 +2834,8 @@ TEST_F(mock_dataservice_test, transaction_get_first_override)
     };
     const uint8_t EXPECTED_CERT[5] = { 0x05, 0x04, 0x03, 0x02, 0x01 };
     const size_t EXPECTED_CERT_SIZE = sizeof(EXPECTED_CERT);
+    const uint32_t EXPECTED_NET_TXN_STATE =
+        ntohl(DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED);
     data_transaction_node_t txn_node;
     void* data = nullptr;
     size_t data_size = 0U;
@@ -2648,7 +2851,7 @@ TEST_F(mock_dataservice_test, transaction_get_first_override)
                 dataservice_encode_response_transaction_get_first(
                     &payload, &payload_size, EXPECTED_TXN_ID, EXPECTED_PREV_ID,
                     EXPECTED_NEXT_ID, EXPECTED_ARTIFACT_ID,
-                    EXPECTED_CERT, EXPECTED_CERT_SIZE);
+                    EXPECTED_NET_TXN_STATE, EXPECTED_CERT, EXPECTED_CERT_SIZE);
             if (AGENTD_STATUS_SUCCESS != retval)
                 return retval;
 

@@ -17,6 +17,23 @@ extern "C" {
 #endif  //__cplusplus
 
 /**
+ * \brief Transaction node states.
+ */
+typedef enum data_transaction_node_state
+{
+    /*** \brief Unknown state. */
+    DATASERVICE_TRANSACTION_NODE_STATE_UNKNOWN = 0x00000000,
+    /*** \brief Submitted to the process queue. */
+    DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED = 0x00000001,
+    /*** \brief Attested as accurate with respect to blockchain rules. */
+    DATASERVICE_TRANSACTION_NODE_STATE_ATTESTED = 0x00000002,
+    /*** \brief Canonized in a block on the blockchain. */
+    DATASERVICE_TRANSACTION_NODE_STATE_CANONIZED = 0x00000003,
+    /*** \brief Invalid state. */
+    DATASERVICE_TRANSACTION_NODE_STATE_INVALID = 0xFFFFFFFF,
+} data_transaction_node_state_t;
+
+/**
  * \brief A transaction node is a linked list node backed by the database, which
  * is used to describe a transaction in the transaction queue.
  */
@@ -51,6 +68,12 @@ typedef struct data_transaction_node
      * \brief The transaction certificate size, in bytes, and in network order.
      */
     uint64_t net_txn_cert_size;
+
+    /**
+     * \brief Set to the current transaction state (i.e. submitted, attested,
+     * canonized).
+     */
+    uint32_t net_txn_state;
 
 } data_transaction_node_t;
 

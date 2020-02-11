@@ -199,6 +199,17 @@ public:
             cb);
 
     /**
+         * \brief Register a mock callback for transaction_promote.
+         *
+         * \param cb                The callback to register.
+         */
+    void register_callback_transaction_promote(
+        std::function<
+            int(const dataservice_request_transaction_promote_t&,
+                std::ostream&)>
+            cb);
+
+    /**
          * \brief Register a mock callback for transaction_get.
          *
          * \param cb                The callback to register.
@@ -339,6 +350,15 @@ public:
          * \param child_index       The child index for this request.
          * \param txn_id            The transaction id for this request.
          */
+    bool request_matches_transaction_promote(
+        uint32_t child_index, const uint8_t* txn_id);
+
+    /**
+         * \brief Return true if the next popped request matches this request.
+         *
+         * \param child_index       The child index for this request.
+         * \param txn_id            The transaction id for this request.
+         */
     bool request_matches_transaction_get(
         uint32_t child_index, const uint8_t* txn_id);
 
@@ -416,6 +436,10 @@ private:
         int(const dataservice_request_transaction_drop_t&,
             std::ostream&)>
         transaction_drop_callback;
+    std::function<
+        int(const dataservice_request_transaction_promote_t&,
+            std::ostream&)>
+        transaction_promote_callback;
     std::function<
         int(const dataservice_request_transaction_get_t&,
             std::ostream&)>
@@ -566,6 +590,17 @@ private:
          * \returns true if the request could be processed and false otherwise.
          */
     bool mock_decode_and_dispatch_transaction_drop(
+        const void* request, size_t payload_size);
+
+    /**
+         * \brief Mock for the transaction promote call.
+         *
+         * \param req       The request payload.
+         * \param size      The request payload size.
+         *
+         * \returns true if the request could be processed and false otherwise.
+         */
+    bool mock_decode_and_dispatch_transaction_promote(
         const void* request, size_t payload_size);
 
     /**

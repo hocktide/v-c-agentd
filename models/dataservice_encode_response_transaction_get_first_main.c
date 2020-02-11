@@ -15,11 +15,12 @@ int main(int argc, char* argv[])
     const uint8_t artifact_id[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     const uint8_t cert[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     size_t cert_size = 16U;
+    uint32_t net_state = htonl(DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED);
 
     int retval =
         dataservice_encode_response_transaction_get_first(
             &payload, &payload_size, txn_id, prev_id, next_id, artifact_id,
-            cert, cert_size);
+            net_state, cert, cert_size);
     if (AGENTD_STATUS_SUCCESS != retval)
         return 0;
 
