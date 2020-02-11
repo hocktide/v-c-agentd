@@ -120,6 +120,11 @@ int dataservice_decode_and_dispatch(
             return dataservice_decode_and_dispatch_transaction_drop(
                 inst, sock, breq, payload_size);
 
+        /* handle transaction promote. */
+        case DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_PROMOTE:
+            return dataservice_decode_and_dispatch_transaction_promote(
+                inst, sock, breq, payload_size);
+
         /* handle artifact read. */
         case DATASERVICE_API_METHOD_APP_ARTIFACT_READ:
             return dataservice_decode_and_dispatch_artifact_read(

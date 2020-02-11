@@ -132,6 +132,15 @@ typedef struct dataservice_request_transaction_drop
 } dataservice_request_transaction_drop_t;
 
 /**
+ * \brief Transaction Promote Request structure.
+ */
+typedef struct dataservice_request_transaction_promote
+{
+    dataservice_request_header_t hdr;
+    uint8_t txn_id[16];
+} dataservice_request_transaction_promote_t;
+
+/**
  * \brief Transaction Get Request structure.
  */
 typedef struct dataservice_request_transaction_get
@@ -532,6 +541,23 @@ int dataservice_decode_request_global_setting_set(
  */
 int dataservice_decode_request_transaction_drop(
     const void* req, size_t size, dataservice_request_transaction_drop_t* dreq);
+
+/**
+ * \brief Decode a transaction promotion request.
+ *
+ * \param req           The request payload to parse.
+ * \param size          The size of this request payload.
+ * \param dreq          The request structure into which this request is
+ *                      decoded.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet payload size is incorrect.
+ */
+int dataservice_decode_request_transaction_promote(
+    const void* req, size_t size,
+    dataservice_request_transaction_promote_t* dreq);
 
 /**
  * \brief Decode a transaction get request.
