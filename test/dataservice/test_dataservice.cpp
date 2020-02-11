@@ -1523,12 +1523,14 @@ TEST_F(dataservice_test, transaction_get_first_with_node_happy_path)
     memcpy(((uint8_t*)foo) + sizeof(data_transaction_node_t), foo_data,
         sizeof(foo_data));
     foo->net_txn_cert_size = htonll(sizeof(foo_data));
+    foo->net_txn_state = htonl(DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED);
     memcpy(bar->key, bar_key, sizeof(bar->key));
     memcpy(bar->prev, foo_key, sizeof(bar->prev));
     memset(bar->next, 0xFF, sizeof(bar->next));
     memcpy(((uint8_t*)bar) + sizeof(data_transaction_node_t), bar_data,
         sizeof(bar_data));
     bar->net_txn_cert_size = htonll(sizeof(bar_data));
+    bar->net_txn_state = htonl(DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED);
 
     /* insert foo. */
     lkey.mv_size = sizeof(foo->key);
@@ -1568,6 +1570,9 @@ TEST_F(dataservice_test, transaction_get_first_with_node_happy_path)
     EXPECT_EQ(0, memcmp(node.prev, start_key, sizeof(node.prev)));
     EXPECT_EQ(0, memcmp(node.next, bar_key, sizeof(node.next)));
     EXPECT_EQ(txn_size, (size_t)ntohll(node.net_txn_cert_size));
+    EXPECT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* dispose of the context. */
     dispose((disposable_t*)&ctx);
@@ -1662,6 +1667,9 @@ TEST_F(dataservice_test, transaction_submit_get_first_with_node_happy_path)
     EXPECT_EQ(0, memcmp(node.prev, start_key, sizeof(node.prev)));
     EXPECT_EQ(0, memcmp(node.next, end_key, sizeof(node.next)));
     EXPECT_EQ(sizeof(foo_data), (size_t)ntohll(node.net_txn_cert_size));
+    EXPECT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* dispose of the context. */
     dispose((disposable_t*)&ctx);
@@ -1758,6 +1766,9 @@ TEST_F(dataservice_test, transaction_submit_txn_get_first_with_node_happy_path)
     EXPECT_EQ(0, memcmp(node.prev, start_key, sizeof(node.prev)));
     EXPECT_EQ(0, memcmp(node.next, end_key, sizeof(node.next)));
     EXPECT_EQ(sizeof(foo_data), (size_t)ntohll(node.net_txn_cert_size));
+    EXPECT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* abort the transaction. */
     dataservice_data_txn_abort(&txn_ctx);
@@ -1850,6 +1861,9 @@ TEST_F(dataservice_test, transaction_submit_get_with_node_happy_path)
     EXPECT_EQ(0, memcmp(node.prev, start_key, sizeof(node.prev)));
     EXPECT_EQ(0, memcmp(node.next, end_key, sizeof(node.next)));
     EXPECT_EQ(sizeof(foo_data), (size_t)ntohll(node.net_txn_cert_size));
+    EXPECT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* dispose of the context. */
     dispose((disposable_t*)&ctx);
@@ -1946,6 +1960,9 @@ TEST_F(dataservice_test, transaction_submit_txn_get_with_node_happy_path)
     EXPECT_EQ(0, memcmp(node.prev, start_key, sizeof(node.prev)));
     EXPECT_EQ(0, memcmp(node.next, end_key, sizeof(node.next)));
     EXPECT_EQ(sizeof(foo_data), (size_t)ntohll(node.net_txn_cert_size));
+    EXPECT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* abort the transaction. */
     dataservice_data_txn_abort(&txn_ctx);
@@ -2264,6 +2281,9 @@ TEST_F(dataservice_test, transaction_drop_ordering)
     ASSERT_EQ(0, memcmp(node.next, foo2_key, 16));
     ASSERT_EQ(sizeof(foo1_data), txn_size);
     ASSERT_EQ(0, memcmp(txn_bytes, foo1_data, sizeof(foo1_data)));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* getting the transaction by id should return success. */
     ASSERT_EQ(0,
@@ -2277,6 +2297,9 @@ TEST_F(dataservice_test, transaction_drop_ordering)
     ASSERT_EQ(0, memcmp(node.next, foo2_key, 16));
     ASSERT_EQ(sizeof(foo1_data), txn_size);
     ASSERT_EQ(0, memcmp(txn_bytes, foo1_data, sizeof(foo1_data)));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* getting the next transaction by id should return success. */
     ASSERT_EQ(0,
@@ -2290,6 +2313,9 @@ TEST_F(dataservice_test, transaction_drop_ordering)
     ASSERT_EQ(0, memcmp(node.next, foo3_key, 16));
     ASSERT_EQ(sizeof(foo2_data), txn_size);
     ASSERT_EQ(0, memcmp(txn_bytes, foo2_data, sizeof(foo2_data)));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* getting the next transaction by id should return success. */
     ASSERT_EQ(0,
@@ -2303,6 +2329,9 @@ TEST_F(dataservice_test, transaction_drop_ordering)
     ASSERT_EQ(0, memcmp(node.next, end_key, 16));
     ASSERT_EQ(sizeof(foo3_data), txn_size);
     ASSERT_EQ(0, memcmp(txn_bytes, foo3_data, sizeof(foo3_data)));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* attempt to drop foo2 transaction. */
     ASSERT_EQ(0,
@@ -2326,6 +2355,9 @@ TEST_F(dataservice_test, transaction_drop_ordering)
     ASSERT_EQ(0, memcmp(node.next, foo3_key, 16));
     ASSERT_EQ(sizeof(foo1_data), txn_size);
     ASSERT_EQ(0, memcmp(txn_bytes, foo1_data, sizeof(foo1_data)));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* getting the next transaction by id should return success. */
     ASSERT_EQ(0,
@@ -2339,6 +2371,9 @@ TEST_F(dataservice_test, transaction_drop_ordering)
     ASSERT_EQ(0, memcmp(node.next, end_key, 16));
     ASSERT_EQ(sizeof(foo3_data), txn_size);
     ASSERT_EQ(0, memcmp(txn_bytes, foo3_data, sizeof(foo3_data)));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* dispose of the context. */
     dispose((disposable_t*)&ctx);
@@ -2463,6 +2498,9 @@ TEST_F(dataservice_test, transaction_drop_first_ordering)
     ASSERT_EQ(0, memcmp(node.next, foo2_key, 16));
     ASSERT_EQ(sizeof(foo1_data), txn_size);
     ASSERT_EQ(0, memcmp(txn_bytes, foo1_data, sizeof(foo1_data)));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* getting the transaction by id should return success. */
     ASSERT_EQ(0,
@@ -2476,6 +2514,9 @@ TEST_F(dataservice_test, transaction_drop_first_ordering)
     ASSERT_EQ(0, memcmp(node.next, foo2_key, 16));
     ASSERT_EQ(sizeof(foo1_data), txn_size);
     ASSERT_EQ(0, memcmp(txn_bytes, foo1_data, sizeof(foo1_data)));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* getting the next transaction by id should return success. */
     ASSERT_EQ(0,
@@ -2489,6 +2530,9 @@ TEST_F(dataservice_test, transaction_drop_first_ordering)
     ASSERT_EQ(0, memcmp(node.next, foo3_key, 16));
     ASSERT_EQ(sizeof(foo2_data), txn_size);
     ASSERT_EQ(0, memcmp(txn_bytes, foo2_data, sizeof(foo2_data)));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* getting the next transaction by id should return success. */
     ASSERT_EQ(0,
@@ -2502,6 +2546,9 @@ TEST_F(dataservice_test, transaction_drop_first_ordering)
     ASSERT_EQ(0, memcmp(node.next, end_key, 16));
     ASSERT_EQ(sizeof(foo3_data), txn_size);
     ASSERT_EQ(0, memcmp(txn_bytes, foo3_data, sizeof(foo3_data)));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* attempt to drop foo1 transaction. */
     ASSERT_EQ(0,
@@ -2525,6 +2572,9 @@ TEST_F(dataservice_test, transaction_drop_first_ordering)
     ASSERT_EQ(0, memcmp(node.next, foo3_key, 16));
     ASSERT_EQ(sizeof(foo2_data), txn_size);
     ASSERT_EQ(0, memcmp(txn_bytes, foo2_data, sizeof(foo2_data)));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* getting the next transaction by id should return success. */
     ASSERT_EQ(0,
@@ -2538,6 +2588,9 @@ TEST_F(dataservice_test, transaction_drop_first_ordering)
     ASSERT_EQ(0, memcmp(node.next, end_key, 16));
     ASSERT_EQ(sizeof(foo3_data), txn_size);
     ASSERT_EQ(0, memcmp(txn_bytes, foo3_data, sizeof(foo3_data)));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* dispose of the context. */
     dispose((disposable_t*)&ctx);

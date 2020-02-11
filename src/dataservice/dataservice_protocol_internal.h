@@ -406,6 +406,7 @@ int dataservice_decode_request_canonized_transaction_get(
  * \param next_id           Pointer to the next transaction UUID.               
  * \param artifact_id       Pointer to the artifact UUID.
  * \param block_id          Pointer to the block UUID.
+ * \param net_txn_state     Net transaction state.
  * \param cert              Pointer to the transaction certificate.
  * \param cert_size         Size of the transaction certificate.
  *
@@ -422,7 +423,8 @@ int dataservice_decode_request_canonized_transaction_get(
 int dataservice_encode_response_canonized_transaction_get(
     void** payload, size_t* payload_size, const uint8_t* txn_id,
     const uint8_t* prev_id, const uint8_t* next_id, const uint8_t* artifact_id,
-    const uint8_t* block_id, const void* cert, size_t cert_size);
+    const uint8_t* block_id, uint32_t net_txn_state,
+    const void* cert, size_t cert_size);
 
 /**
  * \brief Decode a child context close request.
@@ -556,6 +558,7 @@ int dataservice_decode_request_transaction_get(
  * \param prev_id           Pointer to the previous transaction UUID.               
  * \param next_id           Pointer to the next transaction UUID.               
  * \param artifact_id       Pointer to the artifact UUID.
+ * \param net_txn_state     Transaction state.
  * \param cert              Pointer to the transaction certificate.
  * \param cert_size         Size of the transaction certificate.
  *
@@ -572,7 +575,7 @@ int dataservice_decode_request_transaction_get(
 int dataservice_encode_response_transaction_get(
     void** payload, size_t* payload_size, const uint8_t* txn_id,
     const uint8_t* prev_id, const uint8_t* next_id, const uint8_t* artifact_id,
-    const void* cert, size_t cert_size);
+    uint32_t net_txn_state, const void* cert, size_t cert_size);
 
 /**
  * \brief Decode a transaction get first request.
@@ -600,6 +603,7 @@ int dataservice_decode_request_transaction_get_first(
  * \param prev_id           Pointer to the previous transaction UUID.               
  * \param next_id           Pointer to the next transaction UUID.               
  * \param artifact_id       Pointer to the artifact UUID.
+ * \param net_txn_state     Transaction state.
  * \param cert              Pointer to the transaction certificate.
  * \param cert_size         Size of the transaction certificate.
  *
@@ -616,7 +620,7 @@ int dataservice_decode_request_transaction_get_first(
 int dataservice_encode_response_transaction_get_first(
     void** payload, size_t* payload_size, const uint8_t* txn_id,
     const uint8_t* prev_id, const uint8_t* next_id, const uint8_t* artifact_id,
-    const void* cert, size_t cert_size);
+    uint32_t net_txn_state, const void* cert, size_t cert_size);
 
 /**
  * \brief Decode a transaction submit request.

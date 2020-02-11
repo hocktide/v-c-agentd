@@ -1122,6 +1122,9 @@ TEST_F(dataservice_isolation_test, txn_submit_get_first)
     ASSERT_EQ(0, memcmp(node.prev, begin_key, sizeof(node.prev)));
     ASSERT_EQ(0, memcmp(node.next, end_key, sizeof(node.next)));
     ASSERT_EQ(foo_data_size, (uint64_t)ntohll(node.net_txn_cert_size));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* clean up. */
     free(txn_data);
@@ -1318,6 +1321,9 @@ TEST_F(dataservice_isolation_test, txn_submit_get)
     ASSERT_EQ(0, memcmp(node.prev, begin_key, sizeof(node.prev)));
     ASSERT_EQ(0, memcmp(node.next, end_key, sizeof(node.next)));
     ASSERT_EQ(foo_data_size, (uint64_t)ntohll(node.net_txn_cert_size));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* clean up. */
     free(txn_data);
@@ -1516,6 +1522,9 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
     ASSERT_EQ(0, memcmp(node.prev, begin_key, sizeof(node.prev)));
     ASSERT_EQ(0, memcmp(node.next, end_key, sizeof(node.next)));
     ASSERT_EQ(foo_data_size, (uint64_t)ntohll(node.net_txn_cert_size));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(node.net_txn_state));
 
     /* drop this transaction. */
     sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
@@ -2038,6 +2047,9 @@ TEST_F(dataservice_isolation_test, make_block_simple)
         memcmp(foo_artifact, canonized_node.artifact_id, sizeof(foo_artifact)));
     ASSERT_EQ(0,
         memcmp(foo_block_id, canonized_node.block_id, sizeof(foo_block_id)));
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_CANONIZED,
+        ntohl(canonized_node.net_txn_state));
 
     /* clean up. */
     free(block_data);

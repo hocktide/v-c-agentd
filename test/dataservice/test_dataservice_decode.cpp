@@ -862,7 +862,7 @@ TEST(dataservice_decode_test,
         0x82, 0xc1, 0x96, 0x41, 0x7b, 0xe1, 0x89, 0xf7
     };
 
-    uint8_t resp[80] = {
+    uint8_t resp[84] = {
         /* method code. */
         0x00, 0x00, 0x00, 0x10,
 
@@ -887,6 +887,9 @@ TEST(dataservice_decode_test,
         /* node.artifact_id */
         0xc7, 0xe6, 0x53, 0x0d, 0x84, 0x45, 0x48, 0x58,
         0x82, 0xc1, 0x96, 0x41, 0x7b, 0xe1, 0x89, 0xf7,
+
+        /* node.net_txn_state */
+        0x00, 0x00, 0x00, 0x01,
 
         /* data */
         0x01, 0x02, 0x03, 0x04
@@ -920,8 +923,12 @@ TEST(dataservice_decode_test,
     ASSERT_EQ(0, memcmp(EXPECTED_NODE_ARTIFACT_ID, dresp.node.artifact_id, 16));
     /* the node net size should match */
     ASSERT_EQ(dresp.data_size, (size_t)ntohll(dresp.node.net_txn_cert_size));
+    /* the node net state should match */
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(dresp.node.net_txn_state));
     /* the data pointer should be correct. */
-    ASSERT_EQ(resp + 76, dresp.data);
+    ASSERT_EQ(resp + 80, dresp.data);
 }
 
 /**
@@ -1047,7 +1054,7 @@ TEST(dataservice_decode_test,
         0x82, 0xc1, 0x96, 0x41, 0x7b, 0xe1, 0x89, 0xf7
     };
 
-    uint8_t resp[80] = {
+    uint8_t resp[84] = {
         /* method code. */
         0x00, 0x00, 0x00, 0x11,
 
@@ -1072,6 +1079,9 @@ TEST(dataservice_decode_test,
         /* node.artifact_id */
         0xc7, 0xe6, 0x53, 0x0d, 0x84, 0x45, 0x48, 0x58,
         0x82, 0xc1, 0x96, 0x41, 0x7b, 0xe1, 0x89, 0xf7,
+
+        /* node.net_txn_state */
+        0x00, 0x00, 0x00, 0x01,
 
         /* data */
         0x01, 0x02, 0x03, 0x04
@@ -1103,10 +1113,14 @@ TEST(dataservice_decode_test,
     ASSERT_EQ(0, memcmp(EXPECTED_NODE_NEXT, dresp.node.next, 16));
     /* the node artifact_id should match. */
     ASSERT_EQ(0, memcmp(EXPECTED_NODE_ARTIFACT_ID, dresp.node.artifact_id, 16));
+    /* the node state should match. */
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(dresp.node.net_txn_state));
     /* the node net size should match */
     ASSERT_EQ(dresp.data_size, (size_t)ntohll(dresp.node.net_txn_cert_size));
     /* the data pointer should be correct. */
-    ASSERT_EQ(resp + 76, dresp.data);
+    ASSERT_EQ(resp + 80, dresp.data);
 }
 
 /**
@@ -1238,7 +1252,7 @@ TEST(dataservice_decode_test,
         0x97, 0x6a, 0xa3, 0x6e, 0x9b, 0x22, 0x0a, 0xbd
     };
 
-    uint8_t resp[96] = {
+    uint8_t resp[100] = {
         /* method code. */
         0x00, 0x00, 0x00, 0x0E,
 
@@ -1267,6 +1281,9 @@ TEST(dataservice_decode_test,
         /* node.block_id */
         0x43, 0x9b, 0xd7, 0xe6, 0xd9, 0xea, 0x43, 0x78,
         0x97, 0x6a, 0xa3, 0x6e, 0x9b, 0x22, 0x0a, 0xbd,
+
+        /* transaction state. */
+        0x00, 0x00, 0x00, 0x01,
 
         /* data */
         0x01, 0x02, 0x03, 0x04
@@ -1302,8 +1319,12 @@ TEST(dataservice_decode_test,
     ASSERT_EQ(0, memcmp(EXPECTED_NODE_BLOCK_ID, dresp.node.block_id, 16));
     /* the node net size should match */
     ASSERT_EQ(dresp.data_size, (size_t)ntohll(dresp.node.net_txn_cert_size));
+    /* the node state should match. */
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(dresp.node.net_txn_state));
     /* the data pointer should be correct. */
-    ASSERT_EQ(resp + 92, dresp.data);
+    ASSERT_EQ(resp + 96, dresp.data);
 }
 
 /**

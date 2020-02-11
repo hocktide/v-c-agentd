@@ -22,6 +22,7 @@
  * \param next_id           Pointer to the next transaction UUID.               
  * \param artifact_id       Pointer to the artifact UUID.
  * \param block_id          Pointer to the block UUID.
+ * \param net_txn_state     Net transaction state.
  * \param cert              Pointer to the transaction certificate.
  * \param cert_size         Size of the transaction certificate.
  *
@@ -38,7 +39,8 @@
 int dataservice_encode_response_canonized_transaction_get(
     void** payload, size_t* payload_size, const uint8_t* txn_id,
     const uint8_t* prev_id, const uint8_t* next_id, const uint8_t* artifact_id,
-    const uint8_t* block_id, const void* cert, size_t cert_size)
+    const uint8_t* block_id, uint32_t net_txn_state,
+    const void* cert, size_t cert_size)
 {
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != payload);
@@ -51,7 +53,7 @@ int dataservice_encode_response_canonized_transaction_get(
     MODEL_ASSERT(NULL != cert);
 
     /* create the payload. */
-    *payload_size = 5 * 16 + cert_size;
+    *payload_size = 5 * 16 + 4 + cert_size;
     *payload = (uint8_t*)malloc(*payload_size);
     uint8_t* payload_bytes = (uint8_t*)*payload;
     if (NULL == payload_bytes)
@@ -65,9 +67,10 @@ int dataservice_encode_response_canonized_transaction_get(
     memcpy(payload_bytes + 32, next_id, 16);
     memcpy(payload_bytes + 48, artifact_id, 16);
     memcpy(payload_bytes + 64, block_id, 16);
+    memcpy(payload_bytes + 80, &net_txn_state, sizeof(net_txn_state));
 
     /* copy the certificate data to the payload. */
-    memcpy(payload_bytes + 80, cert, cert_size);
+    memcpy(payload_bytes + 84, cert, cert_size);
 
     /* success. */
     return AGENTD_STATUS_SUCCESS;
