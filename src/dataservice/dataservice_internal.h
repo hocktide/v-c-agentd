@@ -184,6 +184,34 @@ int dataservice_transaction_drop_internal(
     dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id);
 
 /**
+ * \brief Promote a given transaction by ID from the queue.
+ *
+ * This is the internal version of the function, which does not perform any
+ * capabilities checking.  As such, it SHOULD NOT BE USED OUTSIDE OF THE DATA
+ * SERVICE.
+ *
+ * \param ctx           The child context for this operation.
+ * \param dtxn_ctx      The dataservice transaction context for this operation.
+ * \param txn_id        The transaction ID for this transaction.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_NOT_FOUND if the transaction uuid could not
+ *        be found.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out of memory condition was
+ *        encountered during this operation.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_TXN_BEGIN_FAILURE if this function could
+ *        not create a transaction.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_GET_FAILURE if this function failed to
+ *        read from the database.
+ *      - AGENTD_ERROR_DATASERVICE_MDB_PUT_FAILURE if this function failed to
+ *        put to the database.
+ */
+int dataservice_transaction_promote_internal(
+    dataservice_child_context_t* child,
+    dataservice_transaction_context_t* dtxn_ctx, const uint8_t* txn_id);
+
+/**
  * \brief Decode and dispatch requests received by the data service.
  *
  * Returns 0 on success or non-fatal error.  If a non-zero error message is
@@ -472,6 +500,30 @@ int dataservice_decode_and_dispatch_transaction_get(
  *        written to the client socket.
  */
 int dataservice_decode_and_dispatch_transaction_drop(
+    dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
+    size_t size);
+
+/**
+ * \brief Decode and dispatch a transaction promote request.
+ *
+ * Returns 0 on success or non-fatal error.  If a non-zero error message is
+ * returned, then a fatal error has occurred that should not be recovered from.
+ * Any additional information on the socket is suspect.
+ *
+ * \param inst          The instance on which the dispatch occurs.
+ * \param sock          The socket on which the request was received and the
+ *                      response is to be written.
+ * \param req           The request to be decoded and dispatched.
+ * \param size          The size of the request.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if an out-of-memory condition was
+ *        encountered in this operation.
+ *      - AGENTD_ERROR_DATASERVICE_IPC_WRITE_DATA_FAILURE if data could not be
+ *        written to the client socket.
+ */
+int dataservice_decode_and_dispatch_transaction_promote(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
     size_t size);
 

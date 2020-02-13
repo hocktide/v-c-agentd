@@ -807,7 +807,7 @@ TEST(dataservice_decode_test, response_transaction_get_first_decoded)
 {
     uint8_t resp[12] = {
         /* method code. */
-        0x00, 0x00, 0x00, 0x10,
+        0x00, 0x00, 0x00, 0x11,
 
         /* offset == 1023 */
         0x00, 0x00, 0x03, 0xFF,
@@ -862,9 +862,9 @@ TEST(dataservice_decode_test,
         0x82, 0xc1, 0x96, 0x41, 0x7b, 0xe1, 0x89, 0xf7
     };
 
-    uint8_t resp[80] = {
+    uint8_t resp[84] = {
         /* method code. */
-        0x00, 0x00, 0x00, 0x10,
+        0x00, 0x00, 0x00, 0x11,
 
         /* offset == 1023 */
         0x00, 0x00, 0x03, 0xFF,
@@ -887,6 +887,9 @@ TEST(dataservice_decode_test,
         /* node.artifact_id */
         0xc7, 0xe6, 0x53, 0x0d, 0x84, 0x45, 0x48, 0x58,
         0x82, 0xc1, 0x96, 0x41, 0x7b, 0xe1, 0x89, 0xf7,
+
+        /* node.net_txn_state */
+        0x00, 0x00, 0x00, 0x01,
 
         /* data */
         0x01, 0x02, 0x03, 0x04
@@ -920,8 +923,12 @@ TEST(dataservice_decode_test,
     ASSERT_EQ(0, memcmp(EXPECTED_NODE_ARTIFACT_ID, dresp.node.artifact_id, 16));
     /* the node net size should match */
     ASSERT_EQ(dresp.data_size, (size_t)ntohll(dresp.node.net_txn_cert_size));
+    /* the node net state should match */
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(dresp.node.net_txn_state));
     /* the data pointer should be correct. */
-    ASSERT_EQ(resp + 76, dresp.data);
+    ASSERT_EQ(resp + 80, dresp.data);
 }
 
 /**
@@ -992,7 +999,7 @@ TEST(dataservice_decode_test, response_transaction_get_decoded)
 {
     uint8_t resp[12] = {
         /* method code. */
-        0x00, 0x00, 0x00, 0x11,
+        0x00, 0x00, 0x00, 0x12,
 
         /* offset == 1023 */
         0x00, 0x00, 0x03, 0xFF,
@@ -1047,9 +1054,9 @@ TEST(dataservice_decode_test,
         0x82, 0xc1, 0x96, 0x41, 0x7b, 0xe1, 0x89, 0xf7
     };
 
-    uint8_t resp[80] = {
+    uint8_t resp[84] = {
         /* method code. */
-        0x00, 0x00, 0x00, 0x11,
+        0x00, 0x00, 0x00, 0x12,
 
         /* offset == 1023 */
         0x00, 0x00, 0x03, 0xFF,
@@ -1072,6 +1079,9 @@ TEST(dataservice_decode_test,
         /* node.artifact_id */
         0xc7, 0xe6, 0x53, 0x0d, 0x84, 0x45, 0x48, 0x58,
         0x82, 0xc1, 0x96, 0x41, 0x7b, 0xe1, 0x89, 0xf7,
+
+        /* node.net_txn_state */
+        0x00, 0x00, 0x00, 0x01,
 
         /* data */
         0x01, 0x02, 0x03, 0x04
@@ -1103,10 +1113,14 @@ TEST(dataservice_decode_test,
     ASSERT_EQ(0, memcmp(EXPECTED_NODE_NEXT, dresp.node.next, 16));
     /* the node artifact_id should match. */
     ASSERT_EQ(0, memcmp(EXPECTED_NODE_ARTIFACT_ID, dresp.node.artifact_id, 16));
+    /* the node state should match. */
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(dresp.node.net_txn_state));
     /* the node net size should match */
     ASSERT_EQ(dresp.data_size, (size_t)ntohll(dresp.node.net_txn_cert_size));
     /* the data pointer should be correct. */
-    ASSERT_EQ(resp + 76, dresp.data);
+    ASSERT_EQ(resp + 80, dresp.data);
 }
 
 /**
@@ -1238,7 +1252,7 @@ TEST(dataservice_decode_test,
         0x97, 0x6a, 0xa3, 0x6e, 0x9b, 0x22, 0x0a, 0xbd
     };
 
-    uint8_t resp[96] = {
+    uint8_t resp[100] = {
         /* method code. */
         0x00, 0x00, 0x00, 0x0E,
 
@@ -1267,6 +1281,9 @@ TEST(dataservice_decode_test,
         /* node.block_id */
         0x43, 0x9b, 0xd7, 0xe6, 0xd9, 0xea, 0x43, 0x78,
         0x97, 0x6a, 0xa3, 0x6e, 0x9b, 0x22, 0x0a, 0xbd,
+
+        /* transaction state. */
+        0x00, 0x00, 0x00, 0x01,
 
         /* data */
         0x01, 0x02, 0x03, 0x04
@@ -1302,8 +1319,12 @@ TEST(dataservice_decode_test,
     ASSERT_EQ(0, memcmp(EXPECTED_NODE_BLOCK_ID, dresp.node.block_id, 16));
     /* the node net size should match */
     ASSERT_EQ(dresp.data_size, (size_t)ntohll(dresp.node.net_txn_cert_size));
+    /* the node state should match. */
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
+        ntohl(dresp.node.net_txn_state));
     /* the data pointer should be correct. */
-    ASSERT_EQ(resp + 92, dresp.data);
+    ASSERT_EQ(resp + 96, dresp.data);
 }
 
 /**
@@ -1379,7 +1400,7 @@ TEST(dataservice_decode_test, response_transaction_drop_decoded)
 {
     uint8_t resp[12] = {
         /* method code. */
-        0x00, 0x00, 0x00, 0x12,
+        0x00, 0x00, 0x00, 0x13,
 
         /* offset == 1023 */
         0x00, 0x00, 0x03, 0xFF,
@@ -1399,6 +1420,108 @@ TEST(dataservice_decode_test, response_transaction_drop_decoded)
         dresp.hdr.hdr.dispose);
     /* the method code is correct. */
     ASSERT_EQ(DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_DROP,
+        dresp.hdr.method_code);
+    /* the offset is correct. */
+    ASSERT_EQ(1023U, dresp.hdr.offset);
+    /* the status is correct. */
+    ASSERT_EQ(0x12345678U, dresp.hdr.status);
+    /* the payload size is correct. */
+    ASSERT_EQ(0U, dresp.hdr.payload_size);
+}
+
+/**
+ * Test that we check for sizes when decoding.
+ */
+TEST(dataservice_decode_test, response_transaction_promote_bad_sizes)
+{
+    uint8_t resp[100] = { 0 };
+    dataservice_response_transaction_promote_t dresp;
+
+    /* a zero size is invalid. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RESPONSE_PACKET_INVALID_SIZE,
+        dataservice_decode_response_transaction_promote(
+            resp, 0, &dresp));
+
+    /* a truncated size is invalid. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RESPONSE_PACKET_INVALID_SIZE,
+        dataservice_decode_response_transaction_promote(
+            resp, 2 * sizeof(uint32_t), &dresp));
+
+    /* a "too large" size is invalid. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RESPONSE_PACKET_INVALID_SIZE,
+        dataservice_decode_response_transaction_promote(
+            resp, 4 * sizeof(uint32_t), &dresp));
+}
+
+/**
+ * Test that we perform null checks in the decode.
+ */
+TEST(dataservice_decode_test, response_transaction_promote_null_checks)
+{
+    uint8_t resp[100] = { 0 };
+    dataservice_response_transaction_promote_t dresp;
+
+    /* a null response packet pointer is invalid. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RESPONSE_INVALID_PARAMETER,
+        dataservice_decode_response_transaction_promote(
+            nullptr, 3 * sizeof(uint32_t), &dresp));
+
+    /* a null decoded response structure pointer is invalid. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RESPONSE_INVALID_PARAMETER,
+        dataservice_decode_response_transaction_promote(
+            resp, 3 * sizeof(uint32_t), nullptr));
+}
+
+/**
+ * Test that a response packet with an invalid method code returns an error.
+ */
+TEST(dataservice_decode_test, response_transaction_promote_bad_method_code)
+{
+    uint8_t resp[12] = {
+        /* bad method code. */
+        0x80, 0x00, 0x00, 0x00,
+
+        /* offset == 1023 */
+        0x00, 0x00, 0x03, 0xFF,
+
+        /* status == 0x12345678 */
+        0x12, 0x34, 0x56, 0x78
+    };
+    dataservice_response_transaction_promote_t dresp;
+
+    /* a valid response is successfully decoded. */
+    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE,
+        dataservice_decode_response_transaction_promote(
+            resp, sizeof(resp), &dresp));
+}
+
+/**
+ * Test that a response packet is successfully decoded.
+ */
+TEST(dataservice_decode_test, response_transaction_promote_decoded)
+{
+    uint8_t resp[12] = {
+        /* method code. */
+        0x00, 0x00, 0x00, 0x10,
+
+        /* offset == 1023 */
+        0x00, 0x00, 0x03, 0xFF,
+
+        /* status == 0x12345678 */
+        0x12, 0x34, 0x56, 0x78
+    };
+    dataservice_response_transaction_promote_t dresp;
+
+    /* a valid response is successfully decoded. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        dataservice_decode_response_transaction_promote(
+            resp, sizeof(resp), &dresp));
+
+    /* the disposer is set to the memset disposer. */
+    ASSERT_EQ(&dataservice_decode_response_memset_disposer,
+        dresp.hdr.hdr.dispose);
+    /* the method code is correct. */
+    ASSERT_EQ(DATASERVICE_API_METHOD_APP_PQ_TRANSACTION_PROMOTE,
         dresp.hdr.method_code);
     /* the offset is correct. */
     ASSERT_EQ(1023U, dresp.hdr.offset);
@@ -1481,7 +1604,7 @@ TEST(dataservice_decode_test, response_block_make_decoded)
 {
     uint8_t resp[12] = {
         /* method code. */
-        0x00, 0x00, 0x00, 0x14,
+        0x00, 0x00, 0x00, 0x15,
 
         /* offset == 1023 */
         0x00, 0x00, 0x03, 0xFF,
@@ -1578,7 +1701,7 @@ TEST(dataservice_decode_test, response_block_id_by_height_get_decoded)
 {
     uint8_t resp[12] = {
         /* method code. */
-        0x00, 0x00, 0x00, 0x15,
+        0x00, 0x00, 0x00, 0x16,
 
         /* offset == 1023 */
         0x00, 0x00, 0x03, 0xFF,
@@ -1623,7 +1746,7 @@ TEST(dataservice_decode_test,
         0x00,
         0x00,
         0x00,
-        0x15,
+        0x16,
 
         /* offset == 1023 */
         0x00,
@@ -1914,7 +2037,7 @@ TEST(dataservice_decode_test, response_artifact_get_decoded)
 {
     uint8_t resp[12] = {
         /* method code. */
-        0x00, 0x00, 0x00, 0x13,
+        0x00, 0x00, 0x00, 0x14,
 
         /* offset == 1023 */
         0x00, 0x00, 0x03, 0xFF,
@@ -1972,7 +2095,7 @@ TEST(dataservice_decode_test,
 
     uint8_t resp[80] = {
         /* method code. */
-        0x00, 0x00, 0x00, 0x13,
+        0x00, 0x00, 0x00, 0x14,
 
         /* offset == 1023 */
         0x00, 0x00, 0x03, 0xFF,

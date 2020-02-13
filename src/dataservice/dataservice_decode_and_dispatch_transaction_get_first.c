@@ -89,7 +89,7 @@ int dataservice_decode_and_dispatch_transaction_get_first(
     retval =
         dataservice_encode_response_transaction_get_first(
             &payload, &payload_size, node.key, node.prev, node.next,
-            node.artifact_id, txn_bytes, txn_size);
+            node.artifact_id, node.net_txn_state, txn_bytes, txn_size);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;

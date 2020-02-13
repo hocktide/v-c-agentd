@@ -130,6 +130,14 @@ typedef struct dataservice_response_transaction_drop
 } dataservice_response_transaction_drop_t;
 
 /**
+ * \brief Transaction Promote Response.
+ */
+typedef struct dataservice_response_transaction_promote
+{
+    dataservice_response_header_t hdr;
+} dataservice_response_transaction_promote_t;
+
+/**
  * \brief Block Make Response.
  */
 typedef struct dataservice_response_block_make
@@ -389,6 +397,25 @@ int dataservice_decode_response_canonized_transaction_get(
 int dataservice_decode_response_transaction_drop(
     const void* resp, size_t size,
     dataservice_response_transaction_drop_t* dresp);
+
+/**
+ * \brief Decode a response from the promote transaction action.
+ *
+ * \param resp          The response payload to parse.
+ * \param size          The size of this response payload.
+ * \param dresp         The decoded response structure into which this response
+ *                      is decoded.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_RESPONSE_PACKET_INVALID_SIZE if the response
+ *        packet payload size is incorrect.
+ *      - AGENTD_ERROR_DATASERVICE_RESPONSE_INVALID_PARAMETER if one of the
+ *        parameters to the function is invalid.
+ */
+int dataservice_decode_response_transaction_promote(
+    const void* resp, size_t size,
+    dataservice_response_transaction_promote_t* dresp);
 
 /**
  * \brief Decode a response from the block make operation.

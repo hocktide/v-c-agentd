@@ -5,7 +5,8 @@
 int dataservice_encode_response_canonized_transaction_get(
     void** payload, size_t* payload_size, const uint8_t* txn_id,
     const uint8_t* prev_id, const uint8_t* next_id, const uint8_t* artifact_id,
-    const uint8_t* block_id, const void* cert, size_t cert_size)
+    const uint8_t* block_id, uint32_t net_txn_state,
+    const void* cert, size_t cert_size)
 {
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != payload);

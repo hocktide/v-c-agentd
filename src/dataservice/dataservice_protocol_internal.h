@@ -132,6 +132,15 @@ typedef struct dataservice_request_transaction_drop
 } dataservice_request_transaction_drop_t;
 
 /**
+ * \brief Transaction Promote Request structure.
+ */
+typedef struct dataservice_request_transaction_promote
+{
+    dataservice_request_header_t hdr;
+    uint8_t txn_id[16];
+} dataservice_request_transaction_promote_t;
+
+/**
  * \brief Transaction Get Request structure.
  */
 typedef struct dataservice_request_transaction_get
@@ -406,6 +415,7 @@ int dataservice_decode_request_canonized_transaction_get(
  * \param next_id           Pointer to the next transaction UUID.               
  * \param artifact_id       Pointer to the artifact UUID.
  * \param block_id          Pointer to the block UUID.
+ * \param net_txn_state     Net transaction state.
  * \param cert              Pointer to the transaction certificate.
  * \param cert_size         Size of the transaction certificate.
  *
@@ -422,7 +432,8 @@ int dataservice_decode_request_canonized_transaction_get(
 int dataservice_encode_response_canonized_transaction_get(
     void** payload, size_t* payload_size, const uint8_t* txn_id,
     const uint8_t* prev_id, const uint8_t* next_id, const uint8_t* artifact_id,
-    const uint8_t* block_id, const void* cert, size_t cert_size);
+    const uint8_t* block_id, uint32_t net_txn_state,
+    const void* cert, size_t cert_size);
 
 /**
  * \brief Decode a child context close request.
@@ -532,6 +543,23 @@ int dataservice_decode_request_transaction_drop(
     const void* req, size_t size, dataservice_request_transaction_drop_t* dreq);
 
 /**
+ * \brief Decode a transaction promotion request.
+ *
+ * \param req           The request payload to parse.
+ * \param size          The size of this request payload.
+ * \param dreq          The request structure into which this request is
+ *                      decoded.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE if the request
+ *        packet payload size is incorrect.
+ */
+int dataservice_decode_request_transaction_promote(
+    const void* req, size_t size,
+    dataservice_request_transaction_promote_t* dreq);
+
+/**
  * \brief Decode a transaction get request.
  *
  * \param req           The request payload to parse.
@@ -556,6 +584,7 @@ int dataservice_decode_request_transaction_get(
  * \param prev_id           Pointer to the previous transaction UUID.               
  * \param next_id           Pointer to the next transaction UUID.               
  * \param artifact_id       Pointer to the artifact UUID.
+ * \param net_txn_state     Transaction state.
  * \param cert              Pointer to the transaction certificate.
  * \param cert_size         Size of the transaction certificate.
  *
@@ -572,7 +601,7 @@ int dataservice_decode_request_transaction_get(
 int dataservice_encode_response_transaction_get(
     void** payload, size_t* payload_size, const uint8_t* txn_id,
     const uint8_t* prev_id, const uint8_t* next_id, const uint8_t* artifact_id,
-    const void* cert, size_t cert_size);
+    uint32_t net_txn_state, const void* cert, size_t cert_size);
 
 /**
  * \brief Decode a transaction get first request.
@@ -600,6 +629,7 @@ int dataservice_decode_request_transaction_get_first(
  * \param prev_id           Pointer to the previous transaction UUID.               
  * \param next_id           Pointer to the next transaction UUID.               
  * \param artifact_id       Pointer to the artifact UUID.
+ * \param net_txn_state     Transaction state.
  * \param cert              Pointer to the transaction certificate.
  * \param cert_size         Size of the transaction certificate.
  *
@@ -616,7 +646,7 @@ int dataservice_decode_request_transaction_get_first(
 int dataservice_encode_response_transaction_get_first(
     void** payload, size_t* payload_size, const uint8_t* txn_id,
     const uint8_t* prev_id, const uint8_t* next_id, const uint8_t* artifact_id,
-    const void* cert, size_t cert_size);
+    uint32_t net_txn_state, const void* cert, size_t cert_size);
 
 /**
  * \brief Decode a transaction submit request.
