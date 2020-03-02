@@ -94,6 +94,7 @@ int randomservice_decode_and_dispatch_get_random_bytes(
     {
         rndsize = 0;
         retval = AGENTD_ERROR_RANDOMSERVICE_GET_RANDOM_BYTES_READ_FAILED;
+        goto done;
     }
 
     /* success. */
