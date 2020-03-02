@@ -6,6 +6,7 @@
  * \copyright 2018 Velo-Payments, Inc.  All rights reserved.
  */
 
+#include <agentd/dataservice/api.h>
 #include <agentd/status_codes.h>
 #include <vccert/certificate_types.h>
 
@@ -3637,4 +3638,40 @@ TEST_F(dataservice_test, transaction_make_block_bad_block_id)
     dispose((disposable_t*)&ctx);
     free(foo_cert);
     free(foo_block_cert);
+}
+
+/**
+ * Test that dataservice_api_node_ref_is_beginning matches against a begin node.
+ */
+TEST_F(dataservice_test, node_ref_is_beginning)
+{
+    const uint8_t BEGINNING[16] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+    const uint8_t NOT_BEGINNING[16] = {
+        0x8f, 0x8c, 0x87, 0xd0, 0xe7, 0x55, 0x43, 0xa2,
+        0x95, 0x28, 0x3a, 0xb2, 0x55, 0x15, 0xbc, 0x05
+    };
+
+    EXPECT_TRUE(dataservice_api_node_ref_is_beginning(BEGINNING));
+    EXPECT_FALSE(dataservice_api_node_ref_is_beginning(NOT_BEGINNING));
+}
+
+/**
+ * Test that dataservice_api_node_ref_is_beginning matches against an end node.
+ */
+TEST_F(dataservice_test, node_ref_is_end)
+{
+    const uint8_t END[16] = {
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+    };
+    const uint8_t NOT_END[16] = {
+        0x8f, 0x8c, 0x87, 0xd0, 0xe7, 0x55, 0x43, 0xa2,
+        0x95, 0x28, 0x3a, 0xb2, 0x55, 0x15, 0xbc, 0x05
+    };
+
+    EXPECT_TRUE(dataservice_api_node_ref_is_end(END));
+    EXPECT_FALSE(dataservice_api_node_ref_is_end(NOT_END));
 }

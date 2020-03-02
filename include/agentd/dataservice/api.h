@@ -3,7 +3,7 @@
  *
  * \brief API for the data service.
  *
- * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2020 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_DATASERVICE_API_HEADER_GUARD
@@ -1579,6 +1579,27 @@ int dataservice_api_sendreq_canonized_transaction_get(
 int dataservice_api_recvresp_canonized_transaction_get(
     ipc_socket_context_t* sock, uint32_t* offset, uint32_t* status,
     data_transaction_node_t* node, void** data, size_t* data_size);
+
+/**
+ * \brief Determine whether a node id reference is the beginning node id
+ * reference.
+ *
+ * \param idref         The 16 byte UUID reference to compare.
+ *
+ * \returns true if this node id reference is the beginning node reference (all
+ * zeroes) or false otherwise.
+ */
+bool dataservice_api_node_ref_is_beginning(const uint8_t* idref);
+
+/**
+ * \brief Determine whether a node id reference is the end node id reference.
+ *
+ * \param idref         The 16 byte UUID reference to compare.
+ *
+ * \returns true if this node id reference is the end node reference (all 0xFF
+ * bytes) or false otherwise.
+ */
+bool dataservice_api_node_ref_is_end(const uint8_t* idref);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
