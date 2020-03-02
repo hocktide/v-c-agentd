@@ -105,7 +105,7 @@ int randomservice_proc(
     if (0 == *randompid)
     {
         /* open the random device socket. */
-        int random = open("/dev/random", O_RDONLY);
+        int random = open("/dev/urandom", O_RDONLY);
         if (random < 0)
         {
             retval = AGENTD_ERROR_RANDOMSERVICE_RANDOM_DEVICE_OPEN_FAILURE;
