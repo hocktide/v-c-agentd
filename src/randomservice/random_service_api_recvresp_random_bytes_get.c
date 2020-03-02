@@ -77,7 +77,7 @@ int random_service_api_recvresp_random_bytes_get(
 
     /* sanity check of response from random read. */
     if (
-        method_id != RANDOMSERVICE_API_METHOD_GET_RANDOM_BYTES || *status != AGENTD_STATUS_SUCCESS || *bytes_size == 0)
+        RANDOMSERVICE_API_METHOD_GET_RANDOM_BYTES != method_id || AGENTD_STATUS_SUCCESS != *status || 0 == *bytes_size)
     {
         retval = AGENTD_ERROR_RANDOMSERVICE_REQUEST_PACKET_BAD;
         goto cleanup_resp;
