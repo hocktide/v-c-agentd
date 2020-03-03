@@ -3,7 +3,7 @@
  *
  * \brief Run a consensus service instance.
  *
- * \copyright 2019 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2019-2020 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/command.h>
@@ -25,6 +25,7 @@ void private_command_consensus_service(bootstrap_config_t* UNUSED(bconf))
     int retval =
         consensus_service_event_loop(
             AGENTD_FD_CONSENSUS_SVC_DATA,
+            AGENTD_FD_CONSENSUS_SVC_RANDOM,
             AGENTD_FD_CONSENSUS_SVC_LOG,
             AGENTD_FD_CONSENSUS_SVC_CONTROL);
 

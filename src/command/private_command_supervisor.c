@@ -3,7 +3,7 @@
  *
  * \brief Create, spawn, and introduce all services.
  *
- * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2020 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/command.h>
@@ -102,6 +102,7 @@ static int supervisor_run(const bootstrap_config_t* bconf)
     int retval = AGENTD_STATUS_SUCCESS;
     agent_config_t conf;
     process_t* random_service;
+    process_t* random_for_consensus_service;
     process_t* listener_service;
     process_t* data_for_auth_protocol_service;
     process_t* data_for_consensus_service;
@@ -111,6 +112,8 @@ static int supervisor_run(const bootstrap_config_t* bconf)
 
     int random_svc_log_sock = -1;
     int random_svc_log_dummy_sock = -1;
+    int random_svc_for_consensus_log_sock = -1;
+    int random_svc_for_consensus_log_dummy_sock = -1;
     int listen_svc_log_sock = -1;
     int listen_svc_log_dummy_sock = -1;
     int unauth_protocol_svc_log_sock = -1;
@@ -126,6 +129,7 @@ static int supervisor_run(const bootstrap_config_t* bconf)
     int auth_svc_log_sock = -1;
     int auth_svc_log_dummy_sock = -1;
     int consensus_svc_data_sock = -1;
+    int consensus_svc_random_sock = -1;
     int consensus_svc_log_sock = -1;
     int consensus_svc_log_dummy_sock = -1;
     int consensus_svc_control_sock = -1;
@@ -138,6 +142,12 @@ static int supervisor_run(const bootstrap_config_t* bconf)
         ipc_socketpair(
             AF_UNIX, SOCK_STREAM, 0,
             &random_svc_log_sock, &random_svc_log_dummy_sock),
+        cleanup_config);
+    TRY_OR_FAIL(
+        ipc_socketpair(
+            AF_UNIX, SOCK_STREAM, 0,
+            &random_svc_for_consensus_log_sock,
+            &random_svc_for_consensus_log_dummy_sock),
         cleanup_config);
     TRY_OR_FAIL(
         ipc_socketpair(
@@ -182,12 +192,20 @@ static int supervisor_run(const bootstrap_config_t* bconf)
             &unauth_protocol_svc_random_sock),
         cleanup_config);
 
+    /* create random service for consensus service. */
+    TRY_OR_FAIL(
+        supervisor_create_random_service(
+            &random_for_consensus_service, bconf, &conf,
+            &random_svc_for_consensus_log_sock,
+            &consensus_svc_random_sock),
+        cleanup_random_service);
+
     /* create listener service. */
     TRY_OR_FAIL(
         supervisor_create_listener_service(
             &listener_service, bconf, &conf, &unauth_protocol_svc_accept_sock,
             &listen_svc_log_sock),
-        cleanup_random_service);
+        cleanup_random_for_consensus_service);
 
     /* create data service for protocol service. */
     TRY_OR_FAIL(
@@ -222,11 +240,13 @@ static int supervisor_run(const bootstrap_config_t* bconf)
     TRY_OR_FAIL(
         supervisor_create_consensus_service(
             &consensus_service, bconf, &conf, &consensus_svc_data_sock,
-            &consensus_svc_log_sock, &consensus_svc_control_sock),
+            &consensus_svc_random_sock, &consensus_svc_log_sock,
+            &consensus_svc_control_sock),
         cleanup_data_service_for_consensus_service);
 
     /* if we've made it this far, attempt to start each service. */
     START_PROCESS(random_service, cleanup_consensus_service);
+    START_PROCESS(random_for_consensus_service, cleanup_consensus_service);
     START_PROCESS(data_for_consensus_service, cleanup_consensus_service);
     START_PROCESS(data_for_auth_protocol_service, quiesce_data_processes);
     START_PROCESS(listener_service, quiesce_data_processes);
@@ -269,6 +289,9 @@ cleanup_data_for_auth_protocol_service:
 cleanup_listener_service:
     CLEANUP_PROCESS(listener_service);
 
+cleanup_random_for_consensus_service:
+    CLEANUP_PROCESS(random_for_consensus_service);
+
 cleanup_random_service:
     CLEANUP_PROCESS(random_service);
 
@@ -278,6 +301,8 @@ cleanup_config:
 done:
     CLOSE_IF_VALID(random_svc_log_sock);
     CLOSE_IF_VALID(random_svc_log_dummy_sock);
+    CLOSE_IF_VALID(random_svc_for_consensus_log_sock);
+    CLOSE_IF_VALID(random_svc_for_consensus_log_dummy_sock);
     CLOSE_IF_VALID(listen_svc_log_sock);
     CLOSE_IF_VALID(listen_svc_log_dummy_sock);
     CLOSE_IF_VALID(unauth_protocol_svc_log_sock);
@@ -293,6 +318,7 @@ done:
     CLOSE_IF_VALID(auth_protocol_svc_data_sock);
     CLOSE_IF_VALID(auth_svc_sock);
     CLOSE_IF_VALID(consensus_svc_data_sock);
+    CLOSE_IF_VALID(consensus_svc_random_sock);
     CLOSE_IF_VALID(consensus_svc_log_sock);
     CLOSE_IF_VALID(consensus_svc_log_dummy_sock);
     CLOSE_IF_VALID(consensus_svc_control_sock);

@@ -3,7 +3,7 @@
  *
  * \brief Service level API for the consensus service.
  *
- * \copyright 2019 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2019-2020 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_CONSENSUSSERVICE_HEADER_GUARD
@@ -23,9 +23,11 @@ extern "C" {
  * \brief Event loop for the consensus service.  This is the entry point for the
  * consensus service.
  *
- * \param datasock      The data service socket.  The protocol service
+ * \param datasock      The data service socket.  The consensus service
  *                      communicates with the dataservice using this socket.
- * \param logsock       The logging service socket.  The protocol service logs
+ * \param randomsock    The random service socket.  The consensus service
+ *                      communicates with the random service using this socket.
+ * \param logsock       The logging service socket.  The consensus service logs
  *                      on this socket.
  * \param controlsock   The socket used to control the consensus service.
  *
@@ -41,7 +43,7 @@ extern "C" {
  *            running the protocol service event loop failed.
  */
 int consensus_service_event_loop(
-    int datasock, int logsock, int controlsock);
+    int datasock, int randomsock, int logsock, int controlsock);
 
 /**
  * \brief Spawn a consensus service process using the provided config structure
@@ -54,6 +56,7 @@ int consensus_service_event_loop(
  * \param conf          The configuration for this service.
  * \param logsock       Socket used to communicate with the logger.
  * \param datasock      Socket used to communicate with the data service.
+ * \param randomsock    Socket used to communicate with the random service.
  * \param controlsock   Socket used to control the consensus service.
  * \param consensuspid  Pointer to the consensus service pid, to be updated on
  *                      the successful completion of this function.
@@ -84,7 +87,8 @@ int consensus_service_event_loop(
  */
 int start_consensus_proc(
     const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,
-    int datasock, int controlsock, pid_t* consensuspid, bool runsecure);
+    int datasock, int randomsock, int controlsock, pid_t* consensuspid,
+    bool runsecure);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

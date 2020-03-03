@@ -3,7 +3,7 @@
  *
  * \brief Create the consensus service.
  *
- * \copyright 2019 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2019-2020 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/control.h>
@@ -23,6 +23,7 @@ typedef struct consensus_process
     const bootstrap_config_t* bconf;
     const agent_config_t* conf;
     int* data_socket;
+    int* random_socket;
     int* log_socket;
     int control_socket;
     /* do not close the srv socket. */
@@ -43,6 +44,7 @@ static int supervisor_start_consensus_service(process_t* proc);
  *                              consensus service.  This configuration must be
  *                              valid for the lifetime of the service.
  * \param data_socket           The data socket descriptor.
+ * \param random_socket         The random socket descriptor.
  * \param log_socket            The log socket descriptor.
  * \param control_socket        The control socket descriptor.
  *
@@ -52,8 +54,8 @@ static int supervisor_start_consensus_service(process_t* proc);
  */
 int supervisor_create_consensus_service(
     process_t** svc, const bootstrap_config_t* bconf,
-    const agent_config_t* conf, int* data_socket, int* log_socket,
-    int* control_socket)
+    const agent_config_t* conf, int* data_socket, int* random_socket,
+    int* log_socket, int* control_socket)
 {
     int retval;
 
@@ -73,6 +75,7 @@ int supervisor_create_consensus_service(
     consensus_proc->bconf = bconf;
     consensus_proc->conf = conf;
     consensus_proc->data_socket = data_socket;
+    consensus_proc->random_socket = random_socket;
     consensus_proc->log_socket = log_socket;
 
     /* create the socketpair for the control socket. */
@@ -118,6 +121,7 @@ static int supervisor_start_consensus_service(process_t* proc)
         start_consensus_proc(
             consensus_proc->bconf, consensus_proc->conf,
             *consensus_proc->log_socket, *consensus_proc->data_socket,
+            *consensus_proc->random_socket,
             consensus_proc->control_socket,
             &consensus_proc->hdr.process_id,
             true),
@@ -126,6 +130,7 @@ static int supervisor_start_consensus_service(process_t* proc)
     /* if successful, the child process owns the sockets. */
     *consensus_proc->log_socket = -1;
     *consensus_proc->data_socket = -1;
+    *consensus_proc->random_socket = -1;
     consensus_proc->control_socket = -1;
 
     /* attempt to send config data to the consensus proc. */
@@ -190,6 +195,13 @@ static void supervisor_dispose_consensus_service(void* disposable)
     {
         close(*consensus_proc->data_socket);
         *consensus_proc->data_socket = -1;
+    }
+
+    /* clean up the random socket if valid. */
+    if (*consensus_proc->random_socket > 0)
+    {
+        close(*consensus_proc->random_socket);
+        *consensus_proc->random_socket = -1;
     }
 
     /* clean up the control socket if valid. */

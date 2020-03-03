@@ -3,7 +3,7 @@
  *
  * Mock dataservice methods.
  *
- * \copyright 2019 Velo-Payments, Inc.  All rights reserved.
+ * \copyright 2019-2020 Velo-Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/ipc.h>
@@ -1628,7 +1628,7 @@ bool mock_dataservice::mock_dataservice::
 
     /* verify the request. */
     if (
-        child_index != dreq.hdr.child_index || 0 != memcmp(block_id, dreq.block_id, 16) || cert_size != dreq.cert_size || 0 != memcmp(cert, dreq.cert, cert_size))
+        child_index != dreq.hdr.child_index || ((NULL != block_id) && (0 != memcmp(block_id, dreq.block_id, 16))) || ((0 != cert_size) && (cert_size != dreq.cert_size)) || ((NULL != cert) && (0 != memcmp(cert, dreq.cert, cert_size))))
     {
         retval = false;
         goto cleanup_val;

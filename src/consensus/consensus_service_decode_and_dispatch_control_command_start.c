@@ -3,7 +3,7 @@
  *
  * \brief Decode and dispatch the start command.
  *
- * \copyright 2019 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2019-2020 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/consensusservice.h>
@@ -39,6 +39,8 @@ int consensus_service_decode_and_dispatch_control_command_start(
     consensusservice_instance_t* instance, ipc_socket_context_t* sock,
     const void* UNUSED(req), size_t UNUSED(size))
 {
+    int retval;
+
     /* parameter sanity checks. */
     MODEL_ASSERT(NULL != instance);
     MODEL_ASSERT(NULL != sock);
@@ -47,32 +49,55 @@ int consensus_service_decode_and_dispatch_control_command_start(
     /* if this instance has not been configured, then it can't be started. */
     if (!instance->configured)
     {
-        consensus_service_decode_and_dispatch_write_status(
-            sock, CONSENSUSSERVICE_API_METHOD_START, 0U,
-            AGENTD_ERROR_CONSENSUSSERVICE_START_BEFORE_CONFIGURE, NULL, 0);
-
-        return AGENTD_STATUS_SUCCESS;
+        retval =
+            consensus_service_decode_and_dispatch_write_status(
+                sock, CONSENSUSSERVICE_API_METHOD_START, 0U,
+                AGENTD_ERROR_CONSENSUSSERVICE_START_BEFORE_CONFIGURE, NULL, 0);
+        goto done;
     }
 
     /* if this instance is running, then it can't be started again. */
     if (instance->running)
     {
-        consensus_service_decode_and_dispatch_write_status(
-            sock, CONSENSUSSERVICE_API_METHOD_START, 0U,
-            AGENTD_ERROR_CONSENSUSSERVICE_ALREADY_RUNNING, NULL, 0);
-
-        return AGENTD_STATUS_SUCCESS;
+        retval =
+            consensus_service_decode_and_dispatch_write_status(
+                sock, CONSENSUSSERVICE_API_METHOD_START, 0U,
+                AGENTD_ERROR_CONSENSUSSERVICE_ALREADY_RUNNING, NULL, 0);
+        goto done;
     }
 
     /* otherwise, start the service. */
     instance->running = true;
 
-    /* TODO - add code here for starting the service on an event timer. */
+    /* create a timer event for running the consensus action. */
+    retval =
+        ipc_timer_init(
+            &instance->timer, instance->block_max_seconds * 1000,
+            &consensus_service_timer_cb, instance);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        /* TODO - write error status. */
+        goto done;
+    }
+
+    /* set the timer event. */
+    retval = ipc_event_loop_add_timer(instance->loop_context, &instance->timer);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        /* TODO - write error status. */
+        goto cleanup_timer;
+    }
 
     /* write a success status. */
-    consensus_service_decode_and_dispatch_write_status(
-        sock, CONSENSUSSERVICE_API_METHOD_START, 0U, AGENTD_STATUS_SUCCESS,
-        NULL, 0);
+    retval =
+        consensus_service_decode_and_dispatch_write_status(
+            sock, CONSENSUSSERVICE_API_METHOD_START, 0U, AGENTD_STATUS_SUCCESS,
+            NULL, 0);
+    goto done;
 
-    return AGENTD_STATUS_SUCCESS;
+cleanup_timer:
+    dispose((disposable_t*)&instance->timer);
+
+done:
+    return retval;
 }

@@ -3,18 +3,31 @@
  *
  * \brief Internal header for the consensus service.
  *
- * \copyright 2019 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2019-2020 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_CONSENSUSSERVICE_INTERNAL_HEADER_GUARD
 #define AGENTD_CONSENSUSSERVICE_INTERNAL_HEADER_GUARD
 
+#include <agentd/dataservice/data.h>
 #include <agentd/ipc.h>
+#include <vccert/builder.h>
+#include <vccrypt/suite.h>
+#include <vpr/allocator.h>
+#include <vpr/linked_list.h>
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 extern "C" {
 #endif  //__cplusplus
+
+/* forward declaration for consensusservice_transaction_t */
+struct consensusservice_transaction;
+typedef struct consensusservice_transaction consensusservice_transaction_t;
+
+/* forward declaration for consensusservice_state_t */
+enum consensusservice_state;
+typedef enum consensusservice_state consensusservice_state_t;
 
 typedef struct consensusservice_instance
 {
@@ -23,9 +36,39 @@ typedef struct consensusservice_instance
     bool running;
     bool force_exit;
     int64_t block_max_seconds;
-    int64_t block_max_transactions;
+    size_t block_max_transactions;
     ipc_event_loop_context_t* loop_context;
+    ipc_socket_context_t* data;
+    ipc_socket_context_t* random;
+    uint32_t data_child_context;
+    ipc_timer_context_t timer;
+    int state;
+    allocator_options_t alloc_opts;
+    vccrypt_suite_options_t crypto_suite;
+    vccert_builder_options_t builder_opts;
+    linked_list_options_t transaction_list_opts;
+    uint8_t block_id[16];
+    linked_list_t* transaction_list;
 } consensusservice_instance_t;
+
+struct consensusservice_transaction
+{
+    disposable_t hdr;
+    data_transaction_node_t node;
+    size_t cert_size;
+    uint8_t cert[];
+};
+
+enum consensusservice_state
+{
+    CONSENSUS_SERVICE_STATE_IDLE,
+    CONSENSUS_SERVICE_STATE_WAITRESP_GET_RANDOM_BYTES,
+    CONSENSUS_SERVICE_STATE_WAITRESP_CHILD_CONTEXT_CREATE,
+    CONSENSUS_SERVICE_STATE_WAITRESP_PQ_TXN_FIRST_GET,
+    CONSENSUS_SERVICE_STATE_WAITRESP_PQ_TXN_GET,
+    CONSENSUS_SERVICE_STATE_WAITRESP_BLOCK_MAKE,
+    CONSENSUS_SERVICE_STATE_WAITRESP_CHILD_CONTEXT_CLOSE
+};
 
 /**
  * \brief Create the consensus service instance.
@@ -33,6 +76,37 @@ typedef struct consensusservice_instance
  * \returns a properly created consensus service instance, or NULL on failure.
  */
 consensusservice_instance_t* consensusservice_instance_create();
+
+/**
+ * \brief Dispose of a consensusservice_transaction_t instance.
+ *
+ * \param ptr           Opaque pointer to the transaction instance to be
+ *                      disposed.
+ */
+void consensusservice_transaction_dispose(void* ptr);
+
+/**
+ * \brief List element disposer for the consensus service transaction linked
+ * list.
+ *
+ * \param alloc_opts    Ignored by this disposer.
+ * \param elem          The element to dispose.
+ */
+void consensusservice_transaction_list_element_dispose(
+    allocator_options_t* alloc_opts, void* elem);
+
+/**
+ * \brief Timer callback for the consensus service.
+ *
+ * This callback is called periodically to check the process queue for attested
+ * certificates.  When these are found, these are used to build the next block
+ * that is appended to the blockchain.
+ *
+ * \param timer         The timer context for this call.
+ * \param context       The user context for this call, which is expected to be
+ *                      a \ref consensusservice_instance_t instance.
+ */
+void consensus_service_timer_cb(ipc_timer_context_t* timer, void* context);
 
 /**
  * \brief Decode and dispatch requests received by the consensus service on the
@@ -138,6 +212,130 @@ int consensus_service_decode_and_dispatch_control_command_start(
 int consensus_service_decode_and_dispatch_write_status(
     ipc_socket_context_t* sock, uint32_t method, uint32_t offset,
     uint32_t status, void* data, size_t data_size);
+
+/**
+ * \brief Write a request to the random service to generate a block id.
+ *
+ * \param instance      The consensus service instance.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - a non-zero return code on failure.
+ */
+int consensus_service_write_block_id_request(
+    consensusservice_instance_t* instance);
+
+/**
+ * \brief Callback for writing data to the data service socket from the
+ * consensus service.
+ *
+ * \param ctx           The socket context on which this write request occurred.
+ * \param event_flags   The event flags that triggered this callback.
+ * \param user_context  Opaque pointer to the consensus service instance.
+ */
+void consensus_service_data_write(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
+ * \brief Callback for writing data to the random service socket from the
+ * consensus service.
+ *
+ * \param ctx           The socket context on which this write request occurred.
+ * \param event_flags   The event flags that triggered this callback.
+ * \param user_context  Opaque pointer to the consensus service instance.
+ */
+void consensus_service_random_write(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
+ * \brief Handle the response from the data service child context create call.
+ *
+ * \param instance      The consensus service instance.
+ * \param resp          The response from the data service.
+ * \param resp_size     The size of the response from the data service.
+ */
+void consensus_service_dataservice_response_child_context_create(
+    consensusservice_instance_t* instance, const uint32_t* resp,
+    const size_t resp_size);
+
+/**
+ * \brief Handle the response from the data service child context close call.
+ *
+ * \param instance      The consensus service instance.
+ * \param resp          The response from the data service.
+ * \param resp_size     The size of the response from the data service.
+ */
+void consensus_service_dataservice_response_child_context_close(
+    consensusservice_instance_t* instance, const uint32_t* resp,
+    const size_t resp_size);
+
+/**
+ * \brief Handle the response from the data service transaction first read.
+ *
+ * \param instance      The consensus service instance.
+ * \param resp          The response from the data service.
+ * \param resp_size     The size of the response from the data service.
+ */
+void consensus_service_dataservice_response_transaction_first_read(
+    consensusservice_instance_t* instance, const uint32_t* resp,
+    const size_t resp_size);
+
+/**
+ * \brief Handle the response from the data service transaction read.
+ *
+ * \param instance      The consensus service instance.
+ * \param resp          The response from the data service.
+ * \param resp_size     The size of the response from the data service.
+ */
+void consensus_service_dataservice_response_transaction_read(
+    consensusservice_instance_t* instance, const uint32_t* resp,
+    const size_t resp_size);
+
+/**
+ * \brief Handle the response from the data service block write.
+ *
+ * \param instance      The consensus service instance.
+ * \param resp          The response from the data service.
+ * \param resp_size     The size of the response from the data service.
+ */
+void consensus_service_dataservice_response_block_write(
+    consensusservice_instance_t* instance, const uint32_t* resp,
+    const size_t resp_size);
+
+/**
+ * \brief Send a child context create request to the data service.
+ *
+ * \param instance      The consensus service instance.
+ */
+int consensus_service_dataservice_sendreq_child_context_create(
+    consensusservice_instance_t* instance);
+
+/**
+ * \brief Build a new block for the blockchain, using the currently attested
+ * transactions.
+ *
+ * \param instance      The consensus service instance.
+ */
+int consensus_service_block_make(
+    consensusservice_instance_t* instance);
+
+/**
+ * \brief Close the child context, leading to reset of the consensus service.
+ *
+ * \param instance      The consensus service instance.
+ */
+void consensus_service_child_context_close(
+    consensusservice_instance_t* instance);
+
+/**
+ * \brief Clean up and reset the consensus service.
+ *
+ * \param instance      The consensus service instance.
+ * \param should_sleep  If set, wake up on the sleep timer.  If not set, call
+ *                      the sleep timer callback right away.
+ */
+void consensus_service_reset(
+    consensusservice_instance_t* instance, bool should_sleep);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

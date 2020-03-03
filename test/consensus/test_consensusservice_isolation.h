@@ -3,7 +3,7 @@
  *
  * Private header for the consensus service isolation tests.
  *
- * \copyright 2019 Velo-Payments, Inc.  All rights reserved.
+ * \copyright 2019-2020 Velo-Payments, Inc.  All rights reserved.
  */
 
 #ifndef TEST_CONSENSUSSERVICE_ISOLATION_HEADER_GUARD
@@ -48,7 +48,10 @@ protected:
     int controlsock;
     int logsock;
     int rlogsock;
+    int rprotosock;
+    pid_t randompid;
     pid_t consensuspid;
+    int random_proc_status;
     int consensus_proc_status;
     char* path;
     char wd[16384];
@@ -71,6 +74,9 @@ protected:
 
     /** \brief Helper to verify dataservice calls on connection teardown. */
     int dataservice_mock_valid_connection_teardown();
+
+    /** \brief Helper to configure and start consensus service. */
+    int consensusservice_configure_and_start(int max_seconds, int max_txns);
 };
 
 #endif /*TEST_CONSENSUSSERVICE_ISOLATION_HEADER_GUARD*/

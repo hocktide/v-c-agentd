@@ -3,10 +3,12 @@
  *
  * Helpers for the consensus service isolation test.
  *
- * \copyright 2019 Velo-Payments, Inc.  All rights reserved.
+ * \copyright 2019-2020 Velo-Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/consensusservice.h>
+#include <agentd/consensusservice/api.h>
+#include <agentd/randomservice.h>
 #include <agentd/status_codes.h>
 #include <vpr/allocator/malloc_allocator.h>
 
@@ -70,11 +72,16 @@ void consensusservice_isolation_test::SetUp()
     memset(&conf, 0, sizeof(conf));
     conf.hdr.dispose = &config_dispose;
 
+    /* spawn the random service process. */
+    random_proc_status =
+        randomservice_proc(
+            &bconf, &conf, rlogsock, &rprotosock, &randompid, false);
+
     /* spawn the consensus service process. */
     consensus_proc_status =
         start_consensus_proc(
-            &bconf, &conf, logsock, datasock_srv, controlsock_srv,
-            &consensuspid, false);
+            &bconf, &conf, logsock, datasock_srv, rprotosock,
+            controlsock_srv, &consensuspid, false);
 
     /* create the mock dataservice. */
     dataservice = make_unique<mock_dataservice::mock_dataservice>(datasock);
@@ -82,6 +89,14 @@ void consensusservice_isolation_test::SetUp()
 
 void consensusservice_isolation_test::TearDown()
 {
+    /* terminate the random service. */
+    if (0 == random_proc_status)
+    {
+        int status = 0;
+        kill(randompid, SIGTERM);
+        waitpid(randompid, &status, 0);
+    }
+
     /* terminate the consensus service process. */
     if (0 == consensus_proc_status)
     {
@@ -166,4 +181,65 @@ int consensusservice_isolation_test::
         return 1;
 
     return 0;
+}
+
+int consensusservice_isolation_test::
+    consensusservice_configure_and_start(int max_seconds, int max_txns)
+{
+    int retval;
+    uint32_t status, offset;
+    agent_config_t conf;
+
+    /* set config values for consensus service. */
+    conf.block_max_seconds_set = true;
+    conf.block_max_seconds = max_seconds;
+    conf.block_max_transactions_set = true;
+    conf.block_max_transactions = max_txns;
+
+    /* send the configure service request. */
+    retval =
+        consensus_api_sendreq_configure(controlsock, &conf);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        return retval;
+    }
+
+    /* receive the configure service response. */
+    retval =
+        consensus_api_recvresp_configure(controlsock, &offset, &status);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        return retval;
+    }
+
+    /* verify that the configure request was successful. */
+    retval = (int)status;
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        return retval;
+    }
+
+    /* send the start request. */
+    retval = consensus_api_sendreq_start(controlsock);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        return retval;
+    }
+
+    /* receive the start response. */
+    retval = consensus_api_recvresp_start(controlsock, &offset, &status);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        return retval;
+    }
+
+    /* verify that the start request was successful. */
+    retval = (int)status;
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        return retval;
+    }
+
+    /* success. */
+    return AGENTD_STATUS_SUCCESS;
 }

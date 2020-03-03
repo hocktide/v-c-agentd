@@ -3,7 +3,7 @@
  *
  * \brief Spawn the consensus service process.
  *
- * \copyright 2019 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2019-2020 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/bootstrap_config.h>
@@ -31,6 +31,7 @@
  * \param conf          The configuration for this service.
  * \param logsock       Socket used to communicate with the logger.
  * \param datasock      Socket used to communicate with the data service.
+ * \param randomsock    Socket used to communicate with the random service.
  * \param controlsock   Socket used to control the consensus service.
  * \param consensuspid  Pointer to the consensus service pid, to be updated on
  *                      the successful completion of this function.
@@ -61,7 +62,8 @@
  */
 int start_consensus_proc(
     const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,
-    int datasock, int controlsock, pid_t* consensuspid, bool runsecure)
+    int datasock, int randomsock, int controlsock, pid_t* consensuspid,
+    bool runsecure)
 {
     int retval = 1;
     uid_t uid;
@@ -131,7 +133,7 @@ int start_consensus_proc(
         /* move the fds out of the way. */
         if (AGENTD_STATUS_SUCCESS !=
             privsep_protect_descriptors(
-                &logsock, &datasock, &controlsock, NULL))
+                &logsock, &datasock, &randomsock, &controlsock, NULL))
         {
             retval = AGENTD_ERROR_CONFIG_PRIVSEP_SETFDS_FAILURE;
             goto done;
@@ -151,6 +153,7 @@ int start_consensus_proc(
             privsep_setfds(
                 logsock, /* ==> */ AGENTD_FD_CONSENSUS_SVC_LOG,
                 datasock, /* ==> */ AGENTD_FD_CONSENSUS_SVC_DATA,
+                randomsock, /* ==> */ AGENTD_FD_CONSENSUS_SVC_RANDOM,
                 controlsock, /* ==> */ AGENTD_FD_CONSENSUS_SVC_CONTROL,
                 -1);
         if (0 != retval)

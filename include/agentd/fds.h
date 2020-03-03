@@ -3,7 +3,7 @@
  *
  * \brief File descriptors for agentd.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2020 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_FDS_CONFIG_HEADER_GUARD
@@ -168,10 +168,16 @@ extern "C" {
 #define AGENTD_FD_CONSENSUS_SVC_DATA ((int)1)
 
 /**
+ * \brief File descriptor for the consensus service random socket.
+ * Used by the consensus service private command.
+ */
+#define AGENTD_FD_CONSENSUS_SVC_RANDOM ((int)2)
+
+/**
  * \brief File descriptor for the consensus service control socket.
  * Used by the consensus service private command.
  */
-#define AGENTD_FD_CONSENSUS_SVC_CONTROL ((int)2)
+#define AGENTD_FD_CONSENSUS_SVC_CONTROL ((int)3)
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
