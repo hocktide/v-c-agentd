@@ -29,6 +29,10 @@
  */
 int ipc_write_string_block(int sock, const char* val)
 {
+    /* parameter sanity checks. */
+    MODEL_ASSERT(sock >= 0);
+    MODEL_ASSERT(val != NULL);
+
     uint8_t typeval = IPC_DATA_TYPE_STRING;
 
     /* attempt to write the type to the socket. */

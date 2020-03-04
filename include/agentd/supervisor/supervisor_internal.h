@@ -3,7 +3,7 @@
  *
  * \brief Internal supervisor functions for setting up services.
  *
- * \copyright 2019 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2019-2020 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_SUPERVISOR_SUPERVISOR_INTERNAL_HEADER_GUARD
@@ -158,7 +158,9 @@ int supervisor_create_auth_service(
  *                              consensus service.  This configuration must be
  *                              valid for the lifetime of the service.
  * \param data_socket           The data socket descriptor.
+ * \param random_socket         The random socket descriptor.
  * \param log_socket            The log socket descriptor.
+ * \param control_socket        The control socket descriptor.
  *
  * \returns a status indicating success or failure.
  *          - AGENTD_STATUS_SUCCESS on success.
@@ -166,7 +168,8 @@ int supervisor_create_auth_service(
  */
 int supervisor_create_consensus_service(
     process_t** svc, const bootstrap_config_t* bconf,
-    const agent_config_t* conf, int* data_socket, int* log_socket);
+    const agent_config_t* conf, int* data_socket, int* random_socket,
+    int* log_socket, int* control_socket);
 
 /**
  * \brief Install the signal handler for the supervisor.

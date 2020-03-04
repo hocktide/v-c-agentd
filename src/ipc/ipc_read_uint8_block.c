@@ -37,6 +37,10 @@ int ipc_read_uint8_block(int sock, uint8_t* val)
     uint32_t nsize = 0U;
     uint32_t size = 0U;
 
+    /* parameter sanity checks. */
+    MODEL_ASSERT(sock >= 0);
+    MODEL_ASSERT(NULL != val);
+
     /* attempt to read the type info. */
     if (sizeof(type) != read(sock, &type, sizeof(type)))
         return AGENTD_ERROR_IPC_READ_BLOCK_FAILURE;

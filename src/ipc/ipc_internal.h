@@ -31,6 +31,14 @@ typedef struct ipc_socket_impl
 } ipc_socket_impl_t;
 
 /**
+ * \brief Internal context for timers.
+ */
+typedef struct ipc_timer_impl
+{
+    struct event* timer_ev;
+} ipc_timer_impl_t;
+
+/**
  * \brief Internal context for signal handling events.
  */
 typedef struct ipc_signal_event_impl

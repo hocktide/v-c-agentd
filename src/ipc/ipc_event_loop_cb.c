@@ -26,18 +26,36 @@
 void ipc_event_loop_cb(
     evutil_socket_t UNUSED(fd), short what, void* ctx)
 {
-    /* get the socket context. */
-    ipc_socket_context_t* sock = (ipc_socket_context_t*)ctx;
-
     /* dispatch read event. */
-    if ((what & EV_READ) && sock->read)
+    if (what & EV_READ)
     {
-        sock->read(sock, IPC_SOCKET_EVENT_READ, sock->user_context);
+        /* get the socket context. */
+        ipc_socket_context_t* sock = (ipc_socket_context_t*)ctx;
+
+        if (sock->read)
+        {
+            sock->read(sock, IPC_SOCKET_EVENT_READ, sock->user_context);
+        }
     }
 
     /* dispatch write event. */
-    if ((what & EV_WRITE) && sock->write)
+    if (what & EV_WRITE)
     {
-        sock->write(sock, IPC_SOCKET_EVENT_WRITE, sock->user_context);
+        /* get the socket context. */
+        ipc_socket_context_t* sock = (ipc_socket_context_t*)ctx;
+
+        if (sock->write)
+        {
+            sock->write(sock, IPC_SOCKET_EVENT_WRITE, sock->user_context);
+        }
+    }
+
+    /* dispatch timer event. */
+    if (what & EV_TIMEOUT)
+    {
+        /* get the timer context. */
+        ipc_timer_context_t* timer = (ipc_timer_context_t*)ctx;
+
+        timer->callback(timer, timer->user_context);
     }
 }

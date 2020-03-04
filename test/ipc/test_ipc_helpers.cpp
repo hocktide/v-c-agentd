@@ -103,3 +103,55 @@ void ipc_test::nonblock_write(
 
     that->onWrite();
 }
+
+void ipc_test::timer_cb(ipc_timer_context_t*, void* ctx)
+{
+    test_timer_context* ptr = (test_timer_context*)ctx;
+
+    ptr->onTimer();
+}
+
+/**
+ * Do the setup for timer mode.
+ */
+void ipc_test::timermode_setup(int dummysock)
+{
+    if (nonblockdatasock_configured)
+    {
+        ipc_event_loop_remove(&loop, &nonblockdatasock);
+        dispose((disposable_t*)&nonblockdatasock);
+        nonblockdatasock_configured = false;
+    }
+
+    /* handle a non-blocking event loop. */
+    if (!nonblockdatasock_configured)
+    {
+        ipc_make_noblock(dummysock, &nonblockdatasock, this);
+        nonblockdatasock_configured = true;
+        ipc_event_loop_init(&loop);
+    }
+}
+
+/**
+ * Run a timer in the event loop.
+ */
+void ipc_test::timermode()
+{
+    /* this assumes that the caller has initialized the loop context, created a
+     * timer, and assigned it to the loop.  We're just going to run the loop. */
+
+    ipc_event_loop_run(&loop);
+}
+
+/**
+ * Do the teardown for timer mode.
+ */
+void ipc_test::timermode_teardown()
+{
+    if (nonblockdatasock_configured)
+    {
+        ipc_event_loop_remove(&loop, &nonblockdatasock);
+        dispose((disposable_t*)&nonblockdatasock);
+        nonblockdatasock_configured = false;
+    }
+}
