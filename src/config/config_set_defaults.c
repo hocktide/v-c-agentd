@@ -42,11 +42,11 @@ int config_set_defaults(agent_config_t* conf, const bootstrap_config_t* bconf)
         conf->loglevel_set = true;
     }
 
-    /* if block_max_seconds is not set, set it to 5. */
-    if (!conf->block_max_seconds_set || conf->block_max_seconds < 0 || conf->block_max_seconds > BLOCK_SECONDS_MAXIMUM)
+    /* if block_max_milliseconds is not set, set it to 5. */
+    if (!conf->block_max_milliseconds_set || conf->block_max_milliseconds < 0 || conf->block_max_milliseconds > BLOCK_MILLISECONDS_MAXIMUM)
     {
-        conf->block_max_seconds = 5;
-        conf->block_max_seconds_set = true;
+        conf->block_max_milliseconds = 5000;
+        conf->block_max_milliseconds_set = true;
     }
 
     /* if block_max_transactions is not set, set it to 500. */

@@ -103,7 +103,7 @@ TEST(config_set_defaults_test, empty_config)
     /* PRECONDITIONS: all config values are unset. */
     ASSERT_EQ(nullptr, user_context.config->logdir);
     ASSERT_FALSE(user_context.config->loglevel_set);
-    ASSERT_FALSE(user_context.config->block_max_seconds_set);
+    ASSERT_FALSE(user_context.config->block_max_milliseconds_set);
     ASSERT_FALSE(user_context.config->block_max_transactions_set);
     ASSERT_EQ(nullptr, user_context.config->secret);
     ASSERT_EQ(nullptr, user_context.config->rootblock);
@@ -119,8 +119,8 @@ TEST(config_set_defaults_test, empty_config)
     ASSERT_STREQ("log", user_context.config->logdir);
     ASSERT_TRUE(user_context.config->loglevel_set);
     ASSERT_EQ(4, user_context.config->loglevel);
-    ASSERT_TRUE(user_context.config->block_max_seconds_set);
-    ASSERT_EQ(5, user_context.config->block_max_seconds);
+    ASSERT_TRUE(user_context.config->block_max_milliseconds_set);
+    ASSERT_EQ(5000, user_context.config->block_max_milliseconds);
     ASSERT_TRUE(user_context.config->block_max_transactions_set);
     ASSERT_EQ(500, user_context.config->block_max_transactions);
     ASSERT_STREQ("root/secret.cert", user_context.config->secret);

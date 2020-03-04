@@ -75,10 +75,10 @@ max {
     return MAX;
 }
 
-seconds {
-    /* seconds keyword */
-    yylval->string = "seconds";
-    return SECONDS;
+milliseconds {
+    /* milliseconds keyword */
+    yylval->string = "milliseconds";
+    return MILLISECONDS;
 }
 
 secret {

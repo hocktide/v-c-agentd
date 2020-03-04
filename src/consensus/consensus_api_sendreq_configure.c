@@ -37,7 +37,7 @@ int consensus_api_sendreq_configure(
     /* | DATA                                          | SIZE         | */
     /* | --------------------------------------------- | ------------ | */
     /* | CONSENSUSSERVICE_API_METHOD_CONFIGURE         |  4 bytes     | */
-    /* | sleep seconds (uint64_t)                      |  8 bytes     | */
+    /* | sleep milliseconds (uint64_t)                 |  8 bytes     | */
     /* | max transactions per block (uint64_t)         |  8 bytes     | */
     /* | --------------------------------------------- | ------------ | */
     /* | total                                         | 20 bytes     | */
@@ -45,11 +45,11 @@ int consensus_api_sendreq_configure(
 
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != conf);
-    MODEL_ASSERT(conf->block_max_seconds_set);
+    MODEL_ASSERT(conf->block_max_milliseconds_set);
     MODEL_ASSERT(conf->block_max_transactions_set);
 
     /* runtime parameter sanity check. */
-    if (NULL == conf || !conf->block_max_seconds_set ||
+    if (NULL == conf || !conf->block_max_milliseconds_set ||
         !conf->block_max_transactions_set)
     {
         return AGENTD_ERROR_CONSENSUSSERVICE_BAD_PARAMETER;
@@ -59,7 +59,7 @@ int consensus_api_sendreq_configure(
     size_t reqbuflen =
         /* method. */
         sizeof(uint32_t) +
-        /* sleep seconds. */
+        /* sleep milliseconds. */
         sizeof(uint64_t) +
         /* max transactions per block. */
         sizeof(uint64_t);
@@ -75,9 +75,11 @@ int consensus_api_sendreq_configure(
     uint32_t req = htonl(CONSENSUSSERVICE_API_METHOD_CONFIGURE);
     memcpy(reqbuf, &req, sizeof(req));
 
-    /* copy the sleep seconds parameter to the buffer. */
-    uint64_t sleep_seconds = htonll(conf->block_max_seconds);
-    memcpy(reqbuf + sizeof(uint32_t), &sleep_seconds, sizeof(sleep_seconds));
+    /* copy the sleep milliseconds parameter to the buffer. */
+    uint64_t sleep_milliseconds = htonll(conf->block_max_milliseconds);
+    memcpy(
+        reqbuf + sizeof(uint32_t), &sleep_milliseconds,
+        sizeof(sleep_milliseconds));
 
     /* copy the max transactions per block parameter to the buffer. */
     uint64_t max_txns = htonll(conf->block_max_transactions);

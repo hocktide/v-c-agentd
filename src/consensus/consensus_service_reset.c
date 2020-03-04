@@ -48,7 +48,7 @@ void consensus_service_reset(
         /* create the new timer. */
         retval =
             ipc_timer_init(
-                &instance->timer, instance->block_max_seconds * 1000,
+                &instance->timer, instance->block_max_milliseconds,
                 &consensus_service_timer_cb, instance);
         if (AGENTD_STATUS_SUCCESS != retval)
         {
