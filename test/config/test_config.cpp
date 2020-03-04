@@ -1049,7 +1049,7 @@ TEST(config_test, empty_consensus_block)
     ASSERT_EQ(nullptr, user_context.config->logdir);
     ASSERT_FALSE(user_context.config->loglevel_set);
     ASSERT_EQ(0L, user_context.config->loglevel);
-    ASSERT_FALSE(user_context.config->block_max_seconds_set);
+    ASSERT_FALSE(user_context.config->block_max_milliseconds_set);
     ASSERT_FALSE(user_context.config->block_max_transactions_set);
     ASSERT_EQ(nullptr, user_context.config->secret);
     ASSERT_EQ(nullptr, user_context.config->rootblock);
@@ -1062,9 +1062,9 @@ TEST(config_test, empty_consensus_block)
 }
 
 /**
- * Test that the block max seconds can be overridden.
+ * Test that the block max milliseconds can be overridden.
  */
-TEST(config_test, block_max_seconds)
+TEST(config_test, block_max_milliseconds)
 {
     YY_BUFFER_STATE state;
     yyscan_t scanner;
@@ -1079,7 +1079,7 @@ TEST(config_test, block_max_seconds)
 
     ASSERT_EQ(0, yylex_init(&scanner));
     ASSERT_NE(nullptr,
-        state = yy_scan_string("consensus { max seconds 995 }", scanner));
+        state = yy_scan_string("consensus { max milliseconds 995 }", scanner));
     ASSERT_EQ(0, yyparse(scanner, &context));
     yy_delete_buffer(state, scanner);
     yylex_destroy(scanner);
@@ -1092,8 +1092,8 @@ TEST(config_test, block_max_seconds)
     ASSERT_EQ(nullptr, user_context.config->logdir);
     ASSERT_FALSE(user_context.config->loglevel_set);
     ASSERT_EQ(0L, user_context.config->loglevel);
-    ASSERT_TRUE(user_context.config->block_max_seconds_set);
-    ASSERT_EQ(995, user_context.config->block_max_seconds);
+    ASSERT_TRUE(user_context.config->block_max_milliseconds_set);
+    ASSERT_EQ(995, user_context.config->block_max_milliseconds);
     ASSERT_FALSE(user_context.config->block_max_transactions_set);
     ASSERT_EQ(nullptr, user_context.config->secret);
     ASSERT_EQ(nullptr, user_context.config->rootblock);
@@ -1106,9 +1106,9 @@ TEST(config_test, block_max_seconds)
 }
 
 /**
- * Test that a negative block max seconds is invalid.
+ * Test that a negative block max milliseconds is invalid.
  */
-TEST(config_test, block_max_seconds_negative)
+TEST(config_test, block_max_milliseconds_negative)
 {
     YY_BUFFER_STATE state;
     yyscan_t scanner;
@@ -1123,7 +1123,7 @@ TEST(config_test, block_max_seconds_negative)
 
     ASSERT_EQ(0, yylex_init(&scanner));
     ASSERT_NE(nullptr,
-        state = yy_scan_string("consensus { max seconds -7 }", scanner));
+        state = yy_scan_string("consensus { max milliseconds -7 }", scanner));
     ASSERT_EQ(0, yyparse(scanner, &context));
     yy_delete_buffer(state, scanner);
     yylex_destroy(scanner);
@@ -1135,9 +1135,9 @@ TEST(config_test, block_max_seconds_negative)
 }
 
 /**
- * Test that too large of a block max seconds is invalid.
+ * Test that too large of a block max milliseconds is invalid.
  */
-TEST(config_test, block_max_seconds_large)
+TEST(config_test, block_max_milliseconds_large)
 {
     YY_BUFFER_STATE state;
     yyscan_t scanner;
@@ -1152,7 +1152,9 @@ TEST(config_test, block_max_seconds_large)
 
     ASSERT_EQ(0, yylex_init(&scanner));
     ASSERT_NE(nullptr,
-        state = yy_scan_string("consensus { max seconds 9999999 }", scanner));
+        state =
+            yy_scan_string(
+                "consensus { max milliseconds 9999999999 }", scanner));
     ASSERT_EQ(0, yyparse(scanner, &context));
     yy_delete_buffer(state, scanner);
     yylex_destroy(scanner);
@@ -1194,7 +1196,7 @@ TEST(config_test, block_max_transactions)
     ASSERT_EQ(nullptr, user_context.config->logdir);
     ASSERT_FALSE(user_context.config->loglevel_set);
     ASSERT_EQ(0L, user_context.config->loglevel);
-    ASSERT_FALSE(user_context.config->block_max_seconds_set);
+    ASSERT_FALSE(user_context.config->block_max_milliseconds_set);
     ASSERT_TRUE(user_context.config->block_max_transactions_set);
     ASSERT_EQ(17, user_context.config->block_max_transactions);
     ASSERT_EQ(nullptr, user_context.config->secret);
@@ -1210,7 +1212,7 @@ TEST(config_test, block_max_transactions)
 /**
  * Test that a negative block max transactions is invalid.
  */
-TEST(config_test, block_max_seconds_transactions)
+TEST(config_test, block_max_milliseconds_transactions)
 {
     YY_BUFFER_STATE state;
     yyscan_t scanner;

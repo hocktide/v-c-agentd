@@ -184,15 +184,15 @@ int consensusservice_isolation_test::
 }
 
 int consensusservice_isolation_test::
-    consensusservice_configure_and_start(int max_seconds, int max_txns)
+    consensusservice_configure_and_start(int max_milliseconds, int max_txns)
 {
     int retval;
     uint32_t status, offset;
     agent_config_t conf;
 
     /* set config values for consensus service. */
-    conf.block_max_seconds_set = true;
-    conf.block_max_seconds = max_seconds;
+    conf.block_max_milliseconds_set = true;
+    conf.block_max_milliseconds = max_milliseconds;
     conf.block_max_transactions_set = true;
     conf.block_max_transactions = max_txns;
 

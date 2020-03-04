@@ -35,7 +35,7 @@ typedef struct consensusservice_instance
     bool configured;
     bool running;
     bool force_exit;
-    int64_t block_max_seconds;
+    int64_t block_max_milliseconds;
     size_t block_max_transactions;
     ipc_event_loop_context_t* loop_context;
     ipc_socket_context_t* data;

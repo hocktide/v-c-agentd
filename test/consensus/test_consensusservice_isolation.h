@@ -76,7 +76,8 @@ protected:
     int dataservice_mock_valid_connection_teardown();
 
     /** \brief Helper to configure and start consensus service. */
-    int consensusservice_configure_and_start(int max_seconds, int max_txns);
+    int consensusservice_configure_and_start(
+        int max_milliseconds, int max_txns);
 };
 
 #endif /*TEST_CONSENSUSSERVICE_ISOLATION_HEADER_GUARD*/

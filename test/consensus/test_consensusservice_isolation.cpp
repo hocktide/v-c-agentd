@@ -55,8 +55,8 @@ TEST_F(consensusservice_isolation_test, configure)
     uint32_t offset = 999, status = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
 
     /* set config values for consensus service. */
-    conf.block_max_seconds_set = true;
-    conf.block_max_seconds = 2;
+    conf.block_max_milliseconds_set = true;
+    conf.block_max_milliseconds = 2;
     conf.block_max_transactions_set = true;
     conf.block_max_transactions = 1000;
 
@@ -83,8 +83,8 @@ TEST_F(consensusservice_isolation_test, start)
     uint32_t offset = 999, status = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
 
     /* set config values for consensus service. */
-    conf.block_max_seconds_set = true;
-    conf.block_max_seconds = 2;
+    conf.block_max_milliseconds_set = true;
+    conf.block_max_milliseconds = 2;
     conf.block_max_transactions_set = true;
     conf.block_max_transactions = 1000;
 
@@ -138,8 +138,7 @@ TEST_F(consensusservice_isolation_test, no_txn_retry)
     ASSERT_EQ(AGENTD_STATUS_SUCCESS,
         consensusservice_configure_and_start(1, 10));
 
-    /* TODO - adjust sleep time when we go to millis. */
-    sleep(3);
+    usleep(30000);
 
     /* stop the mock. */
     dataservice->stop();
@@ -247,8 +246,7 @@ TEST_F(consensusservice_isolation_test, no_attested_retry)
     ASSERT_EQ(AGENTD_STATUS_SUCCESS,
         consensusservice_configure_and_start(1, 10));
 
-    /* TODO - adjust sleep time when we go to millis. */
-    sleep(3);
+    usleep(30000);
 
     /* stop the mock. */
     dataservice->stop();
@@ -374,8 +372,7 @@ TEST_F(consensusservice_isolation_test, one_attested_block)
     ASSERT_EQ(AGENTD_STATUS_SUCCESS,
         consensusservice_configure_and_start(1, 10));
 
-    /* TODO - adjust sleep time when we go to millis. */
-    sleep(3);
+    usleep(30000);
 
     /* stop the mock. */
     dataservice->stop();
@@ -560,8 +557,7 @@ TEST_F(consensusservice_isolation_test, multiple_attested_txns_one_block)
     ASSERT_EQ(AGENTD_STATUS_SUCCESS,
         consensusservice_configure_and_start(1, 10));
 
-    /* TODO - adjust sleep time when we go to millis. */
-    sleep(3);
+    usleep(30000);
 
     /* stop the mock. */
     dataservice->stop();
@@ -775,8 +771,7 @@ TEST_F(consensusservice_isolation_test, multiple_attested_multiple_blocks)
     ASSERT_EQ(AGENTD_STATUS_SUCCESS,
         consensusservice_configure_and_start(1, 1));
 
-    /* TODO - adjust sleep time when we go to millis. */
-    sleep(4);
+    usleep(40000);
 
     /* stop the mock. */
     dataservice->stop();

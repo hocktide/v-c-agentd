@@ -73,18 +73,18 @@ int consensus_service_decode_and_dispatch_control_command_configure(
     /* make working with the payload more convenient. */
     const uint8_t* breq = (const uint8_t*)req;
 
-    /* get the sleep seconds. */
-    uint64_t net_sleep_seconds;
-    memcpy(&net_sleep_seconds, breq, sizeof(net_sleep_seconds));
+    /* get the sleep milliseconds. */
+    uint64_t net_sleep_milliseconds;
+    memcpy(&net_sleep_milliseconds, breq, sizeof(net_sleep_milliseconds));
 
     /* get the max transactions. */
     uint64_t net_max_transactions;
     memcpy(
-        &net_max_transactions, breq + sizeof(net_sleep_seconds),
+        &net_max_transactions, breq + sizeof(net_sleep_milliseconds),
         sizeof(net_max_transactions));
 
     /* save the configuration data. */
-    instance->block_max_seconds = ntohll(net_sleep_seconds);
+    instance->block_max_milliseconds = ntohll(net_sleep_milliseconds);
     instance->block_max_transactions = ntohll(net_max_transactions);
     instance->configured = true;
 

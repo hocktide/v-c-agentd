@@ -16,7 +16,7 @@
 /* forward decls */
 static int config_write_logdir(int s, agent_config_t* conf);
 static int config_write_loglevel(int s, agent_config_t* conf);
-static int config_write_block_max_seconds(int s, agent_config_t* conf);
+static int config_write_block_max_milliseconds(int s, agent_config_t* conf);
 static int config_write_block_max_transactions(int s, agent_config_t* conf);
 static int config_write_secret(int s, agent_config_t* conf);
 static int config_write_rootblock(int s, agent_config_t* conf);
@@ -58,8 +58,8 @@ int config_write_block(int s, agent_config_t* conf)
     if (AGENTD_STATUS_SUCCESS != retval)
         return retval;
 
-    /* block max seconds */
-    retval = config_write_block_max_seconds(s, conf);
+    /* block max milliseconds */
+    retval = config_write_block_max_milliseconds(s, conf);
     if (AGENTD_STATUS_SUCCESS != retval)
         return retval;
 
@@ -168,7 +168,7 @@ static int config_write_loglevel(int s, agent_config_t* conf)
 }
 
 /**
- * \brief Write the block max seconds to the config output stream.
+ * \brief Write the block max milliseconds to the config output stream.
  *
  * \param s             The config output stream.
  * \param conf          The config structure from which this value is obtained.
@@ -178,19 +178,19 @@ static int config_write_loglevel(int s, agent_config_t* conf)
  *      - AGENTD_ERROR_CONFIG_IPC_WRITE_DATA_FAILURE if writing data to the
  *        socket failed.
  */
-static int config_write_block_max_seconds(int s, agent_config_t* conf)
+static int config_write_block_max_milliseconds(int s, agent_config_t* conf)
 {
-    /* write the block max seconds if set. */
-    if (conf->block_max_seconds_set)
+    /* write the block max milliseconds if set. */
+    if (conf->block_max_milliseconds_set)
     {
-        /* write the block max seconds type to the stream. */
-        uint8_t type = CONFIG_STREAM_TYPE_BLOCK_MAX_SECONDS;
+        /* write the block max milliseconds type to the stream. */
+        uint8_t type = CONFIG_STREAM_TYPE_BLOCK_MAX_MILLISECONDS;
         if (AGENTD_STATUS_SUCCESS != ipc_write_uint8_block(s, type))
             return AGENTD_ERROR_CONFIG_IPC_WRITE_DATA_FAILURE;
 
-        /* write the block max seconds to the stream. */
+        /* write the block max milliseconds to the stream. */
         if (AGENTD_STATUS_SUCCESS !=
-            ipc_write_int64_block(s, conf->block_max_seconds))
+            ipc_write_int64_block(s, conf->block_max_milliseconds))
             return AGENTD_ERROR_CONFIG_IPC_WRITE_DATA_FAILURE;
     }
 

@@ -72,7 +72,7 @@ int consensus_service_decode_and_dispatch_control_command_start(
     /* create a timer event for running the consensus action. */
     retval =
         ipc_timer_init(
-            &instance->timer, instance->block_max_seconds * 1000,
+            &instance->timer, instance->block_max_milliseconds,
             &consensus_service_timer_cb, instance);
     if (AGENTD_STATUS_SUCCESS != retval)
     {

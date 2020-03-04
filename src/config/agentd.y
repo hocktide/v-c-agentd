@@ -59,7 +59,7 @@ static config_consensus_t* new_consensus(
 void config_dispose(void* disp);
 static agent_config_t* fold_consensus(
     config_context_t*, agent_config_t*, config_consensus_t*);
-static config_consensus_t* add_max_seconds(
+static config_consensus_t* add_max_milliseconds(
     config_context_t*, config_consensus_t*, int64_t);
 static config_consensus_t* add_max_transactions(
     config_context_t*, config_consensus_t*, int64_t);
@@ -93,7 +93,7 @@ void consensus_dispose(void* disp);
 %token <string> PATH
 %token <string> RBRACE
 %token <string> ROOTBLOCK
-%token <string> SECONDS
+%token <string> MILLISECONDS
 %token <string> SECRET
 %token <string> TRANSACTIONS
 %token <string> USERGROUP
@@ -225,9 +225,9 @@ consensus_block
     : {
             /* create a new consensus block. */
             MAYBE_ASSIGN($$, new_consensus(context)); }
-    | consensus_block MAX SECONDS NUMBER {
-            /* override the max seconds. */
-            MAYBE_ASSIGN($$, add_max_seconds(context, $$, $4)); }
+    | consensus_block MAX MILLISECONDS NUMBER {
+            /* override the max milliseconds. */
+            MAYBE_ASSIGN($$, add_max_milliseconds(context, $$, $4)); }
     | consensus_block MAX TRANSACTIONS NUMBER {
             /* override the max transactions. */
             MAYBE_ASSIGN($$, add_max_transactions(context, $$, $4)); }
@@ -479,24 +479,24 @@ static config_consensus_t* new_consensus(config_context_t* context)
 }
 
 /**
- * \brief Add the maximum seconds to the consensus config.
+ * \brief Add the maximum milliseconds to the consensus config.
  */
-static config_consensus_t* add_max_seconds(
+static config_consensus_t* add_max_milliseconds(
     config_context_t* context, config_consensus_t* consensus,
-    int64_t seconds)
+    int64_t milliseconds)
 {
-    if (consensus->block_max_seconds_set)
+    if (consensus->block_max_milliseconds_set)
     {
-        CONFIG_ERROR("Duplicate max seconds setting.");
+        CONFIG_ERROR("Duplicate max milliseconds setting.");
     }
 
-    if (seconds < 0 || seconds > BLOCK_SECONDS_MAXIMUM)
+    if (milliseconds < 0 || milliseconds > BLOCK_MILLISECONDS_MAXIMUM)
     {
-        CONFIG_ERROR("Invalid seconds range.");
+        CONFIG_ERROR("Invalid milliseconds range.");
     }
 
-    consensus->block_max_seconds_set = true;
-    consensus->block_max_seconds = seconds;
+    consensus->block_max_milliseconds_set = true;
+    consensus->block_max_milliseconds = milliseconds;
 
     return consensus;
 }
@@ -531,17 +531,18 @@ static agent_config_t* fold_consensus(
     config_context_t* context, agent_config_t* cfg,
     config_consensus_t* consensus)
 {
-    /* only allow the max seconds to be set once. */
-    if (cfg->block_max_seconds_set && consensus->block_max_seconds_set)
+    /* only allow the max milliseconds to be set once. */
+    if (cfg->block_max_milliseconds_set
+     && consensus->block_max_milliseconds_set)
     {
-        CONFIG_ERROR("Duplicate consensus max seconds settings.");
+        CONFIG_ERROR("Duplicate consensus max milliseconds settings.");
     }
 
-    /* assign max seconds if set. */
-    cfg->block_max_seconds_set = consensus->block_max_seconds_set;
-    if (consensus->block_max_seconds_set)
+    /* assign max milliseconds if set. */
+    cfg->block_max_milliseconds_set = consensus->block_max_milliseconds_set;
+    if (consensus->block_max_milliseconds_set)
     {
-        cfg->block_max_seconds = consensus->block_max_seconds;
+        cfg->block_max_milliseconds = consensus->block_max_milliseconds;
     }
 
     /* only allow the max transactions to be set once. */

@@ -49,8 +49,9 @@ int command_readconfig(struct bootstrap_config* bconf)
         printf("Log directory: %s\n", conf.logdir);
     if (conf.loglevel_set)
         printf("Log level: %d\n", (int)conf.loglevel);
-    if (conf.block_max_seconds_set)
-        printf("Consensus max seconds: %d\n", (int)conf.block_max_seconds);
+    if (conf.block_max_milliseconds_set)
+        printf("Consensus max milliseconds: %ld\n",
+            conf.block_max_milliseconds);
     if (conf.block_max_transactions_set)
         printf("Consensus max transactions: %d\n",
             (int)conf.block_max_transactions);
