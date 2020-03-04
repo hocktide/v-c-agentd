@@ -44,7 +44,7 @@ INCLUDES=$(foreach d,$(INCDIRS),$(wildcard $(d)/*.h))
 SRCDIR=$(CURDIR)/src
 DIRS=$(SRCDIR) $(SRCDIR)/agentd $(SRCDIR)/authservice \
     $(SRCDIR)/bootstrap_config $(SRCDIR)/command $(SRCDIR)/commandline \
-    $(SRCDIR)/config $(SRCDIR)/consensus $(SRCDIR)/dataservice \
+    $(SRCDIR)/config $(SRCDIR)/canonization $(SRCDIR)/dataservice \
     $(SRCDIR)/listenservice \
     $(SRCDIR)/inet $(SRCDIR)/ipc $(SRCDIR)/path $(SRCDIR)/privsep \
     $(SRCDIR)/process $(SRCDIR)/protocolservice $(SRCDIR)/randomservice \
@@ -60,7 +60,7 @@ STRIPPED_LEXSOURCES=$(patsubst $(SRCDIR)/%,%,$(LEXSOURCES))
 TESTDIR=$(CURDIR)/test
 TESTDIRS=$(TESTDIR) $(TESTDIR)/authservice $(TESTDIR)/bitcap \
 	$(TESTDIR)/bootstrap_config $(TESTDIR)/commandline $(TESTDIR)/config \
-	$(TESTDIR)/consensus $(TESTDIR)/dataservice $(TESTDIR)/mocks \
+	$(TESTDIR)/canonization $(TESTDIR)/dataservice $(TESTDIR)/mocks \
     $(TESTDIR)/ipc $(TESTDIR)/path $(TESTDIR)/protocolservice \
     $(TESTDIR)/randomservice $(TESTDIR)/status_codes $(TESTDIR)/string
 TEST_BUILD_DIR=$(HOST_CHECKED_BUILD_DIR)/test

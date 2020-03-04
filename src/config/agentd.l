@@ -51,10 +51,10 @@ FILE* config_set_input_filedescriptor(
     return NUMBER;
 }
 
-consensus {
-    /* consensus keyword */
-    yylval->string = "consensus";
-    return CONSENSUS;
+canonization {
+    /* canonization keyword */
+    yylval->string = "canonization";
+    return CANONIZATION;
 }
 
 logdir {

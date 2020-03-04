@@ -3,7 +3,7 @@
  *
  * \brief Service enumeration.
  *
- * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2020 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_SERVICES_HEADER_GUARD
@@ -56,9 +56,9 @@ enum agentd_services
     AGENTD_SERVICE_LOG = 0x06U,
 
     /**
-     * \brief Consensus Service.
+     * \brief Canonization Service.
      */
-    AGENTD_SERVICE_CONSENSUS = 0x07U,
+    AGENTD_SERVICE_CANONIZATION = 0x07U,
 
     /**
      * \brief Application Service.
