@@ -152,32 +152,32 @@ extern "C" {
 #define AGENTD_FD_RANDOM_SERVICE_LOG_SOCKET ((int)2)
 
 /******************************************************************************/
-/* Consensus Service                                                          */
+/* Canonization Service                                                       */
 /******************************************************************************/
 
 /**
- * \brief File descriptor for the consensus service log socket.
- * Used by the consensus service private command.
+ * \brief File descriptor for the canonization service log socket.
+ * Used by the canonization service private command.
  */
-#define AGENTD_FD_CONSENSUS_SVC_LOG ((int)0)
+#define AGENTD_FD_CANONIZATION_SVC_LOG ((int)0)
 
 /**
- * \brief File descriptor for the consensus service data socket.
- * Used by the consensus service private command.
+ * \brief File descriptor for the canonization service data socket.
+ * Used by the canonization service private command.
  */
-#define AGENTD_FD_CONSENSUS_SVC_DATA ((int)1)
+#define AGENTD_FD_CANONIZATION_SVC_DATA ((int)1)
 
 /**
- * \brief File descriptor for the consensus service random socket.
- * Used by the consensus service private command.
+ * \brief File descriptor for the canonization service random socket.
+ * Used by the canonization service private command.
  */
-#define AGENTD_FD_CONSENSUS_SVC_RANDOM ((int)2)
+#define AGENTD_FD_CANONIZATION_SVC_RANDOM ((int)2)
 
 /**
- * \brief File descriptor for the consensus service control socket.
- * Used by the consensus service private command.
+ * \brief File descriptor for the canonization service control socket.
+ * Used by the canonization service private command.
  */
-#define AGENTD_FD_CONSENSUS_SVC_CONTROL ((int)3)
+#define AGENTD_FD_CANONIZATION_SVC_CONTROL ((int)3)
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

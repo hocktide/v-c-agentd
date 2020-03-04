@@ -66,11 +66,11 @@ void commandline_dispatch_private_command(
         bootstrap_config_set_private_command(
             bconf, private_command_authservice);
     }
-    /* is this the consensus service private command? */
-    else if (!strcmp(command, "consensus_service"))
+    /* is this the canonization service private command? */
+    else if (!strcmp(command, "canonization_service"))
     {
         bootstrap_config_set_private_command(
-            bconf, private_command_consensus_service);
+            bconf, private_command_canonizationservice);
     }
     else
     {

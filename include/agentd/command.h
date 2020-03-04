@@ -3,7 +3,7 @@
  *
  * \brief Commands supported by agentd.
  *
- * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2020 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_COMMAND_HEADER_GUARD
@@ -43,9 +43,9 @@ void private_command_readconfig(bootstrap_config_t* bconf);
 void private_command_authservice(bootstrap_config_t* bconf);
 
 /**
- * \brief Run a consensus service instance.
+ * \brief Run a canonization service instance.
  */
-void private_command_consensus_service(bootstrap_config_t* bconf);
+void private_command_canonizationservice(bootstrap_config_t* bconf);
 
 /**
  * \brief Run a data service instance.

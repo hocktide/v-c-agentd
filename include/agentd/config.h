@@ -3,7 +3,7 @@
  *
  * \brief Configuration data structure for agentd.
  *
- * \copyright 2018-2019 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2020 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_CONFIG_HEADER_GUARD
@@ -61,16 +61,16 @@ typedef struct config_user_group
 } config_user_group_t;
 
 /**
- * \brief Consensus data.
+ * \brief Canonization data.
  */
-typedef struct config_consensus
+typedef struct config_canonization
 {
     disposable_t hdr;
     bool block_max_milliseconds_set;
     int64_t block_max_milliseconds;
     bool block_max_transactions_set;
     int64_t block_max_transactions;
-} config_consensus_t;
+} config_canonization_t;
 
 #define CONFIG_STREAM_TYPE_BOM 0x00
 #define CONFIG_STREAM_TYPE_LOGDIR 0x01
@@ -120,7 +120,7 @@ typedef union config_val
     agent_config_t* config;
     config_user_group_t* usergroup;
     config_listen_address_t* listenaddr;
-    config_consensus_t* consensus;
+    config_canonization_t* canonization;
 } config_val_t;
 
 /* forward decl for config_context. */

@@ -83,7 +83,7 @@ int supervisor_create_data_service_for_auth_protocol_service(
     const agent_config_t* conf, int* data_socket, int* log_socket);
 
 /**
- * \brief Create a data service instance for the consensus service as a
+ * \brief Create a data service instance for the canonization service as a
  * process that can be started.
  *
  * \param svc                   Pointer to the pointer to receive the process
@@ -101,7 +101,7 @@ int supervisor_create_data_service_for_auth_protocol_service(
  *          - AGENTD_STATUS_SUCCESS on success.
  *          - a non-zero error code on failure.
  */
-int supervisor_create_data_service_for_consensus_service(
+int supervisor_create_data_service_for_canonizationservice(
     process_t** svc, const bootstrap_config_t* bconf,
     const agent_config_t* conf, int* data_socket, int* log_socket);
 
@@ -149,14 +149,14 @@ int supervisor_create_auth_service(
     const agent_config_t* conf, int* auth_socket, int* log_socket);
 
 /**
- * \brief Create the consensus service as a process that can be started.
+ * \brief Create the canonization service as a process that can be started.
  *
  * \param svc                   Pointer to the pointer to receive the process
- *                              descriptor for the consensus service.
+ *                              descriptor for the canonization service.
  * \param bconf                 Agentd bootstrap config for this service.
  * \param conf                  Agentd configuration to be used to build the
- *                              consensus service.  This configuration must be
- *                              valid for the lifetime of the service.
+ *                              canonization service.  This configuration must
+ *                              be valid for the lifetime of the service.
  * \param data_socket           The data socket descriptor.
  * \param random_socket         The random socket descriptor.
  * \param log_socket            The log socket descriptor.
@@ -166,7 +166,7 @@ int supervisor_create_auth_service(
  *          - AGENTD_STATUS_SUCCESS on success.
  *          - a non-zero error code on failure.
  */
-int supervisor_create_consensus_service(
+int supervisor_create_canonizationservice(
     process_t** svc, const bootstrap_config_t* bconf,
     const agent_config_t* conf, int* data_socket, int* random_socket,
     int* log_socket, int* control_socket);

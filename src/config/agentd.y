@@ -54,16 +54,16 @@ static config_user_group_t* create_user_group(
     config_context_t*, const char*, const char*);
 static config_listen_address_t* create_listen_address(
     config_context_t*, struct in_addr*, int64_t);
-static config_consensus_t* new_consensus(
+static config_canonization_t* new_canonization(
     config_context_t*);
 void config_dispose(void* disp);
-static agent_config_t* fold_consensus(
-    config_context_t*, agent_config_t*, config_consensus_t*);
-static config_consensus_t* add_max_milliseconds(
-    config_context_t*, config_consensus_t*, int64_t);
-static config_consensus_t* add_max_transactions(
-    config_context_t*, config_consensus_t*, int64_t);
-void consensus_dispose(void* disp);
+static agent_config_t* fold_canonization(
+    config_context_t*, agent_config_t*, config_canonization_t*);
+static config_canonization_t* add_max_milliseconds(
+    config_context_t*, config_canonization_t*, int64_t);
+static config_canonization_t* add_max_transactions(
+    config_context_t*, config_canonization_t*, int64_t);
+void canonization_dispose(void* disp);
 %}
 
 /* use the full pure API for Bison. */
@@ -78,7 +78,7 @@ void consensus_dispose(void* disp);
 /* Tokens. */
 %token <string> CHROOT
 %token <string> COLON
-%token <string> CONSENSUS
+%token <string> CANONIZATION
 %token <string> DATASTORE
 %token <string> IDENTIFIER
 %token <addr> IP
@@ -101,8 +101,8 @@ void consensus_dispose(void* disp);
 /* Types for branch nodes.. */
 %type <config> conf
 %type <string> chroot
-%type <consensus> consensus
-%type <consensus> consensus_block
+%type <canonization> canonization
+%type <canonization> canonization_block
 %type <string> datastore
 %type <listenaddr> listen
 %type <string> logdir
@@ -142,9 +142,9 @@ conf : {
     | conf usergroup {
             /* fold in usergroup. */
             MAYBE_ASSIGN($$, add_usergroup(context, $1, $2)); }
-    | conf consensus {
-            /* fold in consensus data. */
-            MAYBE_ASSIGN($$, fold_consensus(context, $1, $2)); }
+    | conf canonization {
+            /* fold in canonization data. */
+            MAYBE_ASSIGN($$, fold_canonization(context, $1, $2)); }
     ;
 
 /* Provide a log directory that is either a simple identifier or a path. */
@@ -214,21 +214,21 @@ usergroup
             MAYBE_ASSIGN($$, create_user_group(context, $2, $4)); }
     ;
 
-/* Provide a consensus block. */
-consensus
-    : CONSENSUS LBRACE consensus_block RBRACE {
+/* Provide a canonization block. */
+canonization
+    : CANONIZATION LBRACE canonization_block RBRACE {
             /* ownership is forwarded. */
             $$ = $3; }
     ;
 
-consensus_block
+canonization_block
     : {
-            /* create a new consensus block. */
-            MAYBE_ASSIGN($$, new_consensus(context)); }
-    | consensus_block MAX MILLISECONDS NUMBER {
+            /* create a new canonization block. */
+            MAYBE_ASSIGN($$, new_canonization(context)); }
+    | canonization_block MAX MILLISECONDS NUMBER {
             /* override the max milliseconds. */
             MAYBE_ASSIGN($$, add_max_milliseconds(context, $$, $4)); }
-    | consensus_block MAX TRANSACTIONS NUMBER {
+    | canonization_block MAX TRANSACTIONS NUMBER {
             /* override the max transactions. */
             MAYBE_ASSIGN($$, add_max_transactions(context, $$, $4)); }
     ;
@@ -461,31 +461,31 @@ void config_dispose(void* disp)
 }
 
 /**
- * \brief Create a new consensus structure.
+ * \brief Create a new canonization structure.
  */
-static config_consensus_t* new_consensus(config_context_t* context)
+static config_canonization_t* new_canonization(config_context_t* context)
 {
-    config_consensus_t* ret =
-        (config_consensus_t*)malloc(sizeof(config_consensus_t));
+    config_canonization_t* ret =
+        (config_canonization_t*)malloc(sizeof(config_canonization_t));
     if (NULL == ret)
     {
-        CONFIG_ERROR("Out of memory in new_consensus().");
+        CONFIG_ERROR("Out of memory in new_canonization().");
     }
 
-    memset(ret, 0, sizeof(config_consensus_t));
-    ret->hdr.dispose = &consensus_dispose;
+    memset(ret, 0, sizeof(config_canonization_t));
+    ret->hdr.dispose = &canonization_dispose;
 
     return ret;
 }
 
 /**
- * \brief Add the maximum milliseconds to the consensus config.
+ * \brief Add the maximum milliseconds to the canonization config.
  */
-static config_consensus_t* add_max_milliseconds(
-    config_context_t* context, config_consensus_t* consensus,
+static config_canonization_t* add_max_milliseconds(
+    config_context_t* context, config_canonization_t* canonization,
     int64_t milliseconds)
 {
-    if (consensus->block_max_milliseconds_set)
+    if (canonization->block_max_milliseconds_set)
     {
         CONFIG_ERROR("Duplicate max milliseconds setting.");
     }
@@ -495,20 +495,20 @@ static config_consensus_t* add_max_milliseconds(
         CONFIG_ERROR("Invalid milliseconds range.");
     }
 
-    consensus->block_max_milliseconds_set = true;
-    consensus->block_max_milliseconds = milliseconds;
+    canonization->block_max_milliseconds_set = true;
+    canonization->block_max_milliseconds = milliseconds;
 
-    return consensus;
+    return canonization;
 }
 
 /**
- * \brief Add the maximum transactions to the consensus config.
+ * \brief Add the maximum transactions to the canonization config.
  */
-static config_consensus_t* add_max_transactions(
-    config_context_t* context, config_consensus_t* consensus,
+static config_canonization_t* add_max_transactions(
+    config_context_t* context, config_canonization_t* canonization,
     int64_t transactions)
 {
-    if (consensus->block_max_transactions_set)
+    if (canonization->block_max_transactions_set)
     {
         CONFIG_ERROR("Duplicate max transactions setting.");
     }
@@ -518,61 +518,61 @@ static config_consensus_t* add_max_transactions(
         CONFIG_ERROR("Invalid transactions range.");
     }
 
-    consensus->block_max_transactions_set = true;
-    consensus->block_max_transactions = transactions;
+    canonization->block_max_transactions_set = true;
+    canonization->block_max_transactions = transactions;
 
-    return consensus;
+    return canonization;
 }
 
 /**
- * \brief Fold consensus data into the config structure.
+ * \brief Fold canonization data into the config structure.
  */
-static agent_config_t* fold_consensus(
+static agent_config_t* fold_canonization(
     config_context_t* context, agent_config_t* cfg,
-    config_consensus_t* consensus)
+    config_canonization_t* canonization)
 {
     /* only allow the max milliseconds to be set once. */
     if (cfg->block_max_milliseconds_set
-     && consensus->block_max_milliseconds_set)
+     && canonization->block_max_milliseconds_set)
     {
-        CONFIG_ERROR("Duplicate consensus max milliseconds settings.");
+        CONFIG_ERROR("Duplicate canonization max milliseconds settings.");
     }
 
     /* assign max milliseconds if set. */
-    cfg->block_max_milliseconds_set = consensus->block_max_milliseconds_set;
-    if (consensus->block_max_milliseconds_set)
+    cfg->block_max_milliseconds_set = canonization->block_max_milliseconds_set;
+    if (canonization->block_max_milliseconds_set)
     {
-        cfg->block_max_milliseconds = consensus->block_max_milliseconds;
+        cfg->block_max_milliseconds = canonization->block_max_milliseconds;
     }
 
     /* only allow the max transactions to be set once. */
     if (cfg->block_max_transactions_set
-     && consensus->block_max_transactions_set)
+     && canonization->block_max_transactions_set)
     {
-        CONFIG_ERROR("Duplicate consensus max transactions settings.");
+        CONFIG_ERROR("Duplicate canonization max transactions settings.");
     }
 
     /* assign max transactions if set. */
-    cfg->block_max_transactions_set = consensus->block_max_transactions_set;
-    if (consensus->block_max_transactions_set)
+    cfg->block_max_transactions_set = canonization->block_max_transactions_set;
+    if (canonization->block_max_transactions_set)
     {
-        cfg->block_max_transactions = consensus->block_max_transactions;
+        cfg->block_max_transactions = canonization->block_max_transactions;
     }
 
-    /* dispose of the consensus structure. */
-    dispose((disposable_t*)consensus);
-    /* free the consensus structure. */
-    free(consensus);
+    /* dispose of the canonization structure. */
+    dispose((disposable_t*)canonization);
+    /* free the canonization structure. */
+    free(canonization);
 
     return cfg;
 }
 
 /**
- * \brief dispose of a consensus structure.
+ * \brief dispose of a canonization structure.
  */
-void consensus_dispose(void* disp)
+void canonization_dispose(void* disp)
 {
-    config_consensus_t* cfg = (config_consensus_t*)disp;
+    config_canonization_t* cfg = (config_canonization_t*)disp;
 
     /* nothing to do here yet, as it currently contains just ints and bools.  */
     (void)cfg;

@@ -1020,9 +1020,9 @@ TEST(config_test, usergroup_config)
 }
 
 /**
- * Test that a consensus block parameter is accepted.
+ * Test that a canonization block parameter is accepted.
  */
-TEST(config_test, empty_consensus_block)
+TEST(config_test, empty_canonization_block)
 {
     YY_BUFFER_STATE state;
     yyscan_t scanner;
@@ -1036,7 +1036,7 @@ TEST(config_test, empty_consensus_block)
     context.user_context = &user_context;
 
     ASSERT_EQ(0, yylex_init(&scanner));
-    ASSERT_NE(nullptr, state = yy_scan_string("consensus { }", scanner));
+    ASSERT_NE(nullptr, state = yy_scan_string("canonization { }", scanner));
     ASSERT_EQ(0, yyparse(scanner, &context));
     yy_delete_buffer(state, scanner);
     yylex_destroy(scanner);
@@ -1079,7 +1079,8 @@ TEST(config_test, block_max_milliseconds)
 
     ASSERT_EQ(0, yylex_init(&scanner));
     ASSERT_NE(nullptr,
-        state = yy_scan_string("consensus { max milliseconds 995 }", scanner));
+        state =
+            yy_scan_string("canonization { max milliseconds 995 }", scanner));
     ASSERT_EQ(0, yyparse(scanner, &context));
     yy_delete_buffer(state, scanner);
     yylex_destroy(scanner);
@@ -1123,7 +1124,8 @@ TEST(config_test, block_max_milliseconds_negative)
 
     ASSERT_EQ(0, yylex_init(&scanner));
     ASSERT_NE(nullptr,
-        state = yy_scan_string("consensus { max milliseconds -7 }", scanner));
+        state =
+            yy_scan_string("canonization { max milliseconds -7 }", scanner));
     ASSERT_EQ(0, yyparse(scanner, &context));
     yy_delete_buffer(state, scanner);
     yylex_destroy(scanner);
@@ -1154,7 +1156,7 @@ TEST(config_test, block_max_milliseconds_large)
     ASSERT_NE(nullptr,
         state =
             yy_scan_string(
-                "consensus { max milliseconds 9999999999 }", scanner));
+                "canonization { max milliseconds 9999999999 }", scanner));
     ASSERT_EQ(0, yyparse(scanner, &context));
     yy_delete_buffer(state, scanner);
     yylex_destroy(scanner);
@@ -1183,7 +1185,8 @@ TEST(config_test, block_max_transactions)
 
     ASSERT_EQ(0, yylex_init(&scanner));
     ASSERT_NE(nullptr,
-        state = yy_scan_string("consensus { max transactions 17 }", scanner));
+        state =
+            yy_scan_string("canonization { max transactions 17 }", scanner));
     ASSERT_EQ(0, yyparse(scanner, &context));
     yy_delete_buffer(state, scanner);
     yylex_destroy(scanner);
@@ -1227,7 +1230,8 @@ TEST(config_test, block_max_milliseconds_transactions)
 
     ASSERT_EQ(0, yylex_init(&scanner));
     ASSERT_NE(nullptr,
-        state = yy_scan_string("consensus { max transactions -19 }", scanner));
+        state =
+            yy_scan_string("canonization { max transactions -19 }", scanner));
     ASSERT_EQ(0, yyparse(scanner, &context));
     yy_delete_buffer(state, scanner);
     yylex_destroy(scanner);
@@ -1256,8 +1260,9 @@ TEST(config_test, block_max_transactions_large)
 
     ASSERT_EQ(0, yylex_init(&scanner));
     ASSERT_NE(nullptr,
-        state = yy_scan_string("consensus { max transactions 9999999 }",
-            scanner));
+        state =
+            yy_scan_string(
+                "canonization { max transactions 9999999 }", scanner));
     ASSERT_EQ(0, yyparse(scanner, &context));
     yy_delete_buffer(state, scanner);
     yylex_destroy(scanner);
