@@ -16,6 +16,7 @@ extern "C" {
 
 #include <agentd/bitcap.h>
 #include <agentd/dataservice.h>
+#include <agentd/protocolservice/api.h>
 #include <stdint.h>
 
 /* Forward decl for unauthorized protocol service data structure. */
@@ -108,6 +109,7 @@ typedef struct unauthorized_protocol_connection
     uint64_t client_iv;
     uint64_t server_iv;
     uint32_t current_request_offset;
+    unauthorized_protocol_request_id_t request_id;
 } unauthorized_protocol_connection_t;
 
 /**

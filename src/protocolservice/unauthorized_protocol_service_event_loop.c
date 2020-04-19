@@ -41,7 +41,7 @@ static void unauthorized_protocol_service_command_read(
 static void unauthorized_protocol_service_decode_and_dispatch(
     unauthorized_protocol_connection_t* conn, uint32_t request_id,
     uint32_t request_offset, const uint8_t* breq, size_t size);
-static void unauthorized_protocol_service_handle_request_latest_block_get(
+static void unauthorized_protocol_service_handle_request_latest_block_id_get(
     unauthorized_protocol_connection_t* conn, uint32_t request_offset,
     const uint8_t* breq, size_t size);
 static void unauthorized_protocol_service_handle_request_transaction_submit(
@@ -589,11 +589,14 @@ static void unauthorized_protocol_service_decode_and_dispatch(
     unauthorized_protocol_connection_t* conn, uint32_t request_id,
     uint32_t request_offset, const uint8_t* breq, size_t size)
 {
+    /* save the request id. */
+    conn->request_id = request_id;
+
     /* decode the request id */
     switch (request_id)
     {
-        case UNAUTH_PROTOCOL_REQ_ID_LATEST_BLOCK_GET:
-            unauthorized_protocol_service_handle_request_latest_block_get(
+        case UNAUTH_PROTOCOL_REQ_ID_LATEST_BLOCK_ID_GET:
+            unauthorized_protocol_service_handle_request_latest_block_id_get(
                 conn, request_offset, breq, size);
             break;
 
@@ -615,14 +618,14 @@ static void unauthorized_protocol_service_decode_and_dispatch(
 }
 
 /**
- * \brief Handle a latest_block_get request.
+ * \brief Handle a latest_block_id_get request.
  *
  * \param conn              The connection to close.
  * \param request_offset    The offset of the request.
  * \param breq              The bytestream of the request.
  * \param size              The size of this request bytestream.
  */
-static void unauthorized_protocol_service_handle_request_latest_block_get(
+static void unauthorized_protocol_service_handle_request_latest_block_id_get(
     unauthorized_protocol_connection_t* conn, uint32_t request_offset,
     const uint8_t* UNUSED(breq), size_t UNUSED(size))
 {
@@ -641,7 +644,7 @@ static void unauthorized_protocol_service_handle_request_latest_block_get(
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         unauthorized_protocol_service_error_response(
-            conn, UNAUTH_PROTOCOL_REQ_ID_LATEST_BLOCK_GET,
+            conn, UNAUTH_PROTOCOL_REQ_ID_LATEST_BLOCK_ID_GET,
             retval,
             request_offset, true);
         return;
@@ -1511,7 +1514,7 @@ static void ups_dispatch_dataservice_response_block_id_latest_read(
     }
 
     /* build the payload. */
-    uint32_t net_method = htonl(UNAUTH_PROTOCOL_REQ_ID_LATEST_BLOCK_GET);
+    uint32_t net_method = htonl(UNAUTH_PROTOCOL_REQ_ID_LATEST_BLOCK_ID_GET);
     uint32_t net_status = dresp.hdr.status;
     uint32_t net_offset = conn->current_request_offset;
     uint8_t payload[3 * sizeof(uint32_t) + 16];

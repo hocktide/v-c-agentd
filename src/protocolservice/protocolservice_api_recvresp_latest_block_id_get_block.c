@@ -107,7 +107,7 @@ int protocolservice_api_recvresp_latest_block_id_get_block(
     }
 
     /* verify the request id. */
-    if (UNAUTH_PROTOCOL_REQ_ID_LATEST_BLOCK_GET != ntohl(val[0]))
+    if (UNAUTH_PROTOCOL_REQ_ID_LATEST_BLOCK_ID_GET != ntohl(val[0]))
     {
         retval = AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE;
         goto cleanup_val;

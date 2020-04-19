@@ -59,7 +59,7 @@ int protocolservice_api_sendreq_latest_block_id_get_block(
 
     /* populate the request. */
     uint8_t* breq = (uint8_t*)req.data;
-    uint32_t net_method_id = htonl(UNAUTH_PROTOCOL_REQ_ID_LATEST_BLOCK_GET);
+    uint32_t net_method_id = htonl(UNAUTH_PROTOCOL_REQ_ID_LATEST_BLOCK_ID_GET);
     uint32_t net_request_id = htonl(0UL);
     memcpy(breq, &net_method_id, sizeof(net_method_id));
     memcpy(breq + sizeof(uint32_t), &net_request_id, sizeof(net_request_id));
