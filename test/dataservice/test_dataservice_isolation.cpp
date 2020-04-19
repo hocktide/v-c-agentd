@@ -1122,9 +1122,15 @@ TEST_F(dataservice_isolation_test, txn_submit_get_first)
     ASSERT_EQ(0, memcmp(node.prev, begin_key, sizeof(node.prev)));
     ASSERT_EQ(0, memcmp(node.next, end_key, sizeof(node.next)));
     ASSERT_EQ(foo_data_size, (uint64_t)ntohll(node.net_txn_cert_size));
+#if ATTESTATION == 1
     ASSERT_EQ(
         DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
         ntohl(node.net_txn_state));
+#else
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_ATTESTED,
+        ntohl(node.net_txn_state));
+#endif
 
     /* clean up. */
     free(txn_data);
@@ -1321,9 +1327,15 @@ TEST_F(dataservice_isolation_test, txn_submit_get)
     ASSERT_EQ(0, memcmp(node.prev, begin_key, sizeof(node.prev)));
     ASSERT_EQ(0, memcmp(node.next, end_key, sizeof(node.next)));
     ASSERT_EQ(foo_data_size, (uint64_t)ntohll(node.net_txn_cert_size));
+#if ATTESTATION == 1
     ASSERT_EQ(
         DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
         ntohl(node.net_txn_state));
+#else
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_ATTESTED,
+        ntohl(node.net_txn_state));
+#endif
 
     /* clean up. */
     free(txn_data);
@@ -1522,9 +1534,15 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
     ASSERT_EQ(0, memcmp(node.prev, begin_key, sizeof(node.prev)));
     ASSERT_EQ(0, memcmp(node.next, end_key, sizeof(node.next)));
     ASSERT_EQ(foo_data_size, (uint64_t)ntohll(node.net_txn_cert_size));
+#if ATTESTATION == 1
     ASSERT_EQ(
         DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED,
         ntohl(node.net_txn_state));
+#else
+    ASSERT_EQ(
+        DATASERVICE_TRANSACTION_NODE_STATE_ATTESTED,
+        ntohl(node.net_txn_state));
+#endif
 
     /* drop this transaction. */
     sendreq_status = AGENTD_ERROR_IPC_WOULD_BLOCK;
@@ -1603,7 +1621,11 @@ TEST_F(dataservice_isolation_test, txn_submit_get_drop)
  * Test that we can submit a transaction, get it back, promote it, and its state
  * is updated.
  */
+#if ATTESTATION == 1
 TEST_F(dataservice_isolation_test, txn_submit_get_promote)
+#else
+TEST_F(dataservice_isolation_test, DISABLED_txn_submit_get_promote)
+#endif
 {
     uint32_t offset;
     uint32_t status;

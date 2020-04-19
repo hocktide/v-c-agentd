@@ -145,8 +145,13 @@ int dataservice_transaction_submit(
     memset(newnode->next, 0xFF, sizeof(newnode->next));
     memcpy(newnode->artifact_id, artifact_id, sizeof(newnode->artifact_id));
     newnode->net_txn_cert_size = htonll(txn_size);
+#if ATTESTATION == 1
     newnode->net_txn_state =
         htonl(DATASERVICE_TRANSACTION_NODE_STATE_SUBMITTED);
+#else
+    newnode->net_txn_state =
+        htonl(DATASERVICE_TRANSACTION_NODE_STATE_ATTESTED);
+#endif
 
     /* if the queue exists, set newnode->prev to the prev of end. */
     if (queue_initialized)
