@@ -3260,10 +3260,11 @@ TEST_F(dataservice_test, transaction_make_block_simple)
         dataservice_block_id_by_height_get(
             &child, nullptr, 1, block_id_for_height_1));
 
-    /* verify that we can't get the latest block id as no blocks exist. */
-    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND,
+    /* verify that the latest block id get call returns a null UUID. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
         dataservice_latest_block_id_get(
             &child, nullptr, latest_block_id));
+    ASSERT_EQ(0, memcmp(latest_block_id, zero_uuid, 16));
 
     /* verify that our artifact does not exist. */
     /* getting the artifact record by artifact id should return not found. */

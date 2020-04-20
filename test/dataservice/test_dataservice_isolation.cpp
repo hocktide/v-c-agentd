@@ -2634,7 +2634,7 @@ TEST_F(dataservice_isolation_test, block_id_by_height_get_not_found)
 }
 
 /**
- * Test that latest block id get returns AGENTD_ERROR_DATASERVICE_NOT_FOUND
+ * Test that latest block id get returns AGENTD_STATUS_SUCCESS and a zero_uuid
  * if the latest block id is not found.
  */
 TEST_F(dataservice_isolation_test, latest_block_id_get_not_found)
@@ -2764,7 +2764,8 @@ TEST_F(dataservice_isolation_test, latest_block_id_get_not_found)
     EXPECT_EQ(0, sendreq_status);
     EXPECT_EQ(0, recvresp_status);
     ASSERT_EQ(DATASERVICE_MAX_CHILD_CONTEXTS - 1U, offset);
-    ASSERT_EQ(AGENTD_ERROR_DATASERVICE_NOT_FOUND, (int)status);
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS, (int)status);
+    ASSERT_EQ(0, memcmp(latest_block_id, zero_uuid, 16));
 }
 
 /**

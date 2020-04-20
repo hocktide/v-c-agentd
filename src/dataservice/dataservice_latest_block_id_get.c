@@ -92,8 +92,9 @@ int dataservice_latest_block_id_get(
     retval = mdb_get(query_txn, details->block_db, &lkey, &lval);
     if (MDB_NOTFOUND == retval)
     {
-        /* the value was not found. */
-        retval = AGENTD_ERROR_DATASERVICE_NOT_FOUND;
+        /* the value was not found, so substitute an all-zero response. */
+        memset(block_id, 0, 16);
+        retval = AGENTD_STATUS_SUCCESS;
         goto maybe_transaction_abort;
     }
     else if (0 != retval)
