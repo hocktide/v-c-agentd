@@ -41,6 +41,10 @@ int canonizationservice_dataservice_sendreq_child_context_create(
     BITCAP_SET_TRUE(
         dataservice_caps, DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
     BITCAP_SET_TRUE(
+        dataservice_caps, DATASERVICE_API_CAP_APP_BLOCK_ID_LATEST_READ);
+    BITCAP_SET_TRUE(
+        dataservice_caps, DATASERVICE_API_CAP_APP_BLOCK_READ);
+    BITCAP_SET_TRUE(
         dataservice_caps, DATASERVICE_API_CAP_APP_BLOCK_WRITE);
     BITCAP_SET_TRUE(
         dataservice_caps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
