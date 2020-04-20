@@ -11,6 +11,7 @@
 #include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
+#include <vccert/certificate_types.h>
 #include <vpr/parameters.h>
 
 #include "dataservice_internal.h"
@@ -93,7 +94,7 @@ int dataservice_latest_block_id_get(
     if (MDB_NOTFOUND == retval)
     {
         /* the value was not found, so substitute an all-zero response. */
-        memset(block_id, 0, 16);
+        memcpy(block_id, vccert_certificate_type_uuid_root_block, 16);
         retval = AGENTD_STATUS_SUCCESS;
         goto maybe_transaction_abort;
     }
