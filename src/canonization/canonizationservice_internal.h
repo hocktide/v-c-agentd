@@ -355,6 +355,15 @@ int canonizationservice_dataservice_sendreq_child_context_create(
     canonizationservice_instance_t* instance);
 
 /**
+ * \brief Send a transaction process queue get first request to the data
+ * service.
+ *
+ * \param instance      The canonization service instance.
+ */
+int canonizationservice_dataservice_sendreq_transaction_get_first(
+    canonizationservice_instance_t* instance);
+
+/**
  * \brief Build a new block for the blockchain, using the currently attested
  * transactions.
  *
