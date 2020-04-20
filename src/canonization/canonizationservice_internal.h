@@ -228,6 +228,36 @@ int canonizationservice_write_block_id_request(
     canonizationservice_instance_t* instance);
 
 /**
+ * \brief Handle read events on the control socket.
+ *
+ * \param ctx               The non-blocking socket context.
+ * \param event_flags       The event that triggered this callback.
+ * \param user_context      The user context for this control socket.
+ */
+void canonizationservice_control_read(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
+ * \brief Handle write events on the data socket.
+ *
+ * \param ctx           The non-blocking socket context.
+ * \param event_flags   The event that triggered this callback.
+ * \param user_context  The user context for this data socket.
+ */
+void canonizationservice_control_write(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
+ * \brief Handle read events on the data socket.
+ *
+ * \param ctx               The non-blocking socket context.
+ * \param event_flags       The event that triggered this callback.
+ * \param user_context      The user context for this control socket.
+ */
+void canonizationservice_data_read(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
  * \brief Callback for writing data to the data service socket from the
  * canonization service.
  *
@@ -247,6 +277,16 @@ void canonizationservice_data_write(
  * \param user_context  Opaque pointer to the canonization service instance.
  */
 void canonizationservice_random_write(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
+ * \brief Handle read events on the random socket.
+ *
+ * \param ctx               The non-blocking socket context.
+ * \param event_flags       The event that triggered this callback.
+ * \param user_context      The user context for this control socket.
+ */
+void canonizationservice_random_read(
     ipc_socket_context_t* ctx, int event_flags, void* user_context);
 
 /**
