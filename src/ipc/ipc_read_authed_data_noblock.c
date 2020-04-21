@@ -92,6 +92,11 @@ int ipc_read_authed_data_noblock(
             retval = AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE;
             goto done;
         }
+        else if (retval == 0)
+        {
+            retval = AGENTD_ERROR_IPC_EVBUFFER_EOF;
+            goto done;
+        }
 
         /* if there aren't enough bytes, return. */
         if (retval < needed_bytes)

@@ -172,6 +172,12 @@ extern "C" {
 #define AGENTD_ERROR_IPC_UNAUTHORIZED_PACKET \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_IPC, 0x001AU)
 
+/**
+ * \brief An EOF condition was encountered reading from a socket.
+ */
+#define AGENTD_ERROR_IPC_EVBUFFER_EOF \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_IPC, 0x001BU)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

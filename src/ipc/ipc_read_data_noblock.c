@@ -69,6 +69,11 @@ int ipc_read_data_noblock(
         retval = AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE;
         goto done;
     }
+    else if (retval == 0)
+    {
+        retval = AGENTD_ERROR_IPC_EVBUFFER_EOF;
+        goto done;
+    }
 
     /* we need the header data. */
     uint8_t* mem = (uint8_t*)evbuffer_pullup(sock_impl->readbuf, header_sz);

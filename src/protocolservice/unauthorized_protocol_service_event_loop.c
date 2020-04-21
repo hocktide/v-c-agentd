@@ -304,7 +304,7 @@ static void unauthorized_protocol_service_connection_handshake_req_read(
             &conn->svc->loop);
         return;
     }
-    if (AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE == retval)
+    if (AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE == retval || AGENTD_ERROR_IPC_EVBUFFER_EOF == retval)
     {
         unauthorized_protocol_service_close_connection(conn);
         return;
@@ -448,7 +448,7 @@ static void unauthorized_protocol_service_connection_handshake_ack_read(
             &conn->svc->loop);
         return;
     }
-    if (AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE == retval)
+    if (AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE == retval || AGENTD_ERROR_IPC_EVBUFFER_EOF == retval)
     {
         unauthorized_protocol_service_close_connection(conn);
         return;
@@ -525,7 +525,7 @@ static void unauthorized_protocol_service_command_read(
             &conn->svc->loop);
         return;
     }
-    if (AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE == retval)
+    if (AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE == retval || AGENTD_ERROR_IPC_EVBUFFER_EOF == retval)
     {
         unauthorized_protocol_service_close_connection(conn);
         return;
