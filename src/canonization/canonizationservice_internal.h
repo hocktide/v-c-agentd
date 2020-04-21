@@ -49,6 +49,8 @@ typedef struct canonizationservice_instance
     vccert_builder_options_t builder_opts;
     linked_list_options_t transaction_list_opts;
     uint8_t block_id[16];
+    uint8_t previous_block_id[16];
+    uint64_t block_height;
     linked_list_t* transaction_list;
 } canonizationservice_instance_t;
 
@@ -336,6 +338,28 @@ void canonizationservice_dataservice_response_transaction_read(
     const size_t resp_size);
 
 /**
+ * \brief Handle the response from the data service latest block id read.
+ *
+ * \param instance      The canonization service instance.
+ * \param resp          The response from the data service.
+ * \param resp_size     The size of the response from the data service.
+ */
+void canonizationservice_dataservice_response_latest_block_id_read(
+    canonizationservice_instance_t* instance, const uint32_t* resp,
+    const size_t resp_size);
+
+/**
+ * \brief Handle the response from the data service block read.
+ *
+ * \param instance      The canonization service instance.
+ * \param resp          The response from the data service.
+ * \param resp_size     The size of the response from the data service.
+ */
+void canonizationservice_dataservice_response_block_read(
+    canonizationservice_instance_t* instance, const uint32_t* resp,
+    const size_t resp_size);
+
+/**
  * \brief Handle the response from the data service block write.
  *
  * \param instance      The canonization service instance.
@@ -361,6 +385,22 @@ int canonizationservice_dataservice_sendreq_child_context_create(
  * \param instance      The canonization service instance.
  */
 int canonizationservice_dataservice_sendreq_transaction_get_first(
+    canonizationservice_instance_t* instance);
+
+/**
+ * \brief Send a request to get the latest block id from the data service.
+ *
+ * \param instance      The canonization service instance.
+ */
+int canonizationservice_dataservice_sendreq_block_id_latest_get(
+    canonizationservice_instance_t* instance);
+
+/**
+ * \brief Send a request to get a block by id from the data service.
+ *
+ * \param instance      The canonization service instance.
+ */
+int canonizationservice_dataservice_sendreq_block_get(
     canonizationservice_instance_t* instance);
 
 /**

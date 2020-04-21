@@ -88,6 +88,18 @@ void canonizationservice_data_read(
                 instance, resp, resp_size);
             break;
 
+        /* handle latest block id read. */
+        case DATASERVICE_API_METHOD_APP_BLOCK_ID_LATEST_READ:
+            canonizationservice_dataservice_response_latest_block_id_read(
+                instance, resp, resp_size);
+            break;
+
+        /* handle block read. */
+        case DATASERVICE_API_METHOD_APP_BLOCK_READ:
+            canonizationservice_dataservice_response_block_read(
+                instance, resp, resp_size);
+            break;
+
         /* handle block make. */
         case DATASERVICE_API_METHOD_APP_BLOCK_WRITE:
             canonizationservice_dataservice_response_block_write(

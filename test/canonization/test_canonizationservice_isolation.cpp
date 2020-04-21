@@ -12,6 +12,7 @@
 #include <iostream>
 #include <string>
 #include <unistd.h>
+#include <vccert/certificate_types.h>
 #include <vccrypt/compare.h>
 #include <vpr/disposable.h>
 
@@ -133,6 +134,15 @@ TEST_F(canonizationservice_isolation_test, no_txn_retry)
             return AGENTD_ERROR_DATASERVICE_NOT_FOUND;
         });
 
+    /* mock the latest block id query api call. */
+    dataservice->register_callback_block_id_latest_read(
+        [&](const dataservice_request_block_id_latest_read_t&,
+            std::ostream& out) {
+            out.write((const char*)vccert_certificate_type_uuid_root_block, 16);
+
+            return AGENTD_STATUS_SUCCESS;
+        });
+
     /* start the mock. */
     dataservice->start();
 
@@ -166,6 +176,11 @@ TEST_F(canonizationservice_isolation_test, no_txn_retry)
         dataservice->request_matches_child_context_create(
             EXPECTED_CAPS));
 
+    /* a get latest block id call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_id_latest_read(
+            EXPECTED_CHILD_INDEX));
+
     /* a get first call should have been made. */
     EXPECT_TRUE(
         dataservice->request_matches_transaction_get_first(
@@ -180,6 +195,141 @@ TEST_F(canonizationservice_isolation_test, no_txn_retry)
     EXPECT_TRUE(
         dataservice->request_matches_child_context_create(
             EXPECTED_CAPS));
+
+    /* a get latest block id call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_id_latest_read(
+            EXPECTED_CHILD_INDEX));
+
+    /* a second get first call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_transaction_get_first(
+            EXPECTED_CHILD_INDEX));
+
+    /* a child close should have occurred. */
+    EXPECT_TRUE(
+        dataservice->request_matches_child_context_close(
+            EXPECTED_CHILD_INDEX));
+}
+
+/**
+ * Test that the canonization service tries again when there are no
+ * transactions and a block exists.
+ */
+TEST_F(canonizationservice_isolation_test, no_txn_retry_with_block)
+{
+    const uint8_t dummy_block_id[16] = {
+        0x53, 0x25, 0xb2, 0xa7, 0xc8, 0xa9, 0x45, 0x60,
+        0xb9, 0xea, 0xca, 0x23, 0xc3, 0xf7, 0xb0, 0x72
+    };
+    const uint8_t dummy_block_end[16] = {
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+    };
+
+    /* register dataservice helper mocks. */
+    ASSERT_EQ(0, dataservice_mock_register_helper());
+
+    /* mock the transaction query api call. */
+    dataservice->register_callback_transaction_get_first(
+        [&](const dataservice_request_transaction_get_first_t&,
+            std::ostream&) {
+            return AGENTD_ERROR_DATASERVICE_NOT_FOUND;
+        });
+
+    /* mock the latest block id query api call. */
+    dataservice->register_callback_block_id_latest_read(
+        [&](const dataservice_request_block_id_latest_read_t&,
+            std::ostream& out) {
+            out.write((const char*)dummy_block_id, 16);
+
+            return AGENTD_STATUS_SUCCESS;
+        });
+
+    /* mock the block read call. */
+    dataservice->register_callback_block_read(
+        [&](const dataservice_request_block_read_t&,
+            std::ostream& out) {
+            uint64_t height = htonll(16);
+
+            out.write((const char*)dummy_block_id, 16);
+            out.write((const char*)vccert_certificate_type_uuid_root_block, 16);
+            out.write((const char*)dummy_block_end, 16);
+            out.write((const char*)dummy_block_end, 16);
+            out.write((const char*)&height, sizeof(height));
+            out.write((const char*)&height, sizeof(height));
+            out.write((const char*)dummy_block_id, 16);
+
+            return AGENTD_STATUS_SUCCESS;
+        });
+
+    /* start the mock. */
+    dataservice->start();
+
+    /* we should be able to configure and start the canonization service. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        canonizationservice_configure_and_start(1, 10));
+
+    usleep(30000);
+
+    /* stop the mock. */
+    dataservice->stop();
+
+    /* set our expected caps. */
+    BITCAP(EXPECTED_CAPS, DATASERVICE_API_CAP_BITS_MAX);
+    BITCAP_INIT_FALSE(EXPECTED_CAPS);
+    BITCAP_SET_TRUE(
+        EXPECTED_CAPS, DATASERVICE_API_CAP_APP_PQ_TRANSACTION_FIRST_READ);
+    BITCAP_SET_TRUE(
+        EXPECTED_CAPS, DATASERVICE_API_CAP_APP_PQ_TRANSACTION_READ);
+    BITCAP_SET_TRUE(
+        EXPECTED_CAPS, DATASERVICE_API_CAP_APP_BLOCK_ID_LATEST_READ);
+    BITCAP_SET_TRUE(
+        EXPECTED_CAPS, DATASERVICE_API_CAP_APP_BLOCK_READ);
+    BITCAP_SET_TRUE(
+        EXPECTED_CAPS, DATASERVICE_API_CAP_APP_BLOCK_WRITE);
+    BITCAP_SET_TRUE(
+        EXPECTED_CAPS, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
+
+    /* a child create should have occurred. */
+    EXPECT_TRUE(
+        dataservice->request_matches_child_context_create(
+            EXPECTED_CAPS));
+
+    /* a get latest block id call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_id_latest_read(
+            EXPECTED_CHILD_INDEX));
+
+    /* a get block call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_read(
+            EXPECTED_CHILD_INDEX, dummy_block_id));
+
+    /* a get first call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_transaction_get_first(
+            EXPECTED_CHILD_INDEX));
+
+    /* a child close should have occurred. */
+    EXPECT_TRUE(
+        dataservice->request_matches_child_context_close(
+            EXPECTED_CHILD_INDEX));
+
+    /* a child create should have occurred. */
+    EXPECT_TRUE(
+        dataservice->request_matches_child_context_create(
+            EXPECTED_CAPS));
+
+    /* a get latest block id call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_id_latest_read(
+            EXPECTED_CHILD_INDEX));
+
+    /* a get block call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_read(
+            EXPECTED_CHILD_INDEX, dummy_block_id));
 
     /* a second get first call should have been made. */
     EXPECT_TRUE(
@@ -245,6 +395,15 @@ TEST_F(canonizationservice_isolation_test, no_attested_retry)
             return AGENTD_STATUS_SUCCESS;
         });
 
+    /* mock the latest block id query api call. */
+    dataservice->register_callback_block_id_latest_read(
+        [&](const dataservice_request_block_id_latest_read_t&,
+            std::ostream& out) {
+            out.write((const char*)vccert_certificate_type_uuid_root_block, 16);
+
+            return AGENTD_STATUS_SUCCESS;
+        });
+
     /* start the mock. */
     dataservice->start();
 
@@ -278,6 +437,11 @@ TEST_F(canonizationservice_isolation_test, no_attested_retry)
         dataservice->request_matches_child_context_create(
             EXPECTED_CAPS));
 
+    /* a get latest block id call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_id_latest_read(
+            EXPECTED_CHILD_INDEX));
+
     /* a get first call should have been made. */
     EXPECT_TRUE(
         dataservice->request_matches_transaction_get_first(
@@ -292,6 +456,11 @@ TEST_F(canonizationservice_isolation_test, no_attested_retry)
     EXPECT_TRUE(
         dataservice->request_matches_child_context_create(
             EXPECTED_CAPS));
+
+    /* a get latest block id call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_id_latest_read(
+            EXPECTED_CHILD_INDEX));
 
     /* a second get first call should have been made. */
     EXPECT_TRUE(
@@ -376,6 +545,15 @@ TEST_F(canonizationservice_isolation_test, one_attested_block)
             return AGENTD_ERROR_DATASERVICE_NOT_FOUND;
         });
 
+    /* mock the latest block id query api call. */
+    dataservice->register_callback_block_id_latest_read(
+        [&](const dataservice_request_block_id_latest_read_t&,
+            std::ostream& out) {
+            out.write((const char*)vccert_certificate_type_uuid_root_block, 16);
+
+            return AGENTD_STATUS_SUCCESS;
+        });
+
     /* start the mock. */
     dataservice->start();
 
@@ -409,6 +587,11 @@ TEST_F(canonizationservice_isolation_test, one_attested_block)
         dataservice->request_matches_child_context_create(
             EXPECTED_CAPS));
 
+    /* a get latest block id call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_id_latest_read(
+            EXPECTED_CHILD_INDEX));
+
     /* a get first call should have been made. */
     EXPECT_TRUE(
         dataservice->request_matches_transaction_get_first(
@@ -428,6 +611,11 @@ TEST_F(canonizationservice_isolation_test, one_attested_block)
     EXPECT_TRUE(
         dataservice->request_matches_child_context_create(
             EXPECTED_CAPS));
+
+    /* a get latest block id call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_id_latest_read(
+            EXPECTED_CHILD_INDEX));
 
     /* a second get first call should have been made. */
     EXPECT_TRUE(
@@ -565,6 +753,15 @@ TEST_F(canonizationservice_isolation_test, multiple_attested_txns_one_block)
             }
         });
 
+    /* mock the latest block id query api call. */
+    dataservice->register_callback_block_id_latest_read(
+        [&](const dataservice_request_block_id_latest_read_t&,
+            std::ostream& out) {
+            out.write((const char*)vccert_certificate_type_uuid_root_block, 16);
+
+            return AGENTD_STATUS_SUCCESS;
+        });
+
     /* start the mock. */
     dataservice->start();
 
@@ -598,6 +795,11 @@ TEST_F(canonizationservice_isolation_test, multiple_attested_txns_one_block)
         dataservice->request_matches_child_context_create(
             EXPECTED_CAPS));
 
+    /* a get latest block id call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_id_latest_read(
+            EXPECTED_CHILD_INDEX));
+
     /* a get first call should have been made. */
     EXPECT_TRUE(
         dataservice->request_matches_transaction_get_first(
@@ -627,6 +829,11 @@ TEST_F(canonizationservice_isolation_test, multiple_attested_txns_one_block)
     EXPECT_TRUE(
         dataservice->request_matches_child_context_create(
             EXPECTED_CAPS));
+
+    /* a get latest block id call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_id_latest_read(
+            EXPECTED_CHILD_INDEX));
 
     /* a second get first call should have been made. */
     EXPECT_TRUE(
@@ -783,6 +990,15 @@ TEST_F(canonizationservice_isolation_test, multiple_attested_multiple_blocks)
             return AGENTD_STATUS_SUCCESS;
         });
 
+    /* mock the latest block id query api call. */
+    dataservice->register_callback_block_id_latest_read(
+        [&](const dataservice_request_block_id_latest_read_t&,
+            std::ostream& out) {
+            out.write((const char*)vccert_certificate_type_uuid_root_block, 16);
+
+            return AGENTD_STATUS_SUCCESS;
+        });
+
     /* start the mock. */
     dataservice->start();
 
@@ -816,6 +1032,11 @@ TEST_F(canonizationservice_isolation_test, multiple_attested_multiple_blocks)
         dataservice->request_matches_child_context_create(
             EXPECTED_CAPS));
 
+    /* a get latest block id call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_id_latest_read(
+            EXPECTED_CHILD_INDEX));
+
     /* a get first call should have been made. */
     EXPECT_TRUE(
         dataservice->request_matches_transaction_get_first(
@@ -836,6 +1057,11 @@ TEST_F(canonizationservice_isolation_test, multiple_attested_multiple_blocks)
         dataservice->request_matches_child_context_create(
             EXPECTED_CAPS));
 
+    /* a get latest block id call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_id_latest_read(
+            EXPECTED_CHILD_INDEX));
+
     /* a get first call should have been made. */
     EXPECT_TRUE(
         dataservice->request_matches_transaction_get_first(
@@ -856,6 +1082,11 @@ TEST_F(canonizationservice_isolation_test, multiple_attested_multiple_blocks)
         dataservice->request_matches_child_context_create(
             EXPECTED_CAPS));
 
+    /* a get latest block id call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_id_latest_read(
+            EXPECTED_CHILD_INDEX));
+
     /* a get first call should have been made. */
     EXPECT_TRUE(
         dataservice->request_matches_transaction_get_first(
@@ -875,6 +1106,11 @@ TEST_F(canonizationservice_isolation_test, multiple_attested_multiple_blocks)
     EXPECT_TRUE(
         dataservice->request_matches_child_context_create(
             EXPECTED_CAPS));
+
+    /* a get latest block id call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_id_latest_read(
+            EXPECTED_CHILD_INDEX));
 
     /* a second get first call should have been made. */
     EXPECT_TRUE(

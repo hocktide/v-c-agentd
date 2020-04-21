@@ -161,9 +161,28 @@ int canonizationservice_block_make(
         goto cleanup_builder;
     }
 
-    /* TODO - add previous block id to the builder. */
+    /* add previous block id to the builder. */
+    retval =
+        vccert_builder_add_short_buffer(
+            &builder, VCCERT_FIELD_TYPE_PREVIOUS_BLOCK_UUID,
+            instance->previous_block_id, sizeof(instance->previous_block_id));
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        ipc_exit_loop(instance->loop_context);
+        goto cleanup_builder;
+    }
+
     /* TODO - add previous block hash to the builder. */
-    /* TODO - add block height to the builder. */
+
+    /* add block height to the builder. */
+    retval =
+        vccert_builder_add_short_uint64(
+            &builder, VCCERT_FIELD_TYPE_BLOCK_HEIGHT, instance->block_height);
+    if (AGENTD_STATUS_SUCCESS != retval)
+    {
+        ipc_exit_loop(instance->loop_context);
+        goto cleanup_builder;
+    }
 
     /* add each transaction to the certificate. */
     elem = instance->transaction_list->first;
