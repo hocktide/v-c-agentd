@@ -65,12 +65,12 @@ static int query_end_node(
 static int dataservice_create_child_trasaction(
     MDB_env* env, dataservice_transaction_context_t* dtxn_ctx, MDB_txn** txn);
 static int dataservice_block_make_create_queue(
-    MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id);
+    MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id, uint64_t height);
 static int dataservice_block_make_update_prev(
     MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id,
     const uint8_t* prev);
 static int dataservice_block_make_update_end(
-    MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id,
+    MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id, uint64_t height,
     const data_block_node_t* curr_end);
 static int dataservice_block_make_update_artifact(
     MDB_dbi artifact_db, MDB_txn* txn, const uint8_t* artifact_id,
@@ -291,7 +291,8 @@ int dataservice_block_make(
     if (NULL == end_node)
     {
         retval = dataservice_block_make_create_queue(
-            details->block_db, txn, block_id);
+            details->block_db, txn, block_id,
+            expected_block_height);
         if (AGENTD_STATUS_SUCCESS != retval)
         {
             goto maybe_transaction_abort;
@@ -310,7 +311,9 @@ int dataservice_block_make(
 
         /* update the end node's prev. */
         retval = dataservice_block_make_update_end(
-            details->block_db, txn, block_id, end_node);
+            details->block_db, txn, block_id, expected_block_height,
+            end_node);
+        if (AGENTD_STATUS_SUCCESS != retval)
         {
             goto maybe_transaction_abort;
         }
@@ -473,6 +476,7 @@ static int constraint_sane_block_uuid(
  * \param txn           The database transaction under which this update is
  *                      performed.
  * \param block_id      The block ID representing the first block in this queue.
+ * \param height        The high water mark block height.
  *
  * \returns a status code indicating success or failure.
  *      - AGENTD_STATUS_SUCCESS on success.
@@ -480,7 +484,7 @@ static int constraint_sane_block_uuid(
  *        update the database.
  */
 static int dataservice_block_make_create_queue(
-    MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id)
+    MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id, uint64_t height)
 {
     MODEL_ASSERT(NULL != txn);
     MODEL_ASSERT(NULL != block_id);
@@ -493,6 +497,7 @@ static int dataservice_block_make_create_queue(
     memset(end.key, 0xFF, sizeof(end.key));
     memset(end.next, 0xFF, sizeof(end.next));
     memcpy(end.prev, block_id, sizeof(end.prev));
+    end.net_block_height = htonll(height);
 
     /* insert start. */
     MDB_val lkey;
@@ -596,6 +601,7 @@ static int dataservice_block_make_update_prev(
  *                      performed.
  * \param block_id      The block ID representing the next block being insterted
  *                      into the blockchain.
+ * \param height        The new height of the blockchain.
  * \param prev          The current end block node to replace.
  *
  * \returns a status code indicating success or failure.
@@ -604,13 +610,14 @@ static int dataservice_block_make_update_prev(
  *        update the database.
  */
 static int dataservice_block_make_update_end(
-    MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id,
+    MDB_dbi block_db, MDB_txn* txn, const uint8_t* block_id, uint64_t height,
     const data_block_node_t* curr_end)
 {
     /* create a copy of the end node and update it with the current block id. */
     data_block_node_t end;
     memcpy(&end, curr_end, sizeof(end));
     memcpy(end.prev, block_id, sizeof(end.prev));
+    end.net_block_height = htonll(height);
 
     /* update this node. */
     MDB_val lkey;
