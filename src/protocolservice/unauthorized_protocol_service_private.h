@@ -16,6 +16,7 @@ extern "C" {
 
 #include <agentd/bitcap.h>
 #include <agentd/dataservice.h>
+#include <agentd/ipc.h>
 #include <agentd/protocolservice/api.h>
 #include <stdint.h>
 
@@ -170,6 +171,14 @@ void unauthorized_protocol_connection_remove(
     unauthorized_protocol_connection_t* conn);
 
 /**
+ * \brief Close a connection, returning it to the free connection pool.
+ *
+ * \param conn          The connection to close.
+ */
+void unauthorized_protocol_service_close_connection(
+    unauthorized_protocol_connection_t* conn);
+
+/**
  * \brief Push a protocol connection onto the given list.
  *
  * \param head          Pointer to the head of the list.
@@ -193,6 +202,255 @@ void unauthorized_protocol_connection_push_front(
 int unauthorized_protocol_service_instance_init(
     unauthorized_protocol_service_instance_t* inst, int random, int data,
     int proto, size_t max_socks);
+
+/**
+ * \brief Handle read events on the protocol socket.
+ *
+ * \param ctx           The non-blocking socket context.
+ * \param event_flags   The event that triggered this callback.
+ * \param user_context  The user context for this proto socket.
+ */
+void unauthorized_protocol_service_ipc_read(
+    ipc_socket_context_t* ctx, int event_flags,
+    void* user_context);
+
+/**
+ * \brief Read data from a connection
+ *
+ * \param ctx           The non-blocking socket context.
+ * \param event_flags   The event that triggered this callback.
+ * \param user_context  The user context for this proto socket.
+ */
+void unauthorized_protocol_service_connection_read(
+    ipc_socket_context_t* ctx, int event_flags,
+    void* user_context);
+
+/**
+ * \brief The write callback for managing writes to the client connection and
+ * for advancing the state machine after the write is completed.
+ *
+ * \param ctx           The socket context for this write callback.
+ * \param event_flags   The event flags that led to this callback being called.
+ * \param user_context  The user context for this callback (expected: a protocol
+ *                      connection).
+ */
+void unauthorized_protocol_service_connection_write(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
+ * \brief Read data from the random service socket.
+ *
+ * \param ctx           The socket context triggering this event.
+ * \param event_flags   The flags for this event.
+ * \param user_context  The user context for this event.
+ */
+void unauthorized_protocol_service_random_read(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
+ * \brief Write data to the random service socket.
+ *
+ * \param ctx           The socket context triggering this event.
+ * \param event_flags   The flags for this event.
+ * \param user_context  The user context for this event.
+ */
+void unauthorized_protocol_service_random_write(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
+ * \brief Read data from the data service socket.
+ *
+ * \param ctx           The socket context for this read callback.
+ * \param event_flags   The event flags that led to this callback being called.
+ * \param user_context  The user context for this callback (expected: a protocol
+ *                      service instance).
+ */
+void unauthorized_protocol_service_dataservice_read(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
+ * \brief Write data to the dataservice socket.
+ *
+ * \param ctx           The socket context for this write callback.
+ * \param event_flags   The event flags that led to this callback being called.
+ * \param user_context  The user context for this callback (expected: a protocol
+ *                      service instance).
+ */
+void unauthorized_protocol_service_dataservice_write(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
+ * \brief Attempt to read a handshake request from the client.
+ *
+ * \param conn      The connection from which this handshake request should be
+ *                  read.
+ */
+void unauthorized_protocol_service_connection_handshake_req_read(
+    unauthorized_protocol_connection_t* conn);
+
+/**
+ * \brief Compute and write the handshake response for the handshake request.
+ *
+ * \param conn          The connection for which the response should be written.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - a non-zero return code on failure.
+ */
+int unauthorized_protocol_service_write_handshake_request_response(
+    unauthorized_protocol_connection_t* conn);
+
+/**
+ * \brief Attempt to the client challenge response acknowledgement.
+ *
+ * \param conn      The connection from which this ack should be read.
+ */
+void unauthorized_protocol_service_connection_handshake_ack_read(
+    unauthorized_protocol_connection_t* conn);
+
+/**
+ * \brief Attempt to read a command from the client.
+ *
+ * \param conn      The connection from which this command should be read.
+ */
+void unauthorized_protocol_service_command_read(
+    unauthorized_protocol_connection_t* conn);
+
+/**
+ * \brief Write a request to the random service to gather entropy.
+ *
+ * \param conn          The connection for which the request is written.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - a non-zero return code on failure.
+ */
+int unauthorized_protocol_service_write_entropy_request(
+    unauthorized_protocol_connection_t* conn);
+
+/**
+ * \brief Get the entity key associated with the data read during a handshake
+ * request.
+ *
+ * \param conn          The connection for which the entity key should be
+ *                      resolved.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - a non-zero return code on failure.
+ */
+int unauthorized_protocol_service_get_entity_key(
+    unauthorized_protocol_connection_t* conn);
+
+/**
+ * \brief Write an error response to the socket and set the connection state to
+ * unauthorized.
+ *
+ * This method writes an error response to the socket and sets up the state
+ * machine to close the connection after the error response is written.
+ *
+ * \param conn          The connection to which the error response is written.
+ * \param request_id    The id of the request that caused the error.
+ * \param status        The status code of the error.
+ * \param offset        The request offset that caused the error.
+ * \param encrypted     Set to true if this packet should be encrypted.
+ */
+void unauthorized_protocol_service_error_response(
+    unauthorized_protocol_connection_t* conn, int request_id, int status,
+    uint32_t offset, bool encrypted);
+
+/**
+ * \brief Decode and dispatch a request from the client.
+ *
+ * \param conn              The connection to close.
+ * \param request_id        The request ID to decode.
+ * \param request_offset    The offset of the request.
+ * \param breq              The bytestream of the request.
+ * \param size              The size of this request bytestream.
+ */
+void unauthorized_protocol_service_decode_and_dispatch(
+    unauthorized_protocol_connection_t* conn, uint32_t request_id,
+    uint32_t request_offset, const uint8_t* breq, size_t size);
+
+/**
+ * \brief Handle a latest_block_id_get request.
+ *
+ * \param conn              The connection to close.
+ * \param request_offset    The offset of the request.
+ * \param breq              The bytestream of the request.
+ * \param size              The size of this request bytestream.
+ */
+void unauthorized_protocol_service_handle_request_latest_block_id_get(
+    unauthorized_protocol_connection_t* conn, uint32_t request_offset,
+    const uint8_t* breq, size_t size);
+
+/**
+ * \brief Handle a transaction submit request.
+ *
+ * \param conn              The connection to close.
+ * \param request_offset    The offset of the request.
+ * \param breq              The bytestream of the request.
+ * \param size              The size of this request bytestream.
+ */
+void unauthorized_protocol_service_handle_request_transaction_submit(
+    unauthorized_protocol_connection_t* conn, uint32_t request_offset,
+    const uint8_t* breq, size_t size);
+
+/**
+ * \brief Request that a dataservice child context be created.
+ *
+ * \param conn      The connection to be assigned a child context when this
+ *                  request completes.
+ *
+ * This connection is pushed to the dataservice context create list, where it
+ * will remain until the next dataservice context create request completes.
+ */
+void unauthorized_protocol_service_dataservice_request_child_context(
+    unauthorized_protocol_connection_t* conn);
+
+/**
+ * Handle a child_context_create response.
+ *
+ * \param svc               The protocol service instance.
+ * \param resp              The response from the child context create call.
+ * \param resp_size         The size of the response.
+ */
+void ups_dispatch_dataservice_response_child_context_create(
+    unauthorized_protocol_service_instance_t* svc, const void* resp,
+    size_t resp_size);
+
+/**
+ * Handle a child_context_close response.
+ *
+ * \param svc               The protocol service instance.
+ * \param resp              The response from the child context create call.
+ * \param resp_size         The size of the response.
+ */
+void ups_dispatch_dataservice_response_child_context_close(
+    unauthorized_protocol_service_instance_t* svc, const void* resp,
+    size_t resp_size);
+
+/**
+ * Handle a block_id_latest_read response.
+ *
+ * \param svc               The protocol service instance.
+ * \param resp              The response from the child context create call.
+ * \param resp_size         The size of the response.
+ */
+void ups_dispatch_dataservice_response_block_id_latest_read(
+    unauthorized_protocol_service_instance_t* svc, const void* resp,
+    size_t resp_size);
+
+/**
+ * Handle a transaction submit response.
+ *
+ * \param svc               The protocol service instance.
+ * \param resp              The response from the child context create call.
+ * \param resp_size         The size of the response.
+ */
+void ups_dispatch_dataservice_response_transaction_submit(
+    unauthorized_protocol_service_instance_t* svc, const void* resp,
+    size_t resp_size);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
