@@ -783,3 +783,196 @@ TEST_F(unauthorized_protocol_service_isolation_test,
     dispose((disposable_t*)&shared_secret);
     dispose((disposable_t*)&cert);
 }
+
+/**
+ * Test that a request to get a block by id passes a failure condition back when
+ * the query fails in our data service mock.
+ */
+TEST_F(unauthorized_protocol_service_isolation_test, block_get_by_id_not_found)
+{
+    uint32_t offset, status;
+    uint64_t client_iv = 0;
+    uint64_t server_iv = 0;
+    const uint8_t EXPECTED_BLOCK_ID[16] = {
+        0xca, 0x47, 0xa5, 0xbb, 0x39, 0xaa, 0x44, 0xb2,
+        0xb1, 0x7b, 0xc0, 0x55, 0x1a, 0x24, 0x90, 0x9c
+    };
+    vccrypt_buffer_t shared_secret;
+    data_block_node_t data_block_node;
+    uint8_t* block_cert = nullptr;
+    size_t block_cert_size = 0UL;
+
+    /* register dataservice helper mocks. */
+    ASSERT_EQ(0, dataservice_mock_register_helper());
+
+    /* mock the block get call. */
+    dataservice->register_callback_block_read(
+        [&](const dataservice_request_block_read_t&,
+            std::ostream&) {
+            /* block not found. */
+            return AGENTD_ERROR_DATASERVICE_NOT_FOUND;
+        });
+
+    /* start the mock. */
+    dataservice->start();
+
+    /* do the handshake, populating the shared secret on success. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        do_handshake(&shared_secret, &server_iv, &client_iv));
+
+    /* send the block get request. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_block_get(
+            protosock, &suite, &client_iv, &shared_secret,
+            EXPECTED_BLOCK_ID));
+
+    /* get the response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_block_get(
+            protosock, &suite, &server_iv, &shared_secret, &offset,
+            &status, &data_block_node, &block_cert, &block_cert_size));
+
+    /* the status should indicate that the record wasn't found. */
+    ASSERT_EQ(
+        AGENTD_ERROR_DATASERVICE_NOT_FOUND, (int)status);
+    /* the offset should be zero. */
+    ASSERT_EQ(0U, offset);
+
+    /* send the close request. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_close(
+            protosock, &suite, &client_iv, &shared_secret));
+
+    /* get the close response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_close(
+            protosock, &suite, &server_iv, &shared_secret));
+
+    /* close the socket */
+    close(protosock);
+
+    /* stop the mock. */
+    dataservice->stop();
+
+    /* verify proper connection setup. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_setup());
+
+    /* a block get call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_read(
+            EXPECTED_CHILD_INDEX, EXPECTED_BLOCK_ID));
+
+    /* verify proper connection teardown. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_teardown());
+
+    /* clean up. */
+    dispose((disposable_t*)&shared_secret);
+}
+
+/**
+ * Test the happy path of block_get_by_id
+ */
+TEST_F(unauthorized_protocol_service_isolation_test, block_get_by_id_happy_path)
+{
+    uint32_t offset, status;
+    uint64_t client_iv = 0;
+    uint64_t server_iv = 0;
+    const uint8_t EXPECTED_BLOCK_ID[16] = {
+        0xca, 0x47, 0xa5, 0xbb, 0x39, 0xaa, 0x44, 0xb2,
+        0xb1, 0x7b, 0xc0, 0x55, 0x1a, 0x24, 0x90, 0x9c
+    };
+    vccrypt_buffer_t shared_secret;
+    data_block_node_t data_block_node;
+    uint8_t* block_cert = nullptr;
+    size_t block_cert_size = 0UL;
+
+    /* register dataservice helper mocks. */
+    ASSERT_EQ(0, dataservice_mock_register_helper());
+
+    /* mock the block get call. */
+    dataservice->register_callback_block_read(
+        [&](const dataservice_request_block_read_t&,
+            std::ostream& payout) {
+            void* payload = nullptr;
+            size_t payload_size = 0U;
+
+            int retval =
+                dataservice_encode_response_block_read(
+                    &payload, &payload_size, EXPECTED_BLOCK_ID, EXPECTED_BLOCK_ID,
+                    EXPECTED_BLOCK_ID, EXPECTED_BLOCK_ID, 10, EXPECTED_BLOCK_ID,
+                    sizeof(EXPECTED_BLOCK_ID));
+            if (AGENTD_STATUS_SUCCESS != retval)
+                return retval;
+
+            /* make sure to clean up memory when we fall out of scope. */
+            unique_ptr<void, decltype(free)*> cleanup(payload, &free);
+
+            /* write the payload. */
+            payout.write((const char*)payload, payload_size);
+
+            /* success. */
+            return AGENTD_STATUS_SUCCESS;
+        });
+
+    /* start the mock. */
+    dataservice->start();
+
+    /* do the handshake, populating the shared secret on success. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        do_handshake(&shared_secret, &server_iv, &client_iv));
+
+    /* send the block get request. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_block_get(
+            protosock, &suite, &client_iv, &shared_secret,
+            EXPECTED_BLOCK_ID));
+
+    /* get the response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_block_get(
+            protosock, &suite, &server_iv, &shared_secret, &offset,
+            &status, &data_block_node, &block_cert, &block_cert_size));
+
+    /* the status should indicate that the record wasn't found. */
+    ASSERT_EQ(
+        AGENTD_STATUS_SUCCESS, (int)status);
+    /* the offset should be zero. */
+    ASSERT_EQ(0U, offset);
+
+    /* in the mock above, we hack in the block id as the certificate. */
+    ASSERT_EQ(0, memcmp(block_cert, EXPECTED_BLOCK_ID, 16));
+    ASSERT_EQ(16U, block_cert_size);
+
+    /* clean up memory. */
+    free(block_cert);
+
+    /* send the close request. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_close(
+            protosock, &suite, &client_iv, &shared_secret));
+
+    /* get the close response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_close(
+            protosock, &suite, &server_iv, &shared_secret));
+
+    /* close the socket */
+    close(protosock);
+
+    /* stop the mock. */
+    dataservice->stop();
+
+    /* verify proper connection setup. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_setup());
+
+    /* a block get call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_block_read(
+            EXPECTED_CHILD_INDEX, EXPECTED_BLOCK_ID));
+
+    /* verify proper connection teardown. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_teardown());
+
+    /* clean up. */
+    dispose((disposable_t*)&shared_secret);
+}
