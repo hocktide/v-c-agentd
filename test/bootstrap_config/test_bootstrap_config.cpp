@@ -31,6 +31,8 @@ TEST(bootstrap_config_test, bootstrap_config_init)
     EXPECT_STREQ("/etc/agentd.conf", bconf.config_file);
     /* by default, config_file_override is false. */
     EXPECT_FALSE(bconf.config_file_override);
+    /* by default, init mode is set to false. */
+    EXPECT_FALSE(bconf.init_mode);
 
     dispose((disposable_t*)&bconf);
 }
@@ -52,6 +54,27 @@ TEST(bootstrap_config_test, bootstrap_config_set_foreground)
 
     /* Postcondition: foreground is true. */
     EXPECT_TRUE(bconf.foreground);
+
+    dispose((disposable_t*)&bconf);
+}
+
+/**
+ * \brief bootstrap_config_set_init_mode sets the init_mode field.
+ */
+TEST(bootstrap_config_test, bootstrap_config_set_init_mode)
+{
+    bootstrap_config_t bconf;
+
+    bootstrap_config_init(&bconf);
+
+    /* Precondition: foreground is false. */
+    ASSERT_FALSE(bconf.init_mode);
+
+    /* run bootstrap_config_set_init_mode. */
+    bootstrap_config_set_init_mode(&bconf, true);
+
+    /* Postcondition: foreground is true. */
+    EXPECT_TRUE(bconf.init_mode);
 
     dispose((disposable_t*)&bconf);
 }

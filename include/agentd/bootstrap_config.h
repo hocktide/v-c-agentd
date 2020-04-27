@@ -3,7 +3,7 @@
  *
  * \brief Configuration data structure for bootstrapping agentd.
  *
- * \copyright 2018 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2018-2020 Velo Payments, Inc.  All rights reserved.
  */
 
 #ifndef AGENTD_BOOTSTRAP_CONFIG_HEADER_GUARD
@@ -49,6 +49,9 @@ typedef struct bootstrap_config
     /** \brief Run the service in the foreground (don't daemonize). */
     bool foreground;
 
+    /** \brief Run the service in init mode (exec / don't fork supervisor). */
+    bool init_mode;
+
     /** \brief Command to execute. */
     bootstrap_config_command_t command;
 
@@ -82,6 +85,16 @@ void bootstrap_config_init(bootstrap_config_t* bconf);
  */
 void bootstrap_config_set_foreground(
     bootstrap_config_t* bconf, bool foreground);
+
+/**
+ * \brief Set agentd to start in init mode (exec but don't fork).
+ *
+ * \param bconf         The bootstrap configuration data to update.
+ * \param init_mode     Set to true: run in init mode.  Set to false: run in
+ *                      forked mode.
+ */
+void bootstrap_config_set_init_mode(
+    bootstrap_config_t* bconf, bool init_mode);
 
 /**
  * \brief Set agentd to run the given command.

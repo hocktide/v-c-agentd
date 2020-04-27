@@ -62,6 +62,33 @@ TEST(parse_commandline_options_test, foreground_option)
 }
 
 /**
+ * \brief Parsing a -I option should set init_mode to true.
+ */
+TEST(parse_commandline_options_test, init_mode_option)
+{
+    bootstrap_config_t bconf;
+    char exename[] = { 'a', 'g', 'e', 'n', 't', 'd', 0 };
+    char flags[] = { '-', 'I', 0 };
+    char cmd[] = { 'h', 'e', 'l', 'p', 0 };
+    char* args[] = { exename, flags, cmd };
+
+    bootstrap_config_init(&bconf);
+
+    /* init_mode is false by default. */
+    ASSERT_FALSE(bconf.init_mode);
+
+    parse_commandline_options(
+        &bconf, sizeof(args) / sizeof(char*), args);
+
+    /* agentd has been set to run in init mode. */
+    EXPECT_TRUE(bconf.init_mode);
+    /* the help command is set. */
+    EXPECT_EQ(&command_help, bconf.command);
+
+    dispose((disposable_t*)&bconf);
+}
+
+/**
  * \brief Parsing a -c config should set the config file name.
  */
 TEST(parse_commandline_options_test, config_option_space)

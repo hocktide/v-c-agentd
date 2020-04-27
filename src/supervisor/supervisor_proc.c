@@ -40,20 +40,27 @@ int supervisor_proc(struct bootstrap_config* bconf, int pid_fd)
         goto done;
     }
 
-    /* fork the process. */
-    pid = fork();
-    if (pid < 0)
+    /* fork the process, unless we are in init mode. */
+    if (bconf->init_mode)
     {
-        perror("fork");
-        retval = pid;
-        goto done;
+        pid = 0;
+    }
+    else
+    {
+        pid = fork();
+        if (pid < 0)
+        {
+            perror("fork");
+            retval = pid;
+            goto done;
+        }
     }
 
     /* Child */
     if (pid == 0)
     {
-        /* If we arn't running in foreground we need a new supervision id. */
-        if (!bconf->foreground)
+        /* If we aren't running in foreground we need a new supervision id. */
+        if (!bconf->init_mode && !bconf->foreground)
         {
             pid_t UNUSED(sid) = setsid();
         }

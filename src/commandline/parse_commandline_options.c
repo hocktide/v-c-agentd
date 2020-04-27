@@ -35,13 +35,18 @@ void parse_commandline_options(
 #endif
 
     /* read through command-line options. */
-    while ((ch = getopt(argc, argv, "FP:c:")) != -1)
+    while ((ch = getopt(argc, argv, "FIP:c:")) != -1)
     {
         switch (ch)
         {
             /* run the agent in the foreground. */
             case 'F':
                 bootstrap_config_set_foreground(bconf, true);
+                break;
+
+            /* run the agent in init mode. */
+            case 'I':
+                bootstrap_config_set_init_mode(bconf, true);
                 break;
 
             /* run a private (privsep) command. */
