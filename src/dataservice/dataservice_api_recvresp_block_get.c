@@ -144,17 +144,26 @@ int dataservice_api_recvresp_block_get(
         node->net_block_cert_size = dresp.node.net_block_cert_size;
     }
 
-    /* allocate memory for the data. */
-    *data = malloc(dresp.data_size);
-    if (NULL == *data)
+    /* should we copy a certificate? */
+    if (dresp.data_size > 0)
     {
-        retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
-        goto cleanup_dresp;
-    }
+        /* allocate memory for the data. */
+        *data = malloc(dresp.data_size);
+        if (NULL == *data)
+        {
+            retval = AGENTD_ERROR_GENERAL_OUT_OF_MEMORY;
+            goto cleanup_dresp;
+        }
 
-    /* copy data. */
-    memcpy(*data, dresp.data, dresp.data_size);
-    *data_size = dresp.data_size;
+        /* copy data. */
+        memcpy(*data, dresp.data, dresp.data_size);
+        *data_size = dresp.data_size;
+    }
+    else
+    {
+        *data = NULL;
+        *data_size = 0U;
+    }
 
     /* success. */
     retval = AGENTD_STATUS_SUCCESS;

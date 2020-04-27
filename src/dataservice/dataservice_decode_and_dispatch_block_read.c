@@ -90,7 +90,7 @@ int dataservice_decode_and_dispatch_block_read(
         dataservice_encode_response_block_read(
             &payload, &payload_size, node.key, node.prev, node.next,
             node.first_transaction_id, ntohll(node.net_block_height),
-            block_bytes, block_size);
+            dreq.read_cert, block_bytes, block_size);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;

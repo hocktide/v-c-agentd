@@ -16,6 +16,7 @@ extern "C" {
 
 #include <agentd/bitcap.h>
 #include <agentd/dataservice.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <vpr/disposable.h>
@@ -74,6 +75,7 @@ typedef struct dataservice_request_block_read
 {
     dataservice_request_header_t hdr;
     uint8_t block_id[16];
+    bool read_cert;
 } dataservice_request_block_read_t;
 
 /**
@@ -370,6 +372,7 @@ int dataservice_decode_request_block_read(
  * \param next_id           Pointer to the next block UUID.               
  * \param first_txn_id      Pointer to the first transaction UUID.
  * \param block_height      The block height.
+ * \param write_cert        Set to true if the block cert should be written.
  * \param cert              Pointer to the block certificate.
  * \param cert_size         Size of the block certificate.
  *
@@ -386,7 +389,7 @@ int dataservice_decode_request_block_read(
 int dataservice_encode_response_block_read(
     void** payload, size_t* payload_size, const uint8_t* block_id,
     const uint8_t* prev_id, const uint8_t* next_id, const uint8_t* first_txn_id,
-    uint64_t block_height, const void* cert, size_t cert_size);
+    uint64_t block_height, bool write_cert, const void* cert, size_t cert_size);
 
 /**
  * \brief Decode a canonized transaction get request.

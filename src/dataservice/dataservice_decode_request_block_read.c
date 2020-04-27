@@ -45,8 +45,8 @@ int dataservice_decode_request_block_read(
         goto done;
     }
 
-    /* the remaining payload size should be equal to the block id*/
-    if (size != sizeof(dreq->block_id))
+    /* the remaining payload size should be equal to the block id plus one */
+    if (size != sizeof(dreq->block_id) + 1)
     {
         retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
         goto cleanup_dreq;
@@ -54,6 +54,16 @@ int dataservice_decode_request_block_read(
 
     /* copy the block_id. */
     memcpy(dreq->block_id, breq, sizeof(dreq->block_id));
+
+    /* set the block_read flag. */
+    if (breq[16])
+    {
+        dreq->read_cert = true;
+    }
+    else
+    {
+        dreq->read_cert = false;
+    }
 
     /* success. dreq contents are owned by the caller. */
     goto done;

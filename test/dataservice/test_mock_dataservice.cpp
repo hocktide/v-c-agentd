@@ -936,7 +936,8 @@ TEST_F(mock_dataservice_test, default_block_read)
             {
                 sendreq_status =
                     dataservice_api_sendreq_block_get(
-                        &nonblockdatasock, child_context, EXPECTED_BLOCK_ID);
+                        &nonblockdatasock, child_context, EXPECTED_BLOCK_ID,
+                        true);
             }
         });
 
@@ -992,7 +993,8 @@ TEST_F(mock_dataservice_test, matches_block_read)
             {
                 sendreq_status =
                     dataservice_api_sendreq_block_get(
-                        &nonblockdatasock, child_context, EXPECTED_BLOCK_ID);
+                        &nonblockdatasock, child_context, EXPECTED_BLOCK_ID,
+                        true);
             }
         });
 
@@ -1078,7 +1080,7 @@ TEST_F(mock_dataservice_test, block_read_override)
                 dataservice_encode_response_block_read(
                     &payload, &payload_size, EXPECTED_BLOCK_ID, EXPECTED_PREV_ID,
                     EXPECTED_NEXT_ID, EXPECTED_FIRST_TXN_ID, EXPECTED_BLOCK_HEIGHT,
-                    EXPECTED_CERT, EXPECTED_CERT_SIZE);
+                    true, EXPECTED_CERT, EXPECTED_CERT_SIZE);
             if (AGENTD_STATUS_SUCCESS != retval)
                 return retval;
 
@@ -1120,7 +1122,8 @@ TEST_F(mock_dataservice_test, block_read_override)
             {
                 sendreq_status =
                     dataservice_api_sendreq_block_get(
-                        &nonblockdatasock, child_context, EXPECTED_BLOCK_ID);
+                        &nonblockdatasock, child_context, EXPECTED_BLOCK_ID,
+                        true);
             }
         });
 

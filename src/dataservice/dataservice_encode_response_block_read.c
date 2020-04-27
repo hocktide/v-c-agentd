@@ -23,6 +23,7 @@
  * \param next_id           Pointer to the next block UUID.               
  * \param first_txn_id      Pointer to the first transaction UUID.
  * \param block_height      The block height.
+ * \param write_cert        Set to true if the block cert should be written.
  * \param cert              Pointer to the block certificate.
  * \param cert_size         Size of the block certificate.
  *
@@ -39,7 +40,7 @@
 int dataservice_encode_response_block_read(
     void** payload, size_t* payload_size, const uint8_t* block_id,
     const uint8_t* prev_id, const uint8_t* next_id, const uint8_t* first_txn_id,
-    uint64_t block_height, const void* cert, size_t cert_size)
+    uint64_t block_height, bool write_cert, const void* cert, size_t cert_size)
 {
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != payload);
@@ -50,8 +51,17 @@ int dataservice_encode_response_block_read(
     MODEL_ASSERT(NULL != first_txn_id);
     MODEL_ASSERT(NULL != cert);
 
+    /* compute the payload size. */
+    if (write_cert)
+    {
+        *payload_size = 4 * 16 + sizeof(uint64_t) + cert_size;
+    }
+    else
+    {
+        *payload_size = 4 * 16 + sizeof(uint64_t);
+    }
+
     /* create the payload. */
-    *payload_size = 4 * 16 + sizeof(uint64_t) + cert_size;
     *payload = (uint8_t*)malloc(*payload_size);
     uint8_t* payload_bytes = (uint8_t*)*payload;
     if (NULL == payload_bytes)
@@ -69,8 +79,11 @@ int dataservice_encode_response_block_read(
     memcpy(payload_bytes + 48, first_txn_id, 16);
     memcpy(payload_bytes + 64, &net_block_height, sizeof(net_block_height));
 
-    /* copy the block certificate data to the payload. */
-    memcpy(payload_bytes + 72, cert, cert_size);
+    /* copy the block certificate data to the payload if requested. */
+    if (write_cert)
+    {
+        memcpy(payload_bytes + 72, cert, cert_size);
+    }
 
     /* success. */
     return AGENTD_STATUS_SUCCESS;

@@ -899,8 +899,8 @@ TEST_F(unauthorized_protocol_service_isolation_test, block_get_by_id_happy_path)
             int retval =
                 dataservice_encode_response_block_read(
                     &payload, &payload_size, EXPECTED_BLOCK_ID, EXPECTED_BLOCK_ID,
-                    EXPECTED_BLOCK_ID, EXPECTED_BLOCK_ID, 10, EXPECTED_BLOCK_ID,
-                    sizeof(EXPECTED_BLOCK_ID));
+                    EXPECTED_BLOCK_ID, EXPECTED_BLOCK_ID, 10, true,
+                    EXPECTED_BLOCK_ID, sizeof(EXPECTED_BLOCK_ID));
             if (AGENTD_STATUS_SUCCESS != retval)
                 return retval;
 

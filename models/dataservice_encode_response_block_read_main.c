@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
     int retval =
         dataservice_encode_response_block_read(
             &payload, &payload_size, block_id, prev_id, next_id, first_txn_id,
-            nondet_block_height(), cert, cert_size);
+            nondet_block_height(), true, cert, cert_size);
     if (AGENTD_STATUS_SUCCESS != retval)
         return 0;
 

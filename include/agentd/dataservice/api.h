@@ -11,6 +11,7 @@
 
 #include <agentd/dataservice.h>
 #include <agentd/ipc.h>
+#include <stdbool.h>
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
@@ -1291,6 +1292,7 @@ int dataservice_api_recvresp_block_make(
  * \param sock          The socket on which this request is made.
  * \param child         The child index used for the query.
  * \param block_id      The block UUID of the block to retrieve.
+ * \param read_cert     Set to true if the block certificate should be returned.
  *
  * \returns a status code indicating success or failure.
  *      - AGENTD_STATUS_SUCCESS on success.
@@ -1302,7 +1304,8 @@ int dataservice_api_recvresp_block_make(
  *        when writing to the socket.
  */
 int dataservice_api_sendreq_block_get(
-    ipc_socket_context_t* sock, uint32_t child, const uint8_t* block_id);
+    ipc_socket_context_t* sock, uint32_t child, const uint8_t* block_id,
+    bool read_cert);
 
 /**
  * \brief Receive a response from the get block query.

@@ -21,6 +21,7 @@
  * \param sock          The socket on which this request is made.
  * \param child         The child index used for the query.
  * \param block_id      The block UUID of the block to retrieve.
+ * \param read_cert     Set to true if the block certificate should be returned.
  *
  * \returns a status code indicating success or failure.
  *      - AGENTD_STATUS_SUCCESS on success.
@@ -32,7 +33,8 @@
  *        when writing to the socket.
  */
 int dataservice_api_sendreq_block_get(
-    ipc_socket_context_t* sock, uint32_t child, const uint8_t* block_id)
+    ipc_socket_context_t* sock, uint32_t child, const uint8_t* block_id,
+    bool read_cert)
 {
     /* parameter sanity check. */
     MODEL_ASSERT(NULL != sock);
@@ -45,10 +47,11 @@ int dataservice_api_sendreq_block_get(
     /* | DATASERVICE_API_METHOD_APP_BLOCK_READ                |  4 bytes    | */
     /* | child_context_index                                  |  4 bytes    | */
     /* | block UUID.                                          | 16 bytes    | */
+    /* | read cert flag.                                      |  1 byte     | */
     /* | ---------------------------------------------------- | ----------- | */
 
     /* allocate a structure large enough for writing this request. */
-    size_t reqbuflen = 2 * sizeof(uint32_t) + 16;
+    size_t reqbuflen = 2 * sizeof(uint32_t) + 16 + 1;
     uint8_t* reqbuf = (uint8_t*)malloc(reqbuflen);
     if (NULL == reqbuf)
     {
@@ -65,6 +68,16 @@ int dataservice_api_sendreq_block_get(
 
     /* copy the block id to the buffer. */
     memcpy(reqbuf + 2 * sizeof(uint32_t), block_id, 16);
+
+    /* set the read cert flag to true if specified. */
+    if (read_cert)
+    {
+        reqbuf[2 * sizeof(uint32_t) + 16] = 1;
+    }
+    else
+    {
+        reqbuf[2 * sizeof(uint32_t) + 16] = 0;
+    }
 
     /* the request packet consists of the command, index, and block id. */
     int retval = ipc_write_data_noblock(sock, reqbuf, reqbuflen);

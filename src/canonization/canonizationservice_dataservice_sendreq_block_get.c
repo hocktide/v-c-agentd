@@ -34,7 +34,7 @@ int canonizationservice_dataservice_sendreq_block_get(
     retval =
         dataservice_api_sendreq_block_get(
             instance->data, instance->data_child_context,
-            instance->previous_block_id);
+            instance->previous_block_id, true);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
