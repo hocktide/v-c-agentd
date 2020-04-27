@@ -82,7 +82,7 @@ void unauthorized_protocol_service_dataservice_read(
 
         /* block read response. */
         case DATASERVICE_API_METHOD_APP_BLOCK_READ:
-            ups_dispatch_dataservice_response_block_read(
+            ups_dispatch_dataservice_response_block_meta_read(
                 svc, resp, resp_size);
             break;
 

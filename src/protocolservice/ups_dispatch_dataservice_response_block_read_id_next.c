@@ -1,7 +1,7 @@
 /**
- * \file protocolservice/ups_dispatch_dataservice_response_block_read.c
+ * \file protocolservice/ups_dispatch_dataservice_response_block_read_id_next.c
  *
- * \brief Handle the response from the dataservice block read request.
+ * \brief Handle the response from the dataservice block read id next request.
  *
  * \copyright 2020 Velo Payments, Inc.  All rights reserved.
  */
@@ -11,17 +11,17 @@
 #include "unauthorized_protocol_service_private.h"
 
 /**
- * Handle a block read response.
+ * Handle a block id read next response.
  *
  * \param conn              The peer connection context.
  * \param dresp             The decoded response.
  */
-void ups_dispatch_dataservice_response_block_read(
+void ups_dispatch_dataservice_response_block_read_id_next(
     unauthorized_protocol_connection_t* conn,
     const dataservice_response_block_get_t* dresp)
 {
     /* build the payload. */
-    uint32_t net_method = htonl(UNAUTH_PROTOCOL_REQ_ID_BLOCK_BY_ID_GET);
+    uint32_t net_method = htonl(conn->request_id);
     uint32_t net_status = htonl(dresp->hdr.status);
     uint32_t net_offset = htonl(conn->current_request_offset);
 
@@ -49,10 +49,8 @@ void ups_dispatch_dataservice_response_block_read(
         size_t payload_size =
             /* method, status, offset */
             3 * sizeof(uint32_t)
-            /* key, prev, next, first_transaction_id, height, size */
-            + 5 * 16
-            /* block cert. */
-            + dresp->data_size;
+            /* next */
+            + 1 * 16;
         uint8_t* payload = (uint8_t*)malloc(payload_size);
         if (NULL == payload)
         {
@@ -69,15 +67,7 @@ void ups_dispatch_dataservice_response_block_read(
         memcpy(payload + 8, &net_offset, 4);
 
         /* populate block info. */
-        memcpy(payload + 12, dresp->node.key, 16);
-        memcpy(payload + 28, dresp->node.prev, 16);
-        memcpy(payload + 44, dresp->node.next, 16);
-        memcpy(payload + 60, dresp->node.first_transaction_id, 16);
-        memcpy(payload + 76, &dresp->node.net_block_height, 8);
-        memcpy(payload + 84, &dresp->node.net_block_cert_size, 8);
-
-        /* populate certificate. */
-        memcpy(payload + 92, dresp->data, dresp->data_size);
+        memcpy(payload + 12, dresp->node.next, 16);
 
         /* attempt to write this payload to the socket. */
         int retval =
