@@ -369,6 +369,7 @@ int unauthorized_protocol_service_isolation_test::
     BITCAP_SET_TRUE(testbits, DATASERVICE_API_CAP_APP_BLOCK_ID_LATEST_READ);
     BITCAP_SET_TRUE(testbits, DATASERVICE_API_CAP_APP_PQ_TRANSACTION_SUBMIT);
     BITCAP_SET_TRUE(testbits, DATASERVICE_API_CAP_APP_BLOCK_READ);
+    BITCAP_SET_TRUE(testbits, DATASERVICE_API_CAP_APP_TRANSACTION_READ);
     BITCAP_SET_TRUE(testbits, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
     if (!dataservice->request_matches_child_context_create(testbits))
         return 1;
