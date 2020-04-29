@@ -1188,3 +1188,111 @@ TEST_F(unauthorized_protocol_service_isolation_test, block_get_prev_id)
     /* clean up. */
     dispose((disposable_t*)&shared_secret);
 }
+
+/**
+ * Test the happy path of transaction_get_by_id
+ */
+TEST_F(unauthorized_protocol_service_isolation_test, txn_get_by_id_happy_path)
+{
+    uint32_t offset, status;
+    uint64_t client_iv = 0;
+    uint64_t server_iv = 0;
+    const uint8_t EXPECTED_TXN_ID[16] = {
+        0x97, 0xd0, 0x56, 0x30, 0xbb, 0xad, 0x4c, 0xee,
+        0x8f, 0x97, 0x32, 0x98, 0x13, 0x0b, 0xbe, 0x3d
+    };
+    vccrypt_buffer_t shared_secret;
+    data_transaction_node_t data_txn_node;
+    uint8_t* txn_cert = nullptr;
+    size_t txn_cert_size = 0UL;
+
+    /* register dataservice helper mocks. */
+    ASSERT_EQ(0, dataservice_mock_register_helper());
+
+    /* mock the block get call. */
+    dataservice->register_callback_canonized_transaction_get(
+        [&](const dataservice_request_canonized_transaction_get_t&,
+            std::ostream& payout) {
+            void* payload = nullptr;
+            size_t payload_size = 0U;
+
+            int retval =
+                dataservice_encode_response_canonized_transaction_get(
+                    &payload, &payload_size, EXPECTED_TXN_ID, EXPECTED_TXN_ID,
+                    EXPECTED_TXN_ID, EXPECTED_TXN_ID, EXPECTED_TXN_ID, 10,
+                    EXPECTED_TXN_ID, sizeof(EXPECTED_TXN_ID));
+            if (AGENTD_STATUS_SUCCESS != retval)
+                return retval;
+
+            /* make sure to clean up memory when we fall out of scope. */
+            unique_ptr<void, decltype(free)*> cleanup(payload, &free);
+
+            /* write the payload. */
+            payout.write((const char*)payload, payload_size);
+
+            /* success. */
+            return AGENTD_STATUS_SUCCESS;
+        });
+
+    /* start the mock. */
+    dataservice->start();
+
+    /* do the handshake, populating the shared secret on success. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        do_handshake(&shared_secret, &server_iv, &client_iv));
+
+    /* send the block get request. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_transaction_get(
+            protosock, &suite, &client_iv, &shared_secret,
+            EXPECTED_TXN_ID));
+
+    /* get the response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_transaction_get(
+            protosock, &suite, &server_iv, &shared_secret, &offset,
+            &status, &data_txn_node, &txn_cert, &txn_cert_size));
+
+    /* the status should indicate that the record wasn't found. */
+    ASSERT_EQ(
+        AGENTD_STATUS_SUCCESS, (int)status);
+    /* the offset should be zero. */
+    ASSERT_EQ(0U, offset);
+
+    /* in the mock above, we hack in the txn id as the certificate. */
+    ASSERT_EQ(0, memcmp(txn_cert, EXPECTED_TXN_ID, 16));
+    ASSERT_EQ(16U, txn_cert_size);
+
+    /* clean up memory. */
+    free(txn_cert);
+
+    /* send the close request. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_close(
+            protosock, &suite, &client_iv, &shared_secret));
+
+    /* get the close response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_close(
+            protosock, &suite, &server_iv, &shared_secret));
+
+    /* close the socket */
+    close(protosock);
+
+    /* stop the mock. */
+    dataservice->stop();
+
+    /* verify proper connection setup. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_setup());
+
+    /* a block get call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_canonized_transaction_get(
+            EXPECTED_CHILD_INDEX, EXPECTED_TXN_ID));
+
+    /* verify proper connection teardown. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_teardown());
+
+    /* clean up. */
+    dispose((disposable_t*)&shared_secret);
+}

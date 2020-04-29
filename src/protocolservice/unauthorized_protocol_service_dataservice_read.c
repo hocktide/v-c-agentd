@@ -86,6 +86,12 @@ void unauthorized_protocol_service_dataservice_read(
                 svc, resp, resp_size);
             break;
 
+        /* canonized transaction read response. */
+        case DATASERVICE_API_METHOD_APP_TRANSACTION_READ:
+            ups_dispatch_dataservice_response_transaction_read(
+                svc, resp, resp_size);
+            break;
+
         /* unknown method. */
         default:
             /* TODO - if this happens after everything is decoded, log and shut

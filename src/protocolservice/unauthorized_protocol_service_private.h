@@ -434,6 +434,18 @@ void unauthorized_protocol_service_handle_request_block_id_get_next(
     const uint8_t* breq, size_t size);
 
 /**
+ * \brief Handle a transaction get by id request.
+ *
+ * \param conn              The connection to close.
+ * \param request_offset    The offset of the request.
+ * \param breq              The bytestream of the request.
+ * \param size              The size of this request bytestream.
+ */
+void unauthorized_protocol_service_handle_request_transaction_by_id_get(
+    unauthorized_protocol_connection_t* conn, uint32_t request_offset,
+    const uint8_t* breq, size_t size);
+
+/**
  * \brief Request that a dataservice child context be created.
  *
  * \param conn      The connection to be assigned a child context when this
@@ -529,6 +541,17 @@ void ups_dispatch_dataservice_response_block_read_id_next(
 void ups_dispatch_dataservice_response_block_read_id_prev(
     unauthorized_protocol_connection_t* conn,
     const dataservice_response_block_get_t* dresp);
+
+/**
+ * Handle a transaction read response.
+ *
+ * \param svc               The protocol service instance.
+ * \param resp              The response from the child context create call.
+ * \param resp_size         The size of the response.
+ */
+void ups_dispatch_dataservice_response_transaction_read(
+    unauthorized_protocol_service_instance_t* svc, const void* resp,
+    size_t resp_size);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
