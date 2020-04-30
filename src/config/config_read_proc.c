@@ -103,8 +103,15 @@ int config_read_proc(
         close(clientsock);
         clientsock = -1;
 
-        /* get the user and group IDs for nobody. */
+        /* get the user and group IDs for nobody:nogroup. */
         retval = privsep_lookup_usergroup("nobody", "nogroup", &uid, &gid);
+        if (AGENTD_ERROR_GENERAL_GETGRNAM_FAILURE == retval)
+        {
+            /* attempt nobody:nobody if nobody:nogroup fails. */
+            retval = privsep_lookup_usergroup("nobody", "nobody", &uid, &gid);
+        }
+
+        /* if group lookup failed, handle the error. */
         if (0 != retval)
         {
             perror("privsep_lookup_usergroup");
