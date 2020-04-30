@@ -7,8 +7,29 @@
  */
 
 #include <agentd/status_codes.h>
+#include <stddef.h>
+#include <vccrypt/compare.h>
 
 #include "unauthorized_protocol_service_private.h"
+
+static uint8_t ff_uuid[16] = {
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+};
 
 /**
  * Handle a block id read next response.
@@ -46,11 +67,27 @@ void ups_dispatch_dataservice_response_block_read_id_next(
     /* full payload. */
     else
     {
+        bool copy_uuid = true;
+
+        /* if next is the end sentry, return a not found error. */
+        if (!crypto_memcmp(dresp->node.next, ff_uuid, 16))
+        {
+            copy_uuid = false;
+            net_status = ntohl(AGENTD_ERROR_DATASERVICE_NOT_FOUND);
+        }
+
+        /* compute the payload size. */
         size_t payload_size =
             /* method, status, offset */
-            3 * sizeof(uint32_t)
-            /* next */
-            + 1 * 16;
+            3 * sizeof(uint32_t);
+
+        /* should we copy the next uuid? */
+        if (copy_uuid)
+        {
+            payload_size += 1 * 16;
+        }
+
+        /* allocate the payload data. */
         uint8_t* payload = (uint8_t*)malloc(payload_size);
         if (NULL == payload)
         {
@@ -66,8 +103,11 @@ void ups_dispatch_dataservice_response_block_read_id_next(
         memcpy(payload + 4, &net_status, 4);
         memcpy(payload + 8, &net_offset, 4);
 
-        /* populate block info. */
-        memcpy(payload + 12, dresp->node.next, 16);
+        /* populate block uuid. */
+        if (copy_uuid)
+        {
+            memcpy(payload + 12, dresp->node.next, 16);
+        }
 
         /* attempt to write this payload to the socket. */
         int retval =
