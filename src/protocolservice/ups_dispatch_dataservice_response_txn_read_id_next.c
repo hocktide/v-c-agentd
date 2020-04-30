@@ -1,34 +1,49 @@
 /**
- * \file protocolservice/ups_dispatch_dataservice_response_block_read_id_prev.c
+ * \file protocolservice/ups_dispatch_dataservice_response_txn_read_id_next.c
  *
- * \brief Handle the response from the dataservice block read id prev request.
+ * \brief Handle the response from the dataservice transaction read request.
  *
  * \copyright 2020 Velo Payments, Inc.  All rights reserved.
  */
 
+#include <agentd/dataservice/async_api.h>
 #include <agentd/status_codes.h>
 #include <stddef.h>
 #include <vccrypt/compare.h>
 
 #include "unauthorized_protocol_service_private.h"
 
-static uint8_t zero_uuid[16] = {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+static uint8_t ff_uuid[16] = {
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
 };
 
 /**
- * Handle a block id read prev response.
+ * Handle a transaction read next id response.
  *
  * \param conn              The peer connection context.
  * \param dresp             The decoded response.
  */
-void ups_dispatch_dataservice_response_block_read_id_prev(
+void ups_dispatch_dataservice_response_txn_read_id_next(
     unauthorized_protocol_connection_t* conn,
-    const dataservice_response_block_get_t* dresp)
+    const dataservice_response_canonized_transaction_get_t* dresp)
 {
     /* build the payload. */
-    uint32_t net_method = htonl(conn->request_id);
+    uint32_t net_method = htonl(UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_ID_GET_NEXT);
     uint32_t net_status = htonl(dresp->hdr.status);
     uint32_t net_offset = htonl(conn->current_request_offset);
 
@@ -55,19 +70,18 @@ void ups_dispatch_dataservice_response_block_read_id_prev(
     {
         bool copy_uuid = true;
 
-        /* if prev is the beginning sentry, return a not found error. */
-        if (!crypto_memcmp(dresp->node.prev, zero_uuid, 16))
+        /* if the next is the end sentry, return a not found error. */
+        if (!crypto_memcmp(dresp->node.next, ff_uuid, 16))
         {
             copy_uuid = false;
             net_status = htonl(AGENTD_ERROR_DATASERVICE_NOT_FOUND);
         }
 
-        /* compute the payload size. */
         size_t payload_size =
             /* method, status, offset */
             3 * sizeof(uint32_t);
 
-        /* should we copy the prev uuid? */
+        /* should we copy the next uuid? */
         if (copy_uuid)
         {
             payload_size += 1 * 16;
@@ -78,7 +92,7 @@ void ups_dispatch_dataservice_response_block_read_id_prev(
         if (NULL == payload)
         {
             unauthorized_protocol_service_error_response(
-                conn, UNAUTH_PROTOCOL_REQ_ID_BLOCK_BY_ID_GET,
+                conn, UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_ID_GET_NEXT,
                 AGENTD_ERROR_GENERAL_OUT_OF_MEMORY,
                 conn->current_request_offset, true);
             return;
@@ -92,7 +106,7 @@ void ups_dispatch_dataservice_response_block_read_id_prev(
         /* populate block uuid. */
         if (copy_uuid)
         {
-            memcpy(payload + 12, dresp->node.prev, 16);
+            memcpy(payload + 12, dresp->node.next, 16);
         }
 
         /* attempt to write this payload to the socket. */

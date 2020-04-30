@@ -64,6 +64,21 @@ void unauthorized_protocol_service_decode_and_dispatch(
                 conn, request_offset, breq, size);
             break;
 
+        case UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_ID_GET_NEXT:
+            unauthorized_protocol_service_handle_request_txn_id_get_next(
+                conn, request_offset, breq, size);
+            break;
+
+        case UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_ID_GET_PREV:
+            unauthorized_protocol_service_handle_request_txn_id_get_prev(
+                conn, request_offset, breq, size);
+            break;
+
+        case UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_ID_GET_BLOCK_ID:
+            unauthorized_protocol_service_handle_request_txn_id_get_block_id(
+                conn, request_offset, breq, size);
+            break;
+
         /* TODO - replace with valid error code. */
         default:
             unauthorized_protocol_service_error_response(

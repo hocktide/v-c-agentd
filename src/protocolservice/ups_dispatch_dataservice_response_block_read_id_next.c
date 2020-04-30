@@ -73,7 +73,7 @@ void ups_dispatch_dataservice_response_block_read_id_next(
         if (!crypto_memcmp(dresp->node.next, ff_uuid, 16))
         {
             copy_uuid = false;
-            net_status = ntohl(AGENTD_ERROR_DATASERVICE_NOT_FOUND);
+            net_status = htonl(AGENTD_ERROR_DATASERVICE_NOT_FOUND);
         }
 
         /* compute the payload size. */

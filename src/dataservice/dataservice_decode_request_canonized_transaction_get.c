@@ -46,8 +46,8 @@ int dataservice_decode_request_canonized_transaction_get(
         goto done;
     }
 
-    /* the remaining payload size should be equal to the transaction id */
-    if (size != sizeof(dreq->txn_id))
+    /* the remaining payload size should be equal to the txn id plus one. */
+    if (size != sizeof(dreq->txn_id) + 1)
     {
         retval = AGENTD_ERROR_DATASERVICE_REQUEST_PACKET_INVALID_SIZE;
         goto cleanup_dreq;
@@ -55,6 +55,16 @@ int dataservice_decode_request_canonized_transaction_get(
 
     /* copy the txn_id. */
     memcpy(dreq->txn_id, breq, 16);
+
+    /* set the txn_read flag. */
+    if (breq[16])
+    {
+        dreq->read_cert = true;
+    }
+    else
+    {
+        dreq->read_cert = false;
+    }
 
     /* success. dreq contents are owned by the caller. */
     goto done;

@@ -14,41 +14,20 @@
 /**
  * Handle a transaction read response.
  *
- * \param svc               The protocol service instance.
- * \param resp              The response from the child context create call.
- * \param resp_size         The size of the response.
+ * \param conn              The peer connection context.
+ * \param dresp             The decoded response.
  */
 void ups_dispatch_dataservice_response_transaction_read(
-    unauthorized_protocol_service_instance_t* svc, const void* resp,
-    size_t resp_size)
+    unauthorized_protocol_connection_t* conn,
+    const dataservice_response_canonized_transaction_get_t* dresp)
 {
-    dataservice_response_canonized_transaction_get_t dresp;
-
-    /* decode the response. */
-    if (AGENTD_STATUS_SUCCESS !=
-        dataservice_decode_response_canonized_transaction_get(
-            resp, resp_size, &dresp))
-    {
-        /* TODO - handle failure. */
-        return;
-    }
-
-    /* get the connection associated with this child id. */
-    unauthorized_protocol_connection_t* conn =
-        svc->dataservice_child_map[dresp.hdr.offset];
-    if (NULL == conn)
-    {
-        /* TODO - how do we handle a failure here? */
-        goto cleanup_dresp;
-    }
-
     /* build the payload. */
     uint32_t net_method = htonl(UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_BY_ID_GET);
-    uint32_t net_status = htonl(dresp.hdr.status);
+    uint32_t net_status = htonl(dresp->hdr.status);
     uint32_t net_offset = htonl(conn->current_request_offset);
 
     /* if the API call wasn't successful, return the error payload. */
-    if (AGENTD_STATUS_SUCCESS != dresp.hdr.status)
+    if (AGENTD_STATUS_SUCCESS != dresp->hdr.status)
     {
         uint8_t payload[3 * sizeof(uint32_t)];
         memcpy(payload, &net_method, 4);
@@ -62,7 +41,7 @@ void ups_dispatch_dataservice_response_transaction_read(
                 &conn->svc->suite, &conn->shared_secret))
         {
             unauthorized_protocol_service_close_connection(conn);
-            goto cleanup_dresp;
+            return;
         }
     }
     /* full payload. */
@@ -78,7 +57,7 @@ void ups_dispatch_dataservice_response_transaction_read(
             /* net_txn_state */
             + 1 * 4
             /* block cert. */
-            + dresp.data_size;
+            + dresp->data_size;
         uint8_t* payload = (uint8_t*)malloc(payload_size);
         if (NULL == payload)
         {
@@ -86,7 +65,7 @@ void ups_dispatch_dataservice_response_transaction_read(
                 conn, UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_BY_ID_GET,
                 AGENTD_ERROR_GENERAL_OUT_OF_MEMORY,
                 conn->current_request_offset, true);
-            goto cleanup_dresp;
+            return;
         }
 
         /* populate header info. */
@@ -95,16 +74,16 @@ void ups_dispatch_dataservice_response_transaction_read(
         memcpy(payload + 8, &net_offset, 4);
 
         /* populate block info. */
-        memcpy(payload + 12, dresp.node.key, 16);
-        memcpy(payload + 28, dresp.node.prev, 16);
-        memcpy(payload + 44, dresp.node.next, 16);
-        memcpy(payload + 60, dresp.node.artifact_id, 16);
-        memcpy(payload + 76, &dresp.node.block_id, 16);
-        memcpy(payload + 92, &dresp.node.net_txn_cert_size, 8);
-        memcpy(payload + 100, &dresp.node.net_txn_state, 4);
+        memcpy(payload + 12, dresp->node.key, 16);
+        memcpy(payload + 28, dresp->node.prev, 16);
+        memcpy(payload + 44, dresp->node.next, 16);
+        memcpy(payload + 60, dresp->node.artifact_id, 16);
+        memcpy(payload + 76, &dresp->node.block_id, 16);
+        memcpy(payload + 92, &dresp->node.net_txn_cert_size, 8);
+        memcpy(payload + 100, &dresp->node.net_txn_state, 4);
 
         /* populate certificate. */
-        memcpy(payload + 104, dresp.data, dresp.data_size);
+        memcpy(payload + 104, dresp->data, dresp->data_size);
 
         /* attempt to write this payload to the socket. */
         int retval =
@@ -120,7 +99,7 @@ void ups_dispatch_dataservice_response_transaction_read(
         if (AGENTD_STATUS_SUCCESS != retval)
         {
             unauthorized_protocol_service_close_connection(conn);
-            goto cleanup_dresp;
+            return;
         }
     }
 
@@ -136,7 +115,4 @@ void ups_dispatch_dataservice_response_transaction_read(
         &conn->svc->loop);
 
     /* success. */
-
-cleanup_dresp:
-    dispose((disposable_t*)&dresp);
 }

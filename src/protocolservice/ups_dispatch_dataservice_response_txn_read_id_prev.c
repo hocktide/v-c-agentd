@@ -1,11 +1,12 @@
 /**
- * \file protocolservice/ups_dispatch_dataservice_response_block_read_id_prev.c
+ * \file protocolservice/ups_dispatch_dataservice_response_txn_read_id_prev.c
  *
- * \brief Handle the response from the dataservice block read id prev request.
+ * \brief Handle the response from the dataservice transaction read request.
  *
  * \copyright 2020 Velo Payments, Inc.  All rights reserved.
  */
 
+#include <agentd/dataservice/async_api.h>
 #include <agentd/status_codes.h>
 #include <stddef.h>
 #include <vccrypt/compare.h>
@@ -18,17 +19,17 @@ static uint8_t zero_uuid[16] = {
 };
 
 /**
- * Handle a block id read prev response.
+ * Handle a transaction read prev id response.
  *
  * \param conn              The peer connection context.
  * \param dresp             The decoded response.
  */
-void ups_dispatch_dataservice_response_block_read_id_prev(
+void ups_dispatch_dataservice_response_txn_read_id_prev(
     unauthorized_protocol_connection_t* conn,
-    const dataservice_response_block_get_t* dresp)
+    const dataservice_response_canonized_transaction_get_t* dresp)
 {
     /* build the payload. */
-    uint32_t net_method = htonl(conn->request_id);
+    uint32_t net_method = htonl(UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_ID_GET_PREV);
     uint32_t net_status = htonl(dresp->hdr.status);
     uint32_t net_offset = htonl(conn->current_request_offset);
 
@@ -78,7 +79,7 @@ void ups_dispatch_dataservice_response_block_read_id_prev(
         if (NULL == payload)
         {
             unauthorized_protocol_service_error_response(
-                conn, UNAUTH_PROTOCOL_REQ_ID_BLOCK_BY_ID_GET,
+                conn, UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_ID_GET_PREV,
                 AGENTD_ERROR_GENERAL_OUT_OF_MEMORY,
                 conn->current_request_offset, true);
             return;

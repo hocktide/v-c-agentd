@@ -1511,6 +1511,8 @@ int dataservice_api_recvresp_latest_block_id_get(
  * \param sock          The socket on which this request is made.
  * \param child         The child index used for the query.
  * \param txn_id        The transaction UUID of the transaction to retrieve.
+ * \param read_cert     Set to true if the transaction certificate should be
+ *                      returned.
  *
  * \returns a status code indicating success or failure.
  *      - AGENTD_STATUS_SUCCESS on success.
@@ -1522,7 +1524,8 @@ int dataservice_api_recvresp_latest_block_id_get(
  *        when writing to the socket.
  */
 int dataservice_api_sendreq_canonized_transaction_get(
-    ipc_socket_context_t* sock, uint32_t child, const uint8_t* txn_id);
+    ipc_socket_context_t* sock, uint32_t child, const uint8_t* txn_id,
+    bool read_cert);
 
 /**
  * \brief Receive a response from the get canonized transaction query.

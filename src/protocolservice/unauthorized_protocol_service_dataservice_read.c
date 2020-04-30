@@ -88,7 +88,7 @@ void unauthorized_protocol_service_dataservice_read(
 
         /* canonized transaction read response. */
         case DATASERVICE_API_METHOD_APP_TRANSACTION_READ:
-            ups_dispatch_dataservice_response_transaction_read(
+            ups_dispatch_dataservice_response_transaction_meta_read(
                 svc, resp, resp_size);
             break;
 

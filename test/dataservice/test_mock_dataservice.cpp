@@ -1192,7 +1192,8 @@ TEST_F(mock_dataservice_test, default_canonized_transaction_get)
             {
                 sendreq_status =
                     dataservice_api_sendreq_canonized_transaction_get(
-                        &nonblockdatasock, child_context, EXPECTED_TXN_ID);
+                        &nonblockdatasock, child_context, EXPECTED_TXN_ID,
+                        true);
             }
         });
 
@@ -1248,7 +1249,8 @@ TEST_F(mock_dataservice_test, matches_canonized_transaction_get)
             {
                 sendreq_status =
                     dataservice_api_sendreq_canonized_transaction_get(
-                        &nonblockdatasock, child_context, EXPECTED_TXN_ID);
+                        &nonblockdatasock, child_context, EXPECTED_TXN_ID,
+                        true);
             }
         });
 
@@ -1339,7 +1341,8 @@ TEST_F(mock_dataservice_test, canonized_transaction_get_override)
                 dataservice_encode_response_canonized_transaction_get(
                     &payload, &payload_size, EXPECTED_TXN_ID, EXPECTED_PREV_ID,
                     EXPECTED_NEXT_ID, EXPECTED_ARTIFACT_ID, EXPECTED_BLOCK_ID,
-                    EXPECTED_NET_TXN_STATE, EXPECTED_CERT, EXPECTED_CERT_SIZE);
+                    EXPECTED_NET_TXN_STATE, true,
+                    EXPECTED_CERT, EXPECTED_CERT_SIZE);
             if (AGENTD_STATUS_SUCCESS != retval)
                 return retval;
 
@@ -1381,7 +1384,8 @@ TEST_F(mock_dataservice_test, canonized_transaction_get_override)
             {
                 sendreq_status =
                     dataservice_api_sendreq_canonized_transaction_get(
-                        &nonblockdatasock, child_context, EXPECTED_TXN_ID);
+                        &nonblockdatasock, child_context, EXPECTED_TXN_ID,
+                        true);
             }
         });
 

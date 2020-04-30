@@ -2331,7 +2331,7 @@ TEST_F(dataservice_isolation_test, make_block_simple)
             {
                 sendreq_status =
                     dataservice_api_sendreq_canonized_transaction_get(
-                        &nonblockdatasock, child_context, foo_key);
+                        &nonblockdatasock, child_context, foo_key, true);
             }
         });
 

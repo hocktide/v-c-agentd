@@ -1,7 +1,7 @@
 /**
- * \file protocolservice/unauthorized_protocol_service_handle_request_transaction_by_id_get.c
+ * \file protocolservice/unauthorized_protocol_service_handle_request_txn_id_get_next.c
  *
- * \brief Handle a transaction by id get request.
+ * \brief Handle a transaction get next id request.
  *
  * \copyright 2020 Velo Payments, Inc.  All rights reserved.
  */
@@ -12,14 +12,14 @@
 #include "unauthorized_protocol_service_private.h"
 
 /**
- * \brief Handle a transaction get by id request.
+ * \brief Handle a transaction get next id request.
  *
  * \param conn              The connection to close.
  * \param request_offset    The offset of the request.
  * \param breq              The bytestream of the request.
  * \param size              The size of this request bytestream.
  */
-void unauthorized_protocol_service_handle_request_transaction_by_id_get(
+void unauthorized_protocol_service_handle_request_txn_id_get_next(
     unauthorized_protocol_connection_t* conn, uint32_t request_offset,
     const uint8_t* breq, size_t size)
 {
@@ -33,7 +33,7 @@ void unauthorized_protocol_service_handle_request_transaction_by_id_get(
     if (id_size != size)
     {
         unauthorized_protocol_service_error_response(
-            conn, UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_BY_ID_GET,
+            conn, UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_ID_GET_NEXT,
             AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_REQUEST,
             request_offset, true);
         return;
@@ -57,11 +57,11 @@ void unauthorized_protocol_service_handle_request_transaction_by_id_get(
     retval =
         dataservice_api_sendreq_canonized_transaction_get(
             &conn->svc->data, conn->dataservice_child_context, txn_id,
-            true);
+            false);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         unauthorized_protocol_service_error_response(
-            conn, UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_BY_ID_GET,
+            conn, UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_ID_GET_NEXT,
             retval,
             request_offset, true);
         goto cleanup_ids;

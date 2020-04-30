@@ -85,6 +85,7 @@ typedef struct dataservice_request_canonized_transaction_get
 {
     dataservice_request_header_t hdr;
     uint8_t txn_id[16];
+    bool read_cert;
 } dataservice_request_canonized_transaction_get_t;
 
 /**
@@ -419,6 +420,7 @@ int dataservice_decode_request_canonized_transaction_get(
  * \param artifact_id       Pointer to the artifact UUID.
  * \param block_id          Pointer to the block UUID.
  * \param net_txn_state     Net transaction state.
+ * \param write_cert        Set to true if the txn cert should be written.
  * \param cert              Pointer to the transaction certificate.
  * \param cert_size         Size of the transaction certificate.
  *
@@ -435,7 +437,7 @@ int dataservice_decode_request_canonized_transaction_get(
 int dataservice_encode_response_canonized_transaction_get(
     void** payload, size_t* payload_size, const uint8_t* txn_id,
     const uint8_t* prev_id, const uint8_t* next_id, const uint8_t* artifact_id,
-    const uint8_t* block_id, uint32_t net_txn_state,
+    const uint8_t* block_id, uint32_t net_txn_state, bool write_cert,
     const void* cert, size_t cert_size);
 
 /**
