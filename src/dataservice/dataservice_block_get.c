@@ -11,9 +11,17 @@
 #include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <unistd.h>
+#include <vccert/certificate_types.h>
+#include <vccrypt/compare.h>
 #include <vpr/parameters.h>
 
 #include "dataservice_internal.h"
+
+/* zero uuid. */
+static const uint8_t zero_uuid[16] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
 
 /**
  * \brief Query the blockchain for a block by UUID.
@@ -53,6 +61,7 @@ int dataservice_block_get(
     data_block_node_t* node,
     uint8_t** block_bytes, size_t* block_size)
 {
+    bool skip_cert = false;
     int retval = 0;
     MDB_txn* txn = NULL;
 
@@ -102,6 +111,16 @@ int dataservice_block_get(
 
     /* attempt to read this node from the database. */
     retval = mdb_get(query_txn, details->block_db, &lkey, &lval);
+    if (MDB_NOTFOUND == retval &&
+        0 == crypto_memcmp(block_id, vccert_certificate_type_uuid_root_block, 16))
+    {
+        /* try reading the first block. */
+        skip_cert = true;
+        lkey.mv_data = (void*)zero_uuid;
+        retval = mdb_get(query_txn, details->block_db, &lkey, &lval);
+    }
+
+    /* check the query result value. */
     if (MDB_NOTFOUND == retval)
     {
         /* the value was not found. */
@@ -116,7 +135,8 @@ int dataservice_block_get(
     }
 
     /* verify that this value is large enough to be a node value. */
-    if (lval.mv_size <= sizeof(data_block_node_t))
+    if (
+        (!skip_cert && lval.mv_size <= sizeof(data_block_node_t)) || (skip_cert && lval.mv_size < sizeof(data_block_node_t)))
     {
         retval = AGENTD_ERROR_DATASERVICE_INVALID_STORED_BLOCK_NODE;
         goto maybe_transaction_abort;
