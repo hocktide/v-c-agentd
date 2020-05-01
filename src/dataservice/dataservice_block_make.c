@@ -807,6 +807,7 @@ static int dataservice_block_make_process_child(
     data_transaction_node_t* txn_rec = (data_transaction_node_t*)txn_rec_data;
     memcpy(txn_rec->key, transaction_id, sizeof(txn_rec->key));
     memcpy(txn_rec->prev, prev_transaction_id, sizeof(txn_rec->prev));
+    memcpy(txn_rec->next, ff_uuid, sizeof(txn_rec->next));
     memcpy(txn_rec->artifact_id, artifact_id, sizeof(txn_rec->artifact_id));
     memcpy(txn_rec->block_id, block_id, sizeof(txn_rec->block_id));
     txn_rec->net_txn_cert_size = htonll(txn_cert_size);
