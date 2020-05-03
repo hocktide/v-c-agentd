@@ -79,6 +79,16 @@ void unauthorized_protocol_service_decode_and_dispatch(
                 conn, request_offset, breq, size);
             break;
 
+        case UNAUTH_PROTOCOL_REQ_ID_ARTIFACT_FIRST_TXN_BY_ID_GET:
+            unauthorized_protocol_service_handle_request_artifact_first_txn_get(
+                conn, request_offset, breq, size);
+            break;
+
+        case UNAUTH_PROTOCOL_REQ_ID_ARTIFACT_LAST_TXN_BY_ID_GET:
+            unauthorized_protocol_service_handle_request_artifact_last_txn_get(
+                conn, request_offset, breq, size);
+            break;
+
         /* TODO - replace with valid error code. */
         default:
             unauthorized_protocol_service_error_response(

@@ -2030,3 +2030,213 @@ TEST_F(unauthorized_protocol_service_isolation_test, txn_get_block_id_happy_path
     /* clean up. */
     dispose((disposable_t*)&shared_secret);
 }
+
+/**
+ * Test the happy path of artifact_get_first_txn_id.
+ */
+TEST_F(unauthorized_protocol_service_isolation_test, artifact_first_txn_happy)
+{
+    uint32_t offset, status;
+    uint64_t client_iv = 0;
+    uint64_t server_iv = 0;
+    const uint8_t EXPECTED_ARTIFACT_ID[16] = {
+        0x97, 0xd0, 0x56, 0x30, 0xbb, 0xad, 0x4c, 0xee,
+        0x8f, 0x97, 0x32, 0x98, 0x13, 0x0b, 0xbe, 0x3d
+    };
+    const uint8_t EXPECTED_FIRST_TXN_ID[16] = {
+        0x18, 0x70, 0xe6, 0x2a, 0xff, 0xf2, 0x44, 0x5c,
+        0x90, 0xe0, 0xbd, 0xb0, 0x3c, 0xee, 0xe7, 0x5a
+    };
+    vccrypt_buffer_t shared_secret;
+    uint8_t first_txn_id[16];
+
+    /* register dataservice helper mocks. */
+    ASSERT_EQ(0, dataservice_mock_register_helper());
+
+    /* mock the block get call. */
+    dataservice->register_callback_payload_artifact_read(
+        [&](const dataservice_request_payload_artifact_read_t&,
+            std::ostream& payout) {
+            void* payload = nullptr;
+            size_t payload_size = 0U;
+
+            int retval =
+                dataservice_encode_response_payload_artifact_read(
+                    &payload, &payload_size, EXPECTED_ARTIFACT_ID,
+                    EXPECTED_FIRST_TXN_ID, zero_uuid, 10, 12, 77);
+            if (AGENTD_STATUS_SUCCESS != retval)
+                return retval;
+
+            /* make sure to clean up memory when we fall out of scope. */
+            unique_ptr<void, decltype(free)*> cleanup(payload, &free);
+
+            /* write the payload. */
+            payout.write((const char*)payload, payload_size);
+
+            /* success. */
+            return AGENTD_STATUS_SUCCESS;
+        });
+
+    /* start the mock. */
+    dataservice->start();
+
+    /* do the handshake, populating the shared secret on success. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        do_handshake(&shared_secret, &server_iv, &client_iv));
+
+    /* send the block get request. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_artifact_first_txn_id_get(
+            protosock, &suite, &client_iv, &shared_secret,
+            EXPECTED_ARTIFACT_ID));
+
+    /* get the response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_artifact_first_txn_id_get(
+            protosock, &suite, &server_iv, &shared_secret, &offset,
+            &status, first_txn_id));
+
+    /* the status should indicate that the record wasn't found. */
+    ASSERT_EQ(
+        AGENTD_STATUS_SUCCESS, (int)status);
+    /* the offset should be zero. */
+    ASSERT_EQ(0U, offset);
+
+    /* we should get the first txn id. */
+    ASSERT_EQ(0, memcmp(first_txn_id, EXPECTED_FIRST_TXN_ID, 16));
+
+    /* send the close request. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_close(
+            protosock, &suite, &client_iv, &shared_secret));
+
+    /* get the close response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_close(
+            protosock, &suite, &server_iv, &shared_secret));
+
+    /* close the socket */
+    close(protosock);
+
+    /* stop the mock. */
+    dataservice->stop();
+
+    /* verify proper connection setup. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_setup());
+
+    /* a block get call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_payload_artifact_read(
+            EXPECTED_CHILD_INDEX, EXPECTED_ARTIFACT_ID));
+
+    /* verify proper connection teardown. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_teardown());
+
+    /* clean up. */
+    dispose((disposable_t*)&shared_secret);
+}
+
+/**
+ * Test the happy path of artifact_get_last_txn_id.
+ */
+TEST_F(unauthorized_protocol_service_isolation_test, artifact_last_txn_happy)
+{
+    uint32_t offset, status;
+    uint64_t client_iv = 0;
+    uint64_t server_iv = 0;
+    const uint8_t EXPECTED_ARTIFACT_ID[16] = {
+        0x97, 0xd0, 0x56, 0x30, 0xbb, 0xad, 0x4c, 0xee,
+        0x8f, 0x97, 0x32, 0x98, 0x13, 0x0b, 0xbe, 0x3d
+    };
+    const uint8_t EXPECTED_LAST_TXN_ID[16] = {
+        0x18, 0x70, 0xe6, 0x2a, 0xff, 0xf2, 0x44, 0x5c,
+        0x90, 0xe0, 0xbd, 0xb0, 0x3c, 0xee, 0xe7, 0x5a
+    };
+    vccrypt_buffer_t shared_secret;
+    uint8_t last_txn_id[16];
+
+    /* register dataservice helper mocks. */
+    ASSERT_EQ(0, dataservice_mock_register_helper());
+
+    /* mock the block get call. */
+    dataservice->register_callback_payload_artifact_read(
+        [&](const dataservice_request_payload_artifact_read_t&,
+            std::ostream& payout) {
+            void* payload = nullptr;
+            size_t payload_size = 0U;
+
+            int retval =
+                dataservice_encode_response_payload_artifact_read(
+                    &payload, &payload_size, EXPECTED_ARTIFACT_ID,
+                    zero_uuid, EXPECTED_LAST_TXN_ID, 10, 12, 77);
+            if (AGENTD_STATUS_SUCCESS != retval)
+                return retval;
+
+            /* make sure to clean up memory when we fall out of scope. */
+            unique_ptr<void, decltype(free)*> cleanup(payload, &free);
+
+            /* write the payload. */
+            payout.write((const char*)payload, payload_size);
+
+            /* success. */
+            return AGENTD_STATUS_SUCCESS;
+        });
+
+    /* start the mock. */
+    dataservice->start();
+
+    /* do the handshake, populating the shared secret on success. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        do_handshake(&shared_secret, &server_iv, &client_iv));
+
+    /* send the block get request. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_artifact_last_txn_id_get(
+            protosock, &suite, &client_iv, &shared_secret,
+            EXPECTED_ARTIFACT_ID));
+
+    /* get the response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_artifact_last_txn_id_get(
+            protosock, &suite, &server_iv, &shared_secret, &offset,
+            &status, last_txn_id));
+
+    /* the status should indicate that the record wasn't found. */
+    ASSERT_EQ(
+        AGENTD_STATUS_SUCCESS, (int)status);
+    /* the offset should be zero. */
+    ASSERT_EQ(0U, offset);
+
+    /* we should get the first txn id. */
+    ASSERT_EQ(0, memcmp(last_txn_id, EXPECTED_LAST_TXN_ID, 16));
+
+    /* send the close request. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_sendreq_close(
+            protosock, &suite, &client_iv, &shared_secret));
+
+    /* get the close response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+        protocolservice_api_recvresp_close(
+            protosock, &suite, &server_iv, &shared_secret));
+
+    /* close the socket */
+    close(protosock);
+
+    /* stop the mock. */
+    dataservice->stop();
+
+    /* verify proper connection setup. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_setup());
+
+    /* a block get call should have been made. */
+    EXPECT_TRUE(
+        dataservice->request_matches_payload_artifact_read(
+            EXPECTED_CHILD_INDEX, EXPECTED_ARTIFACT_ID));
+
+    /* verify proper connection teardown. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_teardown());
+
+    /* clean up. */
+    dispose((disposable_t*)&shared_secret);
+}

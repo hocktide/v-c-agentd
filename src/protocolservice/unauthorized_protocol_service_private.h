@@ -482,6 +482,30 @@ void unauthorized_protocol_service_handle_request_txn_id_get_block_id(
     const uint8_t* breq, size_t size);
 
 /**
+ * \brief Handle an artifact get first txn id request.
+ *
+ * \param conn              The connection.
+ * \param request_offset    The offset of the request.
+ * \param breq              The bytestream of the request.
+ * \param size              The size of this request bytestream.
+ */
+void unauthorized_protocol_service_handle_request_artifact_first_txn_get(
+    unauthorized_protocol_connection_t* conn, uint32_t request_offset,
+    const uint8_t* breq, size_t size);
+
+/**
+ * \brief Handle an artifact get last txn id request.
+ *
+ * \param conn              The connection.
+ * \param request_offset    The offset of the request.
+ * \param breq              The bytestream of the request.
+ * \param size              The size of this request bytestream.
+ */
+void unauthorized_protocol_service_handle_request_artifact_last_txn_get(
+    unauthorized_protocol_connection_t* conn, uint32_t request_offset,
+    const uint8_t* breq, size_t size);
+
+/**
  * \brief Request that a dataservice child context be created.
  *
  * \param conn      The connection to be assigned a child context when this
@@ -628,6 +652,37 @@ void ups_dispatch_dataservice_response_txn_read_id_prev(
 void ups_dispatch_dataservice_response_txn_read_block_id(
     unauthorized_protocol_connection_t* conn,
     const dataservice_response_canonized_transaction_get_t* dresp);
+
+/**
+ * Handle a meta artifact read response.
+ *
+ * \param svc               The protocol service instance.
+ * \param resp              The response from the artifact read call.
+ * \param resp_size         The size of the response.
+ */
+void ups_dispatch_dataservice_response_artifact_meta_read(
+    unauthorized_protocol_service_instance_t* svc, const void* resp,
+    size_t resp_size);
+
+/**
+ * Handle an artifact read first txn id response.
+ *
+ * \param conn              The peer connection context.
+ * \param dresp             The decoded response.
+ */
+void ups_dispatch_dataservice_response_artifact_first_txn_id(
+    unauthorized_protocol_connection_t* conn,
+    const dataservice_response_artifact_get_t* dresp);
+
+/**
+ * Handle an artifact read last txn id response.
+ *
+ * \param conn              The peer connection context.
+ * \param dresp             The decoded response.
+ */
+void ups_dispatch_dataservice_response_artifact_last_txn_id(
+    unauthorized_protocol_connection_t* conn,
+    const dataservice_response_artifact_get_t* dresp);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

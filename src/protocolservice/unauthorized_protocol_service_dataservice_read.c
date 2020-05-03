@@ -92,6 +92,12 @@ void unauthorized_protocol_service_dataservice_read(
                 svc, resp, resp_size);
             break;
 
+        /* artifact read response. */
+        case DATASERVICE_API_METHOD_APP_ARTIFACT_READ:
+            ups_dispatch_dataservice_response_artifact_meta_read(
+                svc, resp, resp_size);
+            break;
+
         /* unknown method. */
         default:
             /* TODO - if this happens after everything is decoded, log and shut
