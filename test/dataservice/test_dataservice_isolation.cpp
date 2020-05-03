@@ -2017,6 +2017,10 @@ TEST_F(dataservice_isolation_test, make_block_simple)
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
     };
+    const uint8_t foo_next[16] = {
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+    };
     const uint8_t foo_artifact[16] = {
         0xc3, 0x84, 0x33, 0x0b, 0xf5, 0x0d, 0x42, 0xa2,
         0x9a, 0x52, 0xb5, 0xa4, 0xb3, 0x5b, 0xcf, 0x72
@@ -2345,7 +2349,7 @@ TEST_F(dataservice_isolation_test, make_block_simple)
     ASSERT_EQ(0, memcmp(foo_cert, canonized_data, canonized_data_size));
     ASSERT_EQ(0, memcmp(foo_key, canonized_node.key, sizeof(foo_key)));
     ASSERT_EQ(0, memcmp(foo_prev, canonized_node.prev, sizeof(foo_prev)));
-    ASSERT_EQ(0, memcmp(foo_prev, canonized_node.next, sizeof(foo_prev)));
+    ASSERT_EQ(0, memcmp(foo_next, canonized_node.next, sizeof(foo_prev)));
     ASSERT_EQ(0,
         memcmp(foo_artifact, canonized_node.artifact_id, sizeof(foo_artifact)));
     ASSERT_EQ(0,
