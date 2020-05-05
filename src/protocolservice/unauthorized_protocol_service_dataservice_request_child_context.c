@@ -44,6 +44,9 @@ void unauthorized_protocol_service_dataservice_request_child_context(
     BITCAP_SET_TRUE(
         conn->dataservice_caps, DATASERVICE_API_CAP_APP_BLOCK_READ);
     BITCAP_SET_TRUE(
+        conn->dataservice_caps,
+        DATASERVICE_API_CAP_APP_BLOCK_ID_BY_HEIGHT_READ);
+    BITCAP_SET_TRUE(
         conn->dataservice_caps, DATASERVICE_API_CAP_LL_CHILD_CONTEXT_CLOSE);
     BITCAP_SET_TRUE(
         conn->dataservice_caps, DATASERVICE_API_CAP_APP_TRANSACTION_READ);

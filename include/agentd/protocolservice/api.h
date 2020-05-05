@@ -30,10 +30,13 @@ typedef enum unauthorized_protocol_request_id
     UNAUTH_PROTOCOL_REQ_ID_BLOCK_BY_ID_GET = 0x00000004,
     UNAUTH_PROTOCOL_REQ_ID_BLOCK_ID_GET_NEXT = 0x00000005,
     UNAUTH_PROTOCOL_REQ_ID_BLOCK_ID_GET_PREV = 0x00000006,
+    UNAUTH_PROTOCOL_REQ_ID_BLOCK_ID_BY_HEIGHT_GET = 0x00000007,
+
     UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_BY_ID_GET = 0x00000010,
     UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_ID_GET_NEXT = 0x00000011,
     UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_ID_GET_PREV = 0x00000012,
     UNAUTH_PROTOCOL_REQ_ID_TRANSACTION_ID_GET_BLOCK_ID = 0x00000013,
+
     UNAUTH_PROTOCOL_REQ_ID_ARTIFACT_FIRST_TXN_BY_ID_GET = 0x00000020,
     UNAUTH_PROTOCOL_REQ_ID_ARTIFACT_LAST_TXN_BY_ID_GET = 0x00000021,
 
@@ -256,6 +259,76 @@ int protocolservice_api_sendreq_latest_block_id_get_block(
  *        out-of-memory error.
  */
 int protocolservice_api_recvresp_latest_block_id_get_block(
+    int sock, vccrypt_suite_options_t* suite, uint64_t* server_iv,
+    const vccrypt_buffer_t* shared_secret, uint32_t* offset, uint32_t* status,
+    vccrypt_buffer_t* block_id);
+
+/**
+ * \brief Send a block id by height get request.
+ *
+ * \param sock                      The socket to which this request is written.
+ * \param suite                     The crypto suite to use for this handshake.
+ * \param client_iv                 Pointer to the client IV, updated by this
+ *                                  call.
+ * \param shared_secret             The shared secret key for this request.
+ * \param height                    The block height for this request.
+ *
+ * This function sends a block id by height get request as an authorized packet
+ * to the server.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BLOCK_FAILURE if a blocking write on the socket
+ *        failed.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error.
+ *      - a non-zero error response if something else has failed.
+ */
+int protocolservice_api_sendreq_block_id_by_height_get_block(
+    int sock, vccrypt_suite_options_t* suite, uint64_t* client_iv,
+    const vccrypt_buffer_t* shared_secret, uint64_t height);
+
+/**
+ * \brief Receive a block id by height get response.
+ *
+ * \param sock                      The socket from which this response is read.
+ * \param suite                     The crypto suite to use to verify this
+ *                                  response.
+ * \param server_iv                 Pointer to the server IV, updated by this
+ *                                  call.
+ * \param shared_secret             The shared secret key for this response.
+ * \param offset                    The offset for this response.
+ * \param status                    The status for this response.
+ * \param block_id                  A pointer to the buffer to receive the
+ *                                  block ID.  Should NOT BE initialized
+ *                                  by the caller / will be valid if both the
+ *                                  call succeeds and the remote call to the
+ *                                  server succeeds.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates the request to the remote peer was successful, and a
+ * non-zero status indicates that the request to the remote peer failed.
+ *
+ * If the status code is updated with an error from the service, then this error
+ * will be reflected in the status variable, and a AGENTD_STATUS_SUCCESS will be
+ * returned by this function.  Thus, both the return value of this function and
+ * the upstream status code must be checked for correct operation.
+ *
+ * If this call succeeds AND the remote call to the server succeeds, then
+ * block_id will be initialized with the the UUID from the server.  This buffer
+ * is owned by the caller and must be disposed when no longer needed.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_READ_BLOCK_FAILURE if a blocking read on the socket
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read from
+ *        the socket was unexpected.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error.
+ */
+int protocolservice_api_recvresp_block_id_by_height_get_block(
     int sock, vccrypt_suite_options_t* suite, uint64_t* server_iv,
     const vccrypt_buffer_t* shared_secret, uint32_t* offset, uint32_t* status,
     vccrypt_buffer_t* block_id);

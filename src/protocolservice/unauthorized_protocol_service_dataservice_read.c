@@ -86,6 +86,12 @@ void unauthorized_protocol_service_dataservice_read(
                 svc, resp, resp_size);
             break;
 
+        /* block id by height read response. */
+        case DATASERVICE_API_METHOD_APP_BLOCK_ID_BY_HEIGHT_READ:
+            ups_dispatch_dataservice_response_block_id_by_height_read(
+                svc, resp, resp_size);
+            break;
+
         /* canonized transaction read response. */
         case DATASERVICE_API_METHOD_APP_TRANSACTION_READ:
             ups_dispatch_dataservice_response_transaction_meta_read(
