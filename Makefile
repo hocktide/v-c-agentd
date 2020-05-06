@@ -221,6 +221,8 @@ agentd-install: ALL
 	    mkdir -p ${PREFIX}/lib64; \
 	    install /lib64/ld-linux-x86-64.so.2 ${PREFIX}/lib64; \
 	fi
+	find ${PREFIX} -type f -name "*.so.*" -exec strip {} \;
+	strip ${PREFIX}/bin/agentd
 	mkdir -p ${PREFIX}/var/pid
 
 test.agentd: vcblockchain-build $(TEST_DIRS) host.exe.release host.exe.debug host.exe.checked $(TESTAGENTD)
