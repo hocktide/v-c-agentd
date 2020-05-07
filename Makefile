@@ -189,6 +189,13 @@ HOST_DEBUG_CXXFLAGS=-std=c++14 $(COMMON_CXXFLAGS) -O2
 TEST_CXXFLAGS=$(HOST_RELEASE_CXXFLAGS) $(COMMON_INCLUDES) -I $(GTEST_DIR) \
      -I $(GTEST_DIR)/include -I $(HOST_CHECKED_BUILD_DIR)
 
+#Enable / disable attestation in tests.
+ifeq ($(DISABLE_ATTESTATION),FALSE)
+    TEST_CXXFLAGS+=-DATTESTATION=1
+else
+    TEST_CXXFLAGS+=-DATTESTATION=0
+endif
+
 .PHONY: ALL clean vcblockchain-build vcblockchain-test vcblockchain-clean
 .PHONY: agentd-build host.exe.release host.exe.checked host.exe.debug
 .PHONY: test test.agentd testreport.agentd
