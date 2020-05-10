@@ -69,6 +69,17 @@ verbosity available for the service.
     logdir log
     loglevel 3
 
+The `canonization` section is used by the canonization service (when configured)
+to manage how often the process queue is scanned for attested transactions and
+how many transactions can be put in a new block.  The following example scans
+the process queue every 5 seconds and creates blocks with a maximum of 1000
+transactions per block.
+
+    canonization {
+        max milliseconds 5000
+        max transactions 1000
+    }
+
 The `secret` attribute specifies the local path to a private key certificate for
 the agent.  This should be readable only by root, and should never be included
 in a container.  In the future, support for secrets wiring through a one-time
