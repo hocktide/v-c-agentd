@@ -38,6 +38,13 @@ void unauthorized_protocol_service_dataservice_write(
             /* TODO - shut down the service.  This shouldn't happen. */
             return;
         }
+        /* if there is more data to write, keep the write callback active. */
+        else if (ipc_socket_writebuffer_size(ctx) > 0)
+        {
+            ipc_set_writecb_noblock(
+                &svc->data, &unauthorized_protocol_service_dataservice_write,
+                &svc->loop);
+        }
     }
     else
     {

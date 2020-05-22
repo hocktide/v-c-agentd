@@ -44,6 +44,8 @@ void unauthorized_protocol_service_connection_read(
             unauthorized_protocol_service_command_read(conn);
             break;
 
+        /* we are not currently expecting input, so wait until we enter a state
+         * that expects input. */
         default:
             break;
     }

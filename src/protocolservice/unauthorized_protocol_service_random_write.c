@@ -37,6 +37,13 @@ void unauthorized_protocol_service_random_write(
             /* TODO - shut down service. This shouldn't happen. */
             return;
         }
+        /* if there is more data to write, keep the write callback active. */
+        else if (ipc_socket_writebuffer_size(ctx) > 0)
+        {
+            ipc_set_writecb_noblock(
+                &svc->random, &unauthorized_protocol_service_random_write,
+                &svc->loop);
+        }
     }
     else
     {
