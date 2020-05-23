@@ -207,6 +207,8 @@ static void listenservice_ipc_accept(
         ipc_accept_noblock(ctx, &sock, (struct sockaddr*)&peer, &peersize);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
+        instance->listenservice_force_exit = true;
+        ipc_exit_loop(instance->loop_context);
         return;
     }
 
@@ -215,6 +217,8 @@ static void listenservice_ipc_accept(
         ipc_sendsocket_block(instance->acceptsock, sock);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
+        instance->listenservice_force_exit = true;
+        ipc_exit_loop(instance->loop_context);
         goto cleanup_socket;
     }
 
