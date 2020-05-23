@@ -127,6 +127,16 @@ int listenservice_proc(
             goto done;
         }
 
+        /* close any socket above the given value. */
+        retval =
+            privsep_close_other_fds(AGENTD_FD_LISTENSERVICE_ACCEPT);
+        if (0 != retval)
+        {
+            perror("privsep_close_other_fds");
+            retval = AGENTD_ERROR_LISTENSERVICE_PRIVSEP_CLOSE_OTHER_FDS;
+            goto done;
+        }
+
         /* open listen sockets. */
         retval = listenservice_proc_open_listen_sockets(bconf, conf);
         if (0 != retval)

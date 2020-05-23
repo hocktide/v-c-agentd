@@ -178,6 +178,12 @@ extern "C" {
 #define AGENTD_ERROR_IPC_EVBUFFER_EOF \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_IPC, 0x001BU)
 
+/**
+ * \brief A Linuxism error occurred during accept and we should retry.
+ */
+#define AGENTD_ERROR_IPC_ACCEPT_SHOULD_RETRY \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_IPC, 0x001CU)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

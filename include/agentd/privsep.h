@@ -140,6 +140,18 @@ int privsep_protect_descriptors(int* desc, ...);
  */
 int privsep_setfds(int curr, int mapped, ...);
 
+/**
+ * \brief Close any descriptors greater than the given descriptor.
+ *
+ * \param fd            Any descriptor greater than this descriptor and less
+ *                      than or equal to FD_SETSIZE will be closed.
+ *
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success.
+ *          - a non-zero error code on failure.
+ */
+int privsep_close_other_fds(int fd);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

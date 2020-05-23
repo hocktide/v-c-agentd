@@ -205,7 +205,11 @@ static void listenservice_ipc_accept(
     /* attempt to accept a socket. */
     retval =
         ipc_accept_noblock(ctx, &sock, (struct sockaddr*)&peer, &peersize);
-    if (AGENTD_STATUS_SUCCESS != retval)
+    if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval || AGENTD_ERROR_IPC_ACCEPT_SHOULD_RETRY == retval)
+    {
+        return;
+    }
+    else if (AGENTD_STATUS_SUCCESS != retval)
     {
         instance->listenservice_force_exit = true;
         ipc_exit_loop(instance->loop_context);

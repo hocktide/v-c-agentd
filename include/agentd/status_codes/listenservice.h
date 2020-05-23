@@ -100,6 +100,12 @@ extern "C" {
 #define AGENTD_ERROR_LISTENSERVICE_LISTENSOCKET_OPEN_FAILURE \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_LISTEN, 0x000EU)
 
+/**
+ * \brief We've failed to close the other FDs for this process.
+ */
+#define AGENTD_ERROR_LISTENSERVICE_PRIVSEP_CLOSE_OTHER_FDS \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_LISTEN, 0x000FU)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
