@@ -20,16 +20,13 @@ extern "C" {
 /* Forward decl for auth service data structure. */
 struct auth_service_instance;
 
-
 /* Forward decl for an auth connection. */
 struct auth_connection;
-
 
 /**
  * \brief The auth service instance.
  */
 typedef struct auth_service_instance auth_service_instance_t;
-
 
 /**
  * \brief Auth service instance.
@@ -47,7 +44,6 @@ struct auth_service_instance
     vccrypt_buffer_t agent_privkey;
 };
 
-
 /**
  * \brief Create the auth service instance.
  *
@@ -57,7 +53,6 @@ struct auth_service_instance
  * \returns a status code indicating success or failure.
  */
 int auth_service_instance_init(auth_service_instance_t* inst, int auth);
-
 
 /**
  * \brief Decode and dispatch requests received by the auth service.
@@ -84,7 +79,6 @@ int auth_service_instance_init(auth_service_instance_t* inst, int auth);
 int auth_service_decode_and_dispatch(
     auth_service_instance_t* inst, ipc_socket_context_t* sock, void* req,
     size_t size);
-
 
 /**
  * \brief Write a status response to the socket.
@@ -136,6 +130,39 @@ int auth_service_decode_and_dispatch_initialize(
     auth_service_instance_t* inst, ipc_socket_context_t* sock, void* req,
     size_t size);
 
+/**
+ * \brief Read callback for the auth service protocol socket.
+ *
+ * This callback is registered as part of the ipc callback mechanism for the
+ * auth service protocol socket.
+ *
+ * \param ctx           The non-blocking socket context.
+ * \param event_flags   The event that triggered this callback.
+ * \param user_context  The user context for this random socket.
+ */
+void auth_service_ipc_read(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
+ * \brief Write callback for the auth service protocol socket.
+ *
+ * This callback is registered as part of the ipc callback mechanism for the
+ * auth service protocol socket.
+ *
+ * \param ctx           The non-blocking socket context.
+ * \param event_flags   The event that triggered this callback.
+ * \param user_context  The user context for this random socket.
+ */
+void auth_service_ipc_write(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
+ * \brief Set up a clean re-entry from the event loop and ensure that no other
+ * callbacks occur by setting the appropriate force exit flag.
+ *
+ * \param instance      The randomservice instance.
+ */
+void auth_service_exit_event_loop(auth_service_instance_t* instance);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
