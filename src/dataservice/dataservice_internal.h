@@ -671,6 +671,40 @@ int dataservice_decode_and_dispatch_canonized_transaction_get(
     dataservice_instance_t* inst, ipc_socket_context_t* sock, void* req,
     size_t size);
 
+/**
+ * \brief Read callback for the data service protocol socket.
+ *
+ * This callback is registered as part of the ipc callback mechanism for the
+ * data service protocol socket.
+ *
+ * \param ctx           The non-blocking socket context.
+ * \param event_flags   The event that triggered this callback.
+ * \param user_context  The user context for this random socket.
+ */
+void dataservice_ipc_read(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
+ * \brief Write callback for the data service protocol socket.
+ *
+ * This callback is registered as part of the ipc callback mechanism for the
+ * data service protocol socket.
+ *
+ * \param ctx           The non-blocking socket context.
+ * \param event_flags   The event that triggered this callback.
+ * \param user_context  The user context for this random socket.
+ */
+void dataservice_ipc_write(
+    ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
+ * \brief Set up a clean re-entry from the event loop and ensure that no other
+ * callbacks occur by setting the appropriate force exit flag.
+ *
+ * \param instance      The dataservice instance.
+ */
+void dataservice_exit_event_loop(dataservice_instance_t* instance);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
