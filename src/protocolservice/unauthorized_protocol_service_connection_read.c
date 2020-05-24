@@ -26,6 +26,10 @@ void unauthorized_protocol_service_connection_read(
     unauthorized_protocol_connection_t* conn =
         (unauthorized_protocol_connection_t*)user_context;
 
+    /* don't read anything from this socket if we're shutting down. */
+    if (conn->svc->force_exit)
+        return;
+
     /* dispatch based on the current connection state. */
     switch (conn->state)
     {

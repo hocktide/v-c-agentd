@@ -120,6 +120,7 @@ typedef struct unauthorized_protocol_connection
 struct unauthorized_protocol_service_instance
 {
     disposable_t hdr;
+    bool force_exit;
     unauthorized_protocol_connection_t* connections;
     size_t num_connections;
     unauthorized_protocol_connection_t* free_connection_head;
@@ -279,6 +280,15 @@ void unauthorized_protocol_service_dataservice_read(
  */
 void unauthorized_protocol_service_dataservice_write(
     ipc_socket_context_t* ctx, int event_flags, void* user_context);
+
+/**
+ * \brief Set up a clean re-entry from the event loop and ensure that no other
+ * callbacks occur by setting the appropriate force exit flag.
+ *
+ * \param instance      The unauthorized protocol service instance.
+ */
+void unauthorized_protocol_service_exit_event_loop(
+    unauthorized_protocol_service_instance_t* instance);
 
 /**
  * \brief Attempt to read a handshake request from the client.

@@ -36,6 +36,10 @@ void unauthorized_protocol_service_random_read(
     unauthorized_protocol_service_instance_t* svc =
         (unauthorized_protocol_service_instance_t*)user_context;
 
+    /* no need to continue if we're shutting down. */
+    if (svc->force_exit)
+        return;
+
     /* attempt to read a response packet. */
     int retval = ipc_read_data_noblock(&svc->random, &resp, &resp_size);
     if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
@@ -45,7 +49,7 @@ void unauthorized_protocol_service_random_read(
     /* handle general failures from the random service socket read. */
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        /* TODO - shut down service. */
+        unauthorized_protocol_service_exit_event_loop(svc);
         return;
     }
 
@@ -56,7 +60,7 @@ void unauthorized_protocol_service_random_read(
     /* verify size */
     if (size < 3 * sizeof(uint32_t))
     {
-        /* TODO - shut down sevice. */
+        unauthorized_protocol_service_exit_event_loop(svc);
         goto cleanup_resp;
     }
 
@@ -67,7 +71,7 @@ void unauthorized_protocol_service_random_read(
     request_id = ntohl(request_id);
     if (RANDOMSERVICE_API_METHOD_GET_RANDOM_BYTES != request_id)
     {
-        /* TODO - shut down service. */
+        unauthorized_protocol_service_exit_event_loop(svc);
         goto cleanup_resp;
     }
 
@@ -78,7 +82,7 @@ void unauthorized_protocol_service_random_read(
     request_offset = ntohl(request_offset);
     if (request_offset >= svc->num_connections)
     {
-        /* TODO - shut down service. */
+        unauthorized_protocol_service_exit_event_loop(svc);
         goto cleanup_resp;
     }
 

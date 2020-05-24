@@ -31,6 +31,10 @@ void unauthorized_protocol_service_ipc_read(
     unauthorized_protocol_service_instance_t* inst =
         (unauthorized_protocol_service_instance_t*)user_context;
 
+    /* don't accept any more sockets if we're shutting down. */
+    if (inst->force_exit)
+        return;
+
     /* attempt to receive a socket from the listen service. */
     int retval = ipc_receivesocket_noblock(ctx, &recvsock);
     if (AGENTD_STATUS_SUCCESS != retval)

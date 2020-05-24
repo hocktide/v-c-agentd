@@ -30,6 +30,10 @@ void unauthorized_protocol_service_dataservice_read(
     unauthorized_protocol_service_instance_t* svc =
         (unauthorized_protocol_service_instance_t*)user_context;
 
+    /* don't go further if we are shutting down. */
+    if (svc->force_exit)
+        return;
+
     /* attempt to read a response packet. */
     int retval = ipc_read_data_noblock(&svc->data, (void**)&resp, &resp_size);
     if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
@@ -39,14 +43,14 @@ void unauthorized_protocol_service_dataservice_read(
     /* handle general failures from the data service socket read. */
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        /* TODO - shut down the service. */
+        unauthorized_protocol_service_exit_event_loop(svc);
         return;
     }
 
     /* verify that the size is at least large enough for a method. */
     if (resp_size < sizeof(uint32_t))
     {
-        /* TODO - shut down service on corrupt data socket? */
+        unauthorized_protocol_service_exit_event_loop(svc);
         goto cleanup_resp;
     }
 
@@ -108,6 +112,7 @@ void unauthorized_protocol_service_dataservice_read(
         default:
             /* TODO - if this happens after everything is decoded, log and shut
              * down service. */
+            unauthorized_protocol_service_exit_event_loop(svc);
             break;
     }
 

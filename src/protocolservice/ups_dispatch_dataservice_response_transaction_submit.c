@@ -29,7 +29,8 @@ void ups_dispatch_dataservice_response_transaction_submit(
         dataservice_decode_response_transaction_submit(
             resp, resp_size, &dresp))
     {
-        /* TODO - handle failure. */
+        /* TODO - log fatal error about decod. */
+        unauthorized_protocol_service_exit_event_loop(svc);
         return;
     }
 

@@ -30,7 +30,8 @@ void ups_dispatch_dataservice_response_child_context_create(
         dataservice_decode_response_child_context_create(
             resp, resp_size, &dresp))
     {
-        /* TODO - handle failure. */
+        /* TODO - log decode error. */
+        unauthorized_protocol_service_exit_event_loop(svc);
         return;
     }
 

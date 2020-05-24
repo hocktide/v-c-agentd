@@ -30,7 +30,8 @@ void ups_dispatch_dataservice_response_block_id_latest_read(
         dataservice_decode_response_latest_block_id_get(
             resp, resp_size, &dresp))
     {
-        /* TODO - handle failure. */
+        /* TODO - log a fatal error here. */
+        unauthorized_protocol_service_exit_event_loop(svc);
         return;
     }
 
@@ -39,7 +40,7 @@ void ups_dispatch_dataservice_response_block_id_latest_read(
         svc->dataservice_child_map[dresp.hdr.offset];
     if (NULL == conn)
     {
-        /* TODO - how do we handle a failure here? */
+        /* TODO - warn level log about mismatch. */
         goto cleanup_dresp;
     }
 

@@ -35,7 +35,7 @@ void unauthorized_protocol_service_dataservice_write(
         /* was the socket closed, or was there an error? */
         if (bytes_written == 0 || (bytes_written < 0 && (errno != EAGAIN && errno != EWOULDBLOCK)))
         {
-            /* TODO - shut down the service.  This shouldn't happen. */
+            unauthorized_protocol_service_exit_event_loop(svc);
             return;
         }
         /* if there is more data to write, keep the write callback active. */

@@ -27,6 +27,10 @@ void unauthorized_protocol_service_connection_write(
     unauthorized_protocol_connection_t* conn =
         (unauthorized_protocol_connection_t*)user_context;
 
+    /* no need to continue if we're shutting down. */
+    if (conn->svc->force_exit)
+        return;
+
     /* first, see if we still need to write data. */
     if (ipc_socket_writebuffer_size(ctx) > 0)
     {
