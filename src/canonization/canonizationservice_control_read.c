@@ -50,8 +50,7 @@ void canonizationservice_control_read(
                     instance, ctx, req, size))
             {
                 /* a bad control message means we should shut down. */
-                instance->force_exit = true;
-                ipc_exit_loop(instance->loop_context);
+                canonizationservice_exit_event_loop(instance);
             }
 
             /* clear and free the request data. */
@@ -66,8 +65,7 @@ void canonizationservice_control_read(
         /* any other error code indicates that we should no longer trust the
          * control socket. */
         default:
-            instance->force_exit = true;
-            ipc_exit_loop(instance->loop_context);
+            canonizationservice_exit_event_loop(instance);
             break;
     }
 

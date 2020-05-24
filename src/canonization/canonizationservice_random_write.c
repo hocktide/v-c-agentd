@@ -45,12 +45,20 @@ void canonizationservice_random_write(
         /* was the socket closed, or was there an error? */
         if (bytes_written == 0 || (bytes_written < 0 && (errno != EAGAIN && errno != EWOULDBLOCK)))
         {
-            /* TODO - shut down the service.  This shouldn't happen. */
+            canonizationservice_exit_event_loop(instance);
             return;
+        }
+        /* re-enable callback if there is more data to write. */
+        else if (ipc_socket_writebuffer_size(ctx) > 0)
+        {
+            ipc_set_writecb_noblock(
+                instance->random, &canonizationservice_random_write,
+                instance->loop_context);
         }
     }
     else
     {
+        /* disable callback if there is no more data to write. */
         ipc_set_writecb_noblock(instance->random, NULL, instance->loop_context);
     }
 }

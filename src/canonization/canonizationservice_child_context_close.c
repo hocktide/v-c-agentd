@@ -29,7 +29,7 @@ void canonizationservice_child_context_close(
             instance->data, instance->data_child_context);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         return;
     }
 

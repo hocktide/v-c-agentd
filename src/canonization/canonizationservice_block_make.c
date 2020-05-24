@@ -90,7 +90,7 @@ int canonizationservice_block_make(
     retval = vccert_builder_init(&instance->builder_opts, &builder, block_size);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto done;
     }
 
@@ -104,7 +104,7 @@ int canonizationservice_block_make(
             &builder, VCCERT_FIELD_TYPE_CERTIFICATE_VERSION, cert_version);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto cleanup_builder;
     }
 
@@ -112,7 +112,7 @@ int canonizationservice_block_make(
     time_t timestamp = time(NULL);
     if (timestamp < 0)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto cleanup_builder;
     }
 
@@ -123,7 +123,7 @@ int canonizationservice_block_make(
             &builder, VCCERT_FIELD_TYPE_CERTIFICATE_VALID_FROM, timestamp64);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto cleanup_builder;
     }
 
@@ -134,7 +134,7 @@ int canonizationservice_block_make(
             &builder, VCCERT_FIELD_TYPE_CERTIFICATE_CRYPTO_SUITE, crypto_suite);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto cleanup_builder;
     }
 
@@ -146,7 +146,7 @@ int canonizationservice_block_make(
             sizeof(vccert_certificate_type_uuid_txn_block));
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto cleanup_builder;
     }
 
@@ -157,7 +157,7 @@ int canonizationservice_block_make(
             instance->block_id, sizeof(instance->block_id));
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto cleanup_builder;
     }
 
@@ -168,7 +168,7 @@ int canonizationservice_block_make(
             instance->previous_block_id, sizeof(instance->previous_block_id));
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto cleanup_builder;
     }
 
@@ -180,7 +180,7 @@ int canonizationservice_block_make(
             &builder, VCCERT_FIELD_TYPE_BLOCK_HEIGHT, instance->block_height);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto cleanup_builder;
     }
 
@@ -199,7 +199,7 @@ int canonizationservice_block_make(
                 txn->cert, txn->cert_size);
         if (AGENTD_STATUS_SUCCESS != retval)
         {
-            ipc_exit_loop(instance->loop_context);
+            canonizationservice_exit_event_loop(instance);
             goto cleanup_builder;
         }
 
@@ -215,7 +215,7 @@ int canonizationservice_block_make(
         vccert_builder_emit(&builder, &block_cert_size);
     if (NULL == block_cert_bytes)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto cleanup_builder;
     }
 
@@ -226,7 +226,7 @@ int canonizationservice_block_make(
             block_cert_bytes, block_cert_size);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto cleanup_builder;
     }
 

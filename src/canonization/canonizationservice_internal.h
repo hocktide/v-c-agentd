@@ -430,6 +430,15 @@ void canonizationservice_child_context_close(
 void canonizationservice_reset(
     canonizationservice_instance_t* instance, bool should_sleep);
 
+/**
+ * \brief Set up a clean re-entry from the event loop and ensure that no other
+ * callbacks occur by setting the appropriate force exit flag.
+ *
+ * \param instance      The canonization service instance.
+ */
+void canonizationservice_exit_event_loop(
+    canonizationservice_instance_t* instance);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

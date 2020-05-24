@@ -55,7 +55,7 @@ int canonizationservice_dataservice_sendreq_child_context_create(
             instance->data, dataservice_caps, sizeof(dataservice_caps));
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         return retval;
     }
 

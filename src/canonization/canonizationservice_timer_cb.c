@@ -37,12 +37,16 @@ void canonizationservice_timer_cb(
     MODEL_ASSERT(NULL != instance);
     MODEL_ASSERT(NULL != timer);
 
+    /* if we're exiting the event loop, break out. */
+    if (instance->force_exit)
+        return;
+
     /* allocate memory for the transaction list. */
     MODEL_ASSERT(NULL == instance->transaction_list);
     instance->transaction_list = (linked_list_t*)malloc(sizeof(linked_list_t));
     if (NULL == instance->transaction_list)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto done;
     }
 
@@ -52,7 +56,7 @@ void canonizationservice_timer_cb(
             &instance->transaction_list_opts, instance->transaction_list);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto free_transaction_list;
     }
 
@@ -60,7 +64,7 @@ void canonizationservice_timer_cb(
     retval = canonizationservice_write_block_id_request(instance);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto dispose_transaction_list;
     }
 

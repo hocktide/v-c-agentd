@@ -51,6 +51,13 @@ void canonizationservice_control_write(
                 goto exit_failure;
             }
         }
+        /* re-enable the callback if there is more data to write. */
+        else if (ipc_socket_writebuffer_size(ctx) > 0)
+        {
+            ipc_set_writecb_noblock(
+                ctx, &canonizationservice_control_write,
+                instance->loop_context);
+        }
     }
     else
     {
@@ -63,6 +70,5 @@ void canonizationservice_control_write(
     return;
 
 exit_failure:
-    instance->force_exit = true;
-    ipc_exit_loop(instance->loop_context);
+    canonizationservice_exit_event_loop(instance);
 }

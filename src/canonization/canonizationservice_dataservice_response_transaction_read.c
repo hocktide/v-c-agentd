@@ -37,7 +37,7 @@ void canonizationservice_dataservice_response_transaction_read(
             resp, resp_size, &dresp);
     if (AGENTD_STATUS_SUCCESS != retval || (AGENTD_STATUS_SUCCESS != dresp.hdr.status && AGENTD_ERROR_DATASERVICE_NOT_FOUND != dresp.hdr.status))
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto done;
     }
     else if (AGENTD_STATUS_SUCCESS == retval && AGENTD_ERROR_DATASERVICE_NOT_FOUND == dresp.hdr.status)
@@ -60,7 +60,7 @@ void canonizationservice_dataservice_response_transaction_read(
             sizeof(canonizationservice_transaction_t) + dresp.data_size);
     if (NULL == txn)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto done;
     }
 
@@ -81,7 +81,7 @@ void canonizationservice_dataservice_response_transaction_read(
         dispose((disposable_t*)txn);
         free(txn);
 
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto done;
     }
 
@@ -106,7 +106,7 @@ void canonizationservice_dataservice_response_transaction_read(
             instance->data, instance->data_child_context, txn->node.next);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto done;
     }
 

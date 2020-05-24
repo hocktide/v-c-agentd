@@ -38,6 +38,10 @@ void canonizationservice_data_read(
     MODEL_ASSERT(event_flags & IPC_SOCKET_EVENT_READ);
     MODEL_ASSERT(NULL != instance);
 
+    /* don't process data from this socket if we have been forced to exit. */
+    if (instance->force_exit)
+        return;
+
     /* attempt to read a response packet. */
     int retval = ipc_read_data_noblock(ctx, (void**)&resp, &resp_size);
     if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
@@ -47,14 +51,14 @@ void canonizationservice_data_read(
     /* handle general failures from the data service socket read. */
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         return;
     }
 
     /* verify that the size is at least large enough for a method. */
     if (resp_size < sizeof(uint32_t))
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto cleanup_resp;
     }
 
@@ -109,7 +113,7 @@ void canonizationservice_data_read(
         /* unknown method. */
         default:
             /* TODO - if this happens, log the event. */
-            ipc_exit_loop(instance->loop_context);
+            canonizationservice_exit_event_loop(instance);
             break;
     }
 

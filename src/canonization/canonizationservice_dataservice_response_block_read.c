@@ -33,7 +33,7 @@ void canonizationservice_dataservice_response_block_read(
             resp, resp_size, &dresp);
     if (AGENTD_STATUS_SUCCESS != retval || AGENTD_STATUS_SUCCESS != dresp.hdr.status)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto done;
     }
 
@@ -46,7 +46,7 @@ void canonizationservice_dataservice_response_block_read(
             instance);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
-        ipc_exit_loop(instance->loop_context);
+        canonizationservice_exit_event_loop(instance);
         goto done;
     }
 

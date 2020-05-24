@@ -52,7 +52,7 @@ void canonizationservice_reset(
                 &canonizationservice_timer_cb, instance);
         if (AGENTD_STATUS_SUCCESS != retval)
         {
-            ipc_exit_loop(instance->loop_context);
+            canonizationservice_exit_event_loop(instance);
             goto done;
         }
 
@@ -61,7 +61,7 @@ void canonizationservice_reset(
             ipc_event_loop_add_timer(instance->loop_context, &instance->timer);
         if (AGENTD_STATUS_SUCCESS != retval)
         {
-            ipc_exit_loop(instance->loop_context);
+            canonizationservice_exit_event_loop(instance);
             goto cleanup_timer;
         }
     }
