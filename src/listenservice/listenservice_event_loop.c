@@ -10,17 +10,9 @@
 #include <agentd/status_codes.h>
 #include <cbmc/model_assert.h>
 #include <signal.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <vpr/parameters.h>
 
 #include "listenservice_internal.h"
-
-/* forward decls */
-static int count_listen_sockets(int listenstart);
-static void listenservice_ipc_accept(
-    ipc_socket_context_t* ctx, int event_flags, void* user_context);
 
 /**
  * \brief Event loop for the unauthorized listen service.  This is the entry
@@ -59,7 +51,7 @@ int listenservice_event_loop(
     MODEL_ASSERT(listenstart >= 0);
 
     /* count the number of listen sockets. */
-    int listensocket_count = count_listen_sockets(listenstart);
+    int listensocket_count = listenservice_count_sockets(listenstart);
 
     /* allocate memory for the listen sockets. */
     listensockets = (ipc_socket_context_t*)
@@ -137,95 +129,4 @@ free_listensockets:
 
 done:
     return retval;
-}
-
-/**
- * \brief Count the number of listen sockets for this listen service instance.
- *
- * \param listenstart       The first listen socket to count from.
- *
- * \returns the number of listen sockets, starting at listenstart.
- */
-static int count_listen_sockets(int listenstart)
-{
-    int count = 0;
-    int socket_good = 0;
-    struct stat statbuf;
-
-    /* iterate through each file descriptor. */
-    do
-    {
-        /* get the status of the descriptor. */
-        int retval = fstat(listenstart + count, &statbuf);
-        if (retval < 0)
-        {
-            /* invalid descriptor.  We're done. */
-            socket_good = 0;
-        }
-        else
-        {
-            /* valid descriptor.  Up count and continue. */
-            ++count;
-            socket_good = 1;
-        }
-
-    } while (socket_good);
-
-
-    return count;
-}
-
-/**
- * \brief Handle read events on the listen socket.
- *
- * \param ctx           The non-blocking socket context.
- * \param event_flags   The event that triggered this callback.
- * \param user_context  The user context for this data socket.
- */
-static void listenservice_ipc_accept(
-    ipc_socket_context_t* ctx, int UNUSED(event_flags),
-    void* user_context)
-{
-    ssize_t retval = 0;
-    int sock = 0;
-    struct sockaddr_in peer;
-    socklen_t peersize = sizeof(peer);
-    listenservice_instance_t* instance =
-        (listenservice_instance_t*)user_context;
-
-    /* parameter sanity check. */
-    MODEL_ASSERT(NULL != ctx);
-    MODEL_ASSERT(event_flags & IPC_SOCKET_EVENT_READ);
-    MODEL_ASSERT(NULL != instance);
-
-    /* don't accept new connections from this socket if we are quiescing. */
-    if (instance->listenservice_force_exit)
-        return;
-
-    /* attempt to accept a socket. */
-    retval =
-        ipc_accept_noblock(ctx, &sock, (struct sockaddr*)&peer, &peersize);
-    if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval || AGENTD_ERROR_IPC_ACCEPT_SHOULD_RETRY == retval)
-    {
-        return;
-    }
-    else if (AGENTD_STATUS_SUCCESS != retval)
-    {
-        instance->listenservice_force_exit = true;
-        ipc_exit_loop(instance->loop_context);
-        return;
-    }
-
-    /* attempt to send this socket to the protocol service. */
-    retval =
-        ipc_sendsocket_block(instance->acceptsock, sock);
-    if (AGENTD_STATUS_SUCCESS != retval)
-    {
-        instance->listenservice_force_exit = true;
-        ipc_exit_loop(instance->loop_context);
-        goto cleanup_socket;
-    }
-
-cleanup_socket:
-    close(sock);
 }
