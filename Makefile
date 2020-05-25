@@ -4,6 +4,16 @@ BUILD_DIR=$(CURDIR)/build
 #flag to disable attestation
 DISABLE_ATTESTATION?=FALSE
 
+#flag to disable link-time optimization
+DISABLE_LTO?=FALSE
+
+#Enable / disable LTO based on above flag
+ifeq ($(DISABLE_LTO),FALSE)
+    LTO_FLAG=-flto
+else
+    LTO_FLAG=
+endif
+
 #vcblockchain options
 VCBLOCKCHAIN_DIR?=lib/vcblockchain
 VCBLOCKCHAIN_INCLUDE_PATH?=$(VCBLOCKCHAIN_DIR)/include
@@ -26,7 +36,7 @@ VCBLOCKCHAIN_HOST_RELEASE_LIB_DIR?=$(VCBLOCKCHAIN_DIR)/build/host/release
 VCBLOCKCHAIN_HOST_CHECKED_LINK?= \
     -L $(VCBLOCKCHAIN_HOST_CHECKED_LIB_DIR) -lvcblockchain -lpthread
 VCBLOCKCHAIN_HOST_RELEASE_LINK?= \
-    -L $(VCBLOCKCHAIN_HOST_RELEASE_LIB_DIR) -lvcblockchain -lpthread
+    $(LTO_FLAG) -L $(VCBLOCKCHAIN_HOST_RELEASE_LIB_DIR) -lvcblockchain -lpthread
 
 #Google Test options
 GTEST_DIR?=$(CURDIR)/lib/vcblockchain/lib/googletest/googletest
@@ -172,9 +182,9 @@ HOST_CHECKED_LEXCOMPAT_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_CHECKED_BUILD_DIR) \
     -fPIC -O0 --coverage \
 	-Wno-unused-function -Wno-unused-value -Wno-unused-const-variable
 HOST_RELEASE_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_RELEASE_BUILD_DIR) \
-    -fPIC -O2
+    -fPIC -O2 $(LTO_FLAG)
 HOST_RELEASE_LEXCOMPAT_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_RELEASE_BUILD_DIR) \
-    -fPIC -O2 \
+    -fPIC -O2 $(LTO_FLAG) \
 	-Wno-unused-function -Wno-unused-value -Wno-unused-const-variable
 HOST_DEBUG_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_DEBUG_BUILD_DIR) \
     -fPIC -O0 -g
@@ -184,8 +194,8 @@ HOST_DEBUG_LEXCOMPAT_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_DEBUG_BUILD_DIR) \
 COMMON_CXXFLAGS=-I $(PWD)/include $(VCBLOCKCHAIN_CFLAGS) -Wall -Werror -Wextra \
     -I $(TOOLCHAIN_DIR)/host/include
 HOST_CHECKED_CXXFLAGS=-std=c++14 $(COMMON_CXXFLAGS) -O0 --coverage
-HOST_RELEASE_CXXFLAGS=-std=c++14 $(COMMON_CXXFLAGS) -O2
-HOST_DEBUG_CXXFLAGS=-std=c++14 $(COMMON_CXXFLAGS) -O2
+HOST_RELEASE_CXXFLAGS=-std=c++14 $(COMMON_CXXFLAGS) -O2 $(LTO_FLAG)
+HOST_DEBUG_CXXFLAGS=-std=c++14 $(COMMON_CXXFLAGS) -O0
 TEST_CXXFLAGS=$(HOST_RELEASE_CXXFLAGS) $(COMMON_INCLUDES) -I $(GTEST_DIR) \
      -I $(GTEST_DIR)/include -I $(HOST_CHECKED_BUILD_DIR)
 
