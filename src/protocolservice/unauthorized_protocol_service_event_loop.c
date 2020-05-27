@@ -50,7 +50,7 @@ int unauthorized_protocol_service_event_loop(
     /* TODO - get the number of connections from config. */
     retval =
         unauthorized_protocol_service_instance_init(
-            &inst, randomsock, datasock, protosock, 50);
+            &inst, randomsock, datasock, protosock, 1000);
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         goto done;
