@@ -107,7 +107,6 @@ static int supervisor_run(const bootstrap_config_t* bconf)
     process_t* data_for_auth_protocol_service;
     process_t* data_for_canonizationservice;
     process_t* protocol_service;
-    process_t* auth_service;
     process_t* canonizationservice;
 
     int random_svc_log_sock = -1;
@@ -125,14 +124,19 @@ static int supervisor_run(const bootstrap_config_t* bconf)
     int unauth_protocol_svc_random_sock = -1;
     int unauth_protocol_svc_accept_sock = -1;
     int auth_protocol_svc_data_sock = -1;
-    int auth_svc_sock = -1;
-    int auth_svc_log_sock = -1;
-    int auth_svc_log_dummy_sock = -1;
     int canonization_svc_data_sock = -1;
     int canonization_svc_random_sock = -1;
     int canonization_svc_log_sock = -1;
     int canonization_svc_log_dummy_sock = -1;
     int canonization_svc_control_sock = -1;
+
+#if AUTHSERVICE
+    process_t* auth_service;
+
+    int auth_svc_sock = -1;
+    int auth_svc_log_sock = -1;
+    int auth_svc_log_dummy_sock = -1;
+#endif /*AUTHSERVICE*/
 
     /* read config. */
     TRY_OR_FAIL(config_read_proc(bconf, &conf), done);
@@ -178,12 +182,14 @@ static int supervisor_run(const bootstrap_config_t* bconf)
             &canonization_svc_log_sock,
             &canonization_svc_log_dummy_sock),
         cleanup_config);
+#if AUTHSERVICE
     TRY_OR_FAIL(
         ipc_socketpair(
             AF_UNIX, SOCK_STREAM, 0,
             &auth_svc_log_sock,
             &auth_svc_log_dummy_sock),
         cleanup_config);
+#endif /*AUTHSERVICE*/
 
     /* create random service. */
     TRY_OR_FAIL(
@@ -222,6 +228,7 @@ static int supervisor_run(const bootstrap_config_t* bconf)
             &unauth_protocol_svc_log_sock),
         cleanup_data_for_auth_protocol_service);
 
+#if AUTHSERVICE
     /* create auth service */
     TRY_OR_FAIL(
         supervisor_create_auth_service(
@@ -235,6 +242,14 @@ static int supervisor_run(const bootstrap_config_t* bconf)
             &data_for_canonizationservice, bconf, &conf,
             &canonization_svc_data_sock, &data_for_canonization_svc_log_sock),
         cleanup_auth_service);
+#else
+    /* create data service for canonization service. */
+    TRY_OR_FAIL(
+        supervisor_create_data_service_for_canonizationservice(
+            &data_for_canonizationservice, bconf, &conf,
+            &canonization_svc_data_sock, &data_for_canonization_svc_log_sock),
+        cleanup_protocol_service);
+#endif /*AUTHSERVICE*/
 
     /* create canonization service. */
     TRY_OR_FAIL(
@@ -251,8 +266,10 @@ static int supervisor_run(const bootstrap_config_t* bconf)
     START_PROCESS(data_for_auth_protocol_service, quiesce_data_processes);
     START_PROCESS(listener_service, quiesce_data_processes);
 
-    START_PROCESS(protocol_service, quiesce_data_processes);
+#if AUTHSERVICE
     START_PROCESS(auth_service, quiesce_data_processes);
+#endif /*AUTHSERVICE*/
+    START_PROCESS(protocol_service, quiesce_data_processes);
     START_PROCESS(canonizationservice, quiesce_data_processes);
 
     /* wait until we get a signal, and then restart / terminate. */
@@ -262,7 +279,9 @@ static int supervisor_run(const bootstrap_config_t* bconf)
     sleep(5);
 
     /* quiesce the higher-level processes first. */
+#if AUTHSERVICE
     process_stop(auth_service);
+#endif /*AUTHSERVICE*/
     process_stop(listener_service);
     process_stop(protocol_service);
     process_stop(canonizationservice);
@@ -277,8 +296,10 @@ cleanup_canonizationservice:
 cleanup_data_service_for_canonizationservice:
     CLEANUP_PROCESS(data_for_canonizationservice);
 
+#if AUTHSERVICE
 cleanup_auth_service:
     CLEANUP_PROCESS(auth_service);
+#endif /*AUTHSERVICE*/
 
 cleanup_protocol_service:
     CLEANUP_PROCESS(protocol_service);
@@ -309,19 +330,22 @@ done:
     CLOSE_IF_VALID(unauth_protocol_svc_log_dummy_sock);
     CLOSE_IF_VALID(data_for_auth_protocol_svc_log_sock);
     CLOSE_IF_VALID(data_for_auth_protocol_svc_log_dummy_sock);
-    CLOSE_IF_VALID(auth_svc_log_sock);
-    CLOSE_IF_VALID(auth_svc_log_dummy_sock);
     CLOSE_IF_VALID(data_for_canonization_svc_log_sock);
     CLOSE_IF_VALID(data_for_canonization_svc_log_dummy_sock);
     CLOSE_IF_VALID(unauth_protocol_svc_random_sock);
     CLOSE_IF_VALID(unauth_protocol_svc_accept_sock);
     CLOSE_IF_VALID(auth_protocol_svc_data_sock);
-    CLOSE_IF_VALID(auth_svc_sock);
     CLOSE_IF_VALID(canonization_svc_data_sock);
     CLOSE_IF_VALID(canonization_svc_random_sock);
     CLOSE_IF_VALID(canonization_svc_log_sock);
     CLOSE_IF_VALID(canonization_svc_log_dummy_sock);
     CLOSE_IF_VALID(canonization_svc_control_sock);
+
+#if AUTHSERVICE
+    CLOSE_IF_VALID(auth_svc_log_sock);
+    CLOSE_IF_VALID(auth_svc_log_dummy_sock);
+    CLOSE_IF_VALID(auth_svc_sock);
+#endif /*AUTHSERVICE*/
 
     return retval;
 }

@@ -4,6 +4,9 @@ BUILD_DIR=$(CURDIR)/build
 #flag to disable attestation
 DISABLE_ATTESTATION?=FALSE
 
+#flag to disable auth service
+DISABLE_AUTHSERVICE?=FALSE
+
 #flag to disable link-time optimization
 DISABLE_LTO?=FALSE
 
@@ -176,6 +179,13 @@ else
     COMMON_CFLAGS+=-DATTESTATION=0
 endif
 
+#Enable / disable auth service.
+ifeq ($(DISABLE_AUTHSERVICE),FALSE)
+    COMMON_CFLAGS+=-DAUTHSERVICE=1
+else
+    COMMON_CFLAGS+=-DAUTHSERVICE=0
+endif
+
 HOST_CHECKED_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_CHECKED_BUILD_DIR) \
     -fPIC -O0 --coverage
 HOST_CHECKED_LEXCOMPAT_CFLAGS=$(COMMON_CFLAGS) -I $(HOST_CHECKED_BUILD_DIR) \
@@ -204,6 +214,13 @@ ifeq ($(DISABLE_ATTESTATION),FALSE)
     TEST_CXXFLAGS+=-DATTESTATION=1
 else
     TEST_CXXFLAGS+=-DATTESTATION=0
+endif
+
+#Enable / disable auth service in tests.
+ifeq ($(DISABLE_AUTHSERVICE),FALSE)
+    TEST_CXXFLAGS+=-DAUTHSERVICE=1
+else
+    TEST_CXXFLAGS+=-DAUTHSERVICE=0
 endif
 
 .PHONY: ALL clean vcblockchain-build vcblockchain-test vcblockchain-clean
