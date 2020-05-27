@@ -148,6 +148,8 @@ terminate_proc:
     /* force the running status to true so we can terminate the process. */
     auth_proc->hdr.running = true;
     process_stop((process_t*)auth_proc);
+    sleep(5);
+    process_kill((process_t*)auth_proc);
 
 done:
     return retval;
@@ -174,8 +176,16 @@ static void supervisor_dispose_auth_service(void* disposable)
         *auth_proc->log_socket = -1;
     }
 
-    /* call the process stop method. */
-    process_stop((process_t*)auth_proc);
+    if (auth_proc->hdr.running)
+    {
+        /* call the process stop method. */
+        process_stop((process_t*)auth_proc);
+
+        sleep(5);
+
+        /* kill the process. */
+        process_kill((process_t*)auth_proc);
+    }
 }
 
 /**

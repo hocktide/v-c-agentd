@@ -3,7 +3,7 @@
  *
  * \brief Stop a process.
  *
- * \copyright 2019 Velo Payments, Inc.  All rights reserved.
+ * \copyright 2019-2020 Velo Payments, Inc.  All rights reserved.
  */
 
 #include <agentd/process.h>
@@ -26,22 +26,5 @@ int process_stop(process_t* proc)
 {
     MODEL_ASSERT(NULL != proc);
 
-    /* can't stop a process that isn't running. */
-    if (!proc->running)
-    {
-        return AGENTD_ERROR_PROCESS_NOT_ACTIVE;
-    }
-
-    /* send a terminate signal to the process. */
-    kill(proc->process_id, SIGTERM);
-
-    /* wait on this process to terminate. */
-    int status;
-    waitpid(proc->process_id, &status, 0);
-
-    /* update the running state to show that this process is not running. */
-    proc->running = false;
-
-    /* success */
-    return AGENTD_STATUS_SUCCESS;
+    return process_stop_ex(proc, WNOWAIT);
 }

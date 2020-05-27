@@ -128,6 +128,14 @@ static void supervisor_dispose_random_service(void* disposable)
         *random_prc->proto_random_socket = -1;
     }
 
-    /* call the process stop method. */
-    process_stop((process_t*)random_prc);
+    if (random_prc->hdr.running)
+    {
+        /* call the process stop method. */
+        process_stop((process_t*)random_prc);
+
+        sleep(5);
+
+        /* kill the process. */
+        process_kill((process_t*)random_prc);
+    }
 }

@@ -141,6 +141,14 @@ static void supervisor_dispose_listener_service(void* disposable)
         *listener->log_socket = -1;
     }
 
-    /* call the process stop method. */
-    process_stop((process_t*)listener);
+    if (listener->hdr.running)
+    {
+        /* call the process stop method. */
+        process_stop((process_t*)listener);
+
+        sleep(5);
+
+        /* kill the process. */
+        process_kill((process_t*)listener);
+    }
 }

@@ -286,9 +286,23 @@ static int supervisor_run(const bootstrap_config_t* bconf)
     process_stop(protocol_service);
     process_stop(canonizationservice);
 
+    /* wait an additional 2 seconds. */
+    sleep(2);
+
+    process_stop_ex(random_for_canonizationservice, 0);
+    process_stop_ex(random_service, 0);
+
+    /* kill these processes. */
+#if AUTHSERVICE
+    process_kill(auth_service);
+#endif /*AUTHSERVICE*/
+    process_kill(listener_service);
+    process_kill(protocol_service);
+    process_kill(canonizationservice);
+
 quiesce_data_processes:
-    process_stop(data_for_canonizationservice);
-    process_stop(data_for_auth_protocol_service);
+    process_stop_ex(data_for_canonizationservice, 0);
+    process_stop_ex(data_for_auth_protocol_service, 0);
 
 cleanup_canonizationservice:
     CLEANUP_PROCESS(canonizationservice);

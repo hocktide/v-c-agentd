@@ -172,6 +172,8 @@ terminate_proc:
     /* force the running status to true so we can terminate the process. */
     canonization_proc->hdr.running = true;
     process_stop((process_t*)canonization_proc);
+    sleep(5);
+    process_kill((process_t*)canonization_proc);
 
 done:
     return retval;
@@ -213,6 +215,14 @@ static void supervisor_dispose_canonizationservice(void* disposable)
         canonization_proc->control_socket = -1;
     }
 
-    /* call the process stop method. */
-    process_stop((process_t*)canonization_proc);
+    if (canonization_proc->hdr.running)
+    {
+        /* call the process stop method. */
+        process_stop((process_t*)canonization_proc);
+
+        sleep(5);
+
+        /* kill the proc. */
+        process_kill((process_t*)canonization_proc);
+    }
 }

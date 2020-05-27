@@ -77,6 +77,8 @@ terminate_proc:
     /* force the running status to true so we can terminate the process. */
     data_proc->hdr.running = true;
     process_stop((process_t*)data_proc);
+    sleep(5);
+    process_kill((process_t*)data_proc);
 
 done:
     return retval;

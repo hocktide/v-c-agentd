@@ -33,6 +33,15 @@ void supervisor_dispose_data_service(void* disposable)
         *data_proc->log_socket = -1;
     }
 
-    /* call the process stop method. */
-    process_stop((process_t*)data_proc);
+    /* if the process is running, stop and then kill it. */
+    if (data_proc->hdr.running)
+    {
+        /* call the process stop method. */
+        process_stop((process_t*)data_proc);
+
+        sleep(5);
+
+        /* call the process kill method. */
+        process_kill((process_t*)data_proc);
+    }
 }

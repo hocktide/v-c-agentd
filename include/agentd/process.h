@@ -78,6 +78,29 @@ int process_start(process_t* proc);
  */
 int process_stop(process_t* proc);
 
+/**
+ * \brief Stop a process, passing extended options.
+ *
+ * \param proc              The process to stop.
+ * \param options           The options to send to waitpid.
+ *
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success;
+ *          - AGENTD_ERROR_PROCESS_NOT_ACTIVE if the process is not running.
+ *          - An error code on failure.
+ */
+int process_stop_ex(process_t* proc, int options);
+
+/**
+ * \brief Kill a process.
+ *
+ * \param proc              The process to kill.
+ *
+ * \returns a status code indicating success or failure.
+ *          - AGENTD_STATUS_SUCCESS on success;
+ */
+int process_kill(process_t* proc);
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

@@ -153,6 +153,14 @@ static void supervisor_dispose_protocol_service(void* disposable)
         *protocol_proc->data_socket = -1;
     }
 
-    /* call the process stop method. */
-    process_stop((process_t*)protocol_proc);
+    if (protocol_proc->hdr.running)
+    {
+        /* call the process stop method. */
+        process_stop((process_t*)protocol_proc);
+
+        sleep(5);
+
+        /* kill the process. */
+        process_kill((process_t*)protocol_proc);
+    }
 }
