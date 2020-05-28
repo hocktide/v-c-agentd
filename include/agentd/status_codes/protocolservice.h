@@ -124,6 +124,12 @@ extern "C" {
 #define AGENTD_ERROR_PROTOCOLSERVICE_TRANSACTION_VERIFICATION \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_PROTOCOL, 0x0012U)
 
+/**
+ * \brief Attempt to close other fds failed.
+ */
+#define AGENTD_ERROR_PROTOCOLSERVICE_PRIVSEP_CLOSE_OTHER_FDS \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_PROTOCOL, 0x0013U)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

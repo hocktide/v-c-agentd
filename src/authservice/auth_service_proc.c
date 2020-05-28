@@ -178,6 +178,16 @@ int auth_service_proc(
             goto done;
         }
 
+        /* close any socket above the given value. */
+        retval =
+            privsep_close_other_fds(AGENTD_FD_AUTHSERVICE_LOG);
+        if (0 != retval)
+        {
+            perror("privsep_close_other_fds");
+            retval = AGENTD_ERROR_AUTHSERVICE_PRIVSEP_CLOSE_OTHER_FDS;
+            goto done;
+        }
+
         /* spawn the child process (this does not return if successful). */
         if (runsecure)
         {

@@ -400,6 +400,12 @@ extern "C" {
 #define AGENTD_ERROR_DATASERVICE_RESPONSE_INVALID_PARAMETER \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x0043U)
 
+/**
+ * \brief Attempt to close other fds failed.
+ */
+#define AGENTD_ERROR_DATASERVICE_PRIVSEP_CLOSE_OTHER_FDS \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_DATASERVICE, 0x0044U)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

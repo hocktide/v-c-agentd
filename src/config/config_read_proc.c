@@ -183,6 +183,16 @@ int config_read_proc(
             goto done;
         }
 
+        /* close any socket above the given value. */
+        retval =
+            privsep_close_other_fds(AGENTD_FD_CONFIG_OUT);
+        if (0 != retval)
+        {
+            perror("privsep_close_other_fds");
+            retval = AGENTD_ERROR_CONFIG_PRIVSEP_CLOSE_OTHER_FDS;
+            goto done;
+        }
+
         /* spawn the child process (this does not return if successful. */
         retval = privsep_exec_private(bconf, "readconfig");
         if (0 != retval)

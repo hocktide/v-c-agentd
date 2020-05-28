@@ -118,6 +118,12 @@ extern "C" {
 #define AGENTD_ERROR_CONFIG_INVALID_STREAM \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_CONFIG, 0x0010U)
 
+/**
+ * \brief Attempt to close other FDs failed.
+ */
+#define AGENTD_ERROR_CONFIG_PRIVSEP_CLOSE_OTHER_FDS \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_CONFIG, 0x0011U)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }

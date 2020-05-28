@@ -142,6 +142,12 @@ extern "C" {
 #define AGENTD_ERROR_RANDOMSERVICE_PRIVSEP_EXEC_SURVIVAL_WEIRDNESS \
     AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_RANDOM, 0x0015U)
 
+/**
+ * \brief Attempting to close all other FDs failed.
+ */
+#define AGENTD_ERROR_RANDOMSERVICE_PRIVSEP_CLOSE_OTHER_FDS \
+    AGENTD_STATUS_ERROR_MACRO(AGENTD_SERVICE_RANDOM, 0x0016U)
+
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 }
