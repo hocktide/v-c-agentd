@@ -73,7 +73,7 @@ void auth_service_isolation_test::SetUp()
     /* spawn the authservice process. */
     auth_service_proc_status =
         auth_service_proc(
-            &bconf, &conf, logsock, &authsock, &auth_pid,
+            &bconf, &conf, &logsock, &authsock, &auth_pid,
             false);
 
     /* by default, we run in blocking mode. */
@@ -101,7 +101,8 @@ void auth_service_isolation_test::TearDown()
     setenv("PATH", oldpath, 1);
 
     /* clean up. */
-    close(logsock);
+    if (logsock >= 0)
+        close(logsock);
     dispose((disposable_t*)&bconf);
     free(path);
 }
