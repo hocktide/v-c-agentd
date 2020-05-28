@@ -68,7 +68,6 @@ enum authservice_api_method_enum
  */
 int auth_service_event_loop(int authsock, int logsock);
 
-
 /**
  * \brief Spawn an auth service process using the provided config structure and
  * logger socket.
@@ -81,7 +80,8 @@ int auth_service_event_loop(int authsock, int logsock);
  *
  * \param bconf         The bootstrap configuration for this service.
  * \param conf          The configuration for this service.
- * \param logsock       Socket used to communicate with the logger.
+ * \param logsock       Pointer to the socket used to communicate with the
+ *                      logger.
  * \param authsock      Pointer to the auth service socket, to be updated on
  *                      successful completion of this function.
  * \param authpid       Pointer to the auth service pid, to be updated on the
@@ -111,9 +111,8 @@ int auth_service_event_loop(int authsock, int logsock);
  *        process survived execution (weird!).      
  */
 int auth_service_proc(
-    const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,
+    const bootstrap_config_t* bconf, const agent_config_t* conf, int* logsock,
     int* authsock, pid_t* authpid, bool runsecure);
-
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus

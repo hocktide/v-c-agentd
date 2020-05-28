@@ -32,7 +32,8 @@
  *
  * \param bconf         The bootstrap configuration for this service.
  * \param conf          The configuration for this service.
- * \param logsock       Socket used to communicate with the logger.
+ * \param logsock       Pointer to the socket used to communicate with the
+ *                      logger.
  * \param authsock      Pointer to the auth service socket, to be updated on
  *                      successful completion of this function.
  * \param authpid       Pointer to the auth service pid, to be updated on the
@@ -62,7 +63,7 @@
  *        process survived execution (weird!).      
  */
 int auth_service_proc(
-    const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,
+    const bootstrap_config_t* bconf, const agent_config_t* conf, int* logsock,
     int* authsock, pid_t* authpid, bool runsecure)
 {
     int retval = 1;
@@ -150,7 +151,7 @@ int auth_service_proc(
 
         /* move the fds out of the way. */
         if (AGENTD_STATUS_SUCCESS !=
-            privsep_protect_descriptors(&serversock, &logsock, NULL))
+            privsep_protect_descriptors(&serversock, logsock, NULL))
         {
             retval = AGENTD_ERROR_AUTHSERVICE_PRIVSEP_SETFDS_FAILURE;
             goto done;
@@ -169,7 +170,7 @@ int auth_service_proc(
         retval =
             privsep_setfds(
                 serversock, /* ==> */ AGENTD_FD_AUTHSERVICE_SOCK,
-                logsock, /* ==> */ AGENTD_FD_AUTHSERVICE_LOG,
+                *logsock, /* ==> */ AGENTD_FD_AUTHSERVICE_LOG,
                 -1);
         if (0 != retval)
         {
@@ -217,6 +218,8 @@ int auth_service_proc(
     {
         /* close the child's end of the socket pair. */
         close(serversock);
+        close(*logsock);
+        *logsock = -1;
         serversock = -1;
 
         /* let the cleanup logic know that we want to preserve authsock. */

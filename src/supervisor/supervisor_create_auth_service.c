@@ -107,7 +107,7 @@ static int supervisor_start_auth_service(process_t* proc)
     TRY_OR_FAIL(
         auth_service_proc(
             auth_proc->bconf, auth_proc->conf,
-            *auth_proc->log_socket, auth_proc->auth_socket,
+            auth_proc->log_socket, auth_proc->auth_socket,
             &auth_proc->hdr.process_id, true),
         done);
 
@@ -131,9 +131,6 @@ static int supervisor_start_auth_service(process_t* proc)
 
     /* verify that the operation completed successfully. */
     TRY_OR_FAIL(status, cleanup_buffers);
-
-    /* if successful, the child process owns the sockets. */
-    *auth_proc->log_socket = -1;
 
     /* success */
     retval = AGENTD_STATUS_SUCCESS;
