@@ -32,7 +32,8 @@
  *
  * \param bconf         The bootstrap configuration for this service.
  * \param conf          The configuration for this service.
- * \param logsock       Socket used to communicate with the logger.
+ * \param logsock       Pointer to the socket used to communicate with the
+ *                      logger.
  * \param datasock      Pointer to the data service socket, to be updated on
  *                      successful completion of this function.
  * \param datapid       Pointer to the data service pid, to be updated on the
@@ -62,7 +63,7 @@
  *        process survived execution (weird!).      
  */
 int dataservice_proc(
-    const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,
+    const bootstrap_config_t* bconf, const agent_config_t* conf, int* logsock,
     int* datasock, pid_t* datapid, bool runsecure)
 {
     int retval = 1;
@@ -150,7 +151,7 @@ int dataservice_proc(
 
         /* move the fds out of the way. */
         if (AGENTD_STATUS_SUCCESS !=
-            privsep_protect_descriptors(&serversock, &logsock, NULL))
+            privsep_protect_descriptors(&serversock, logsock, NULL))
         {
             retval = AGENTD_ERROR_DATASERVICE_PRIVSEP_SETFDS_FAILURE;
             goto done;
@@ -169,7 +170,7 @@ int dataservice_proc(
         retval =
             privsep_setfds(
                 serversock, /* ==> */ AGENTD_FD_DATASERVICE_SOCK,
-                logsock, /* ==> */ AGENTD_FD_DATASERVICE_LOG,
+                *logsock, /* ==> */ AGENTD_FD_DATASERVICE_LOG,
                 -1);
         if (0 != retval)
         {
@@ -218,6 +219,8 @@ int dataservice_proc(
         /* close the child's end of the socket pair. */
         close(serversock);
         serversock = -1;
+        close(*logsock);
+        *logsock = -1;
 
         /* let the cleanup logic know that we want to preserve datasock. */
         keep_datasock = true;

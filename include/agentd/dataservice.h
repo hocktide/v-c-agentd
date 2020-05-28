@@ -366,7 +366,8 @@ int dataservice_event_loop(int datasock, int logsock);
  *
  * \param bconf         The bootstrap configuration for this service.
  * \param conf          The configuration for this service.
- * \param logsock       Socket used to communicate with the logger.
+ * \param logsock       Pointer to the socket used to communicate with the
+ *                      logger.
  * \param datasock      Pointer to the data service socket, to be updated on
  *                      successful completion of this function.
  * \param datapid       Pointer to the data service pid, to be updated on the
@@ -396,7 +397,7 @@ int dataservice_event_loop(int datasock, int logsock);
  *        process survived execution (weird!).      
  */
 int dataservice_proc(
-    const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,
+    const bootstrap_config_t* bconf, const agent_config_t* conf, int* logsock,
     int* datasock, pid_t* datapid, bool runsecure);
 
 /* make this header C++ friendly. */

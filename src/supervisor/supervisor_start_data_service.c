@@ -30,7 +30,7 @@ int supervisor_start_data_service(process_t* proc)
     /* attempt to create the data service. */
     TRY_OR_FAIL(
         dataservice_proc(
-            data_proc->bconf, data_proc->conf, *data_proc->log_socket,
+            data_proc->bconf, data_proc->conf, data_proc->log_socket,
             data_proc->supervisor_data_socket, &data_proc->hdr.process_id,
             true),
         done);
@@ -65,9 +65,6 @@ int supervisor_start_data_service(process_t* proc)
 
     /* verify that the operation completed successfully. */
     TRY_OR_FAIL(status, terminate_proc);
-
-    /* if successful, the child process owns the sockets. */
-    *data_proc->log_socket = -1;
 
     /* success */
     retval = AGENTD_STATUS_SUCCESS;

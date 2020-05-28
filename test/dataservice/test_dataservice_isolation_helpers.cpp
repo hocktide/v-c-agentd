@@ -130,7 +130,7 @@ void dataservice_isolation_test::SetUp()
     /* spawn the dataservice process. */
     dataservice_proc_status =
         dataservice_proc(
-            &bconf, user_context.config, logsock, &datasock, &datapid,
+            &bconf, user_context.config, &logsock, &datasock, &datapid,
             false);
 
     /* by default, we run in blocking mode. */
@@ -172,7 +172,8 @@ void dataservice_isolation_test::TearDown()
     /* clean up. */
     yy_delete_buffer(state, scanner);
     yylex_destroy(scanner);
-    close(logsock);
+    if (logsock >= 0)
+        close(logsock);
     dispose((disposable_t*)&bconf);
     dispose((disposable_t*)&user_context);
     free(path);
