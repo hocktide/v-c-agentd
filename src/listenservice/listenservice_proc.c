@@ -36,8 +36,9 @@ int listenservice_proc_open_listen_sockets(
  *
  * \param bconf         The bootstrap configuration for this service.
  * \param conf          The configuration for this service.
- * \param acceptsock    Socket used to pass accepted sockets.
- * \param logsock       Socket used to communicate with the logger.
+ * \param acceptsock    Pointer to the socket used to pass accepted sockets.
+ * \param logsock       Pointer to the socket used to communicate with the
+ *                      logger.
  * \param listenpid     Pointer to the listen service pid, to be updated on
  *                      the successful completion of this function.
  * \param runsecure     Set to false if we are not being run in secure mode.
@@ -64,8 +65,8 @@ int listenservice_proc_open_listen_sockets(
  *        process survived execution (weird!).      
  */
 int listenservice_proc(
-    const bootstrap_config_t* bconf, const agent_config_t* conf, int acceptsock,
-    int logsock, pid_t* listenpid, bool runsecure)
+    const bootstrap_config_t* bconf, const agent_config_t* conf,
+    int* acceptsock, int* logsock, pid_t* listenpid, bool runsecure)
 {
     int retval = 1;
     uid_t uid;
@@ -74,6 +75,7 @@ int listenservice_proc(
     /* parameter sanity checks. */
     MODEL_ASSERT(NULL != bconf);
     MODEL_ASSERT(NULL != conf);
+    MODEL_ASSERT(NULL != acceptsock);
     MODEL_ASSERT(NULL != logsock);
     MODEL_ASSERT(NULL != listenpid);
 
@@ -99,7 +101,7 @@ int listenservice_proc(
     {
         /* move the fds out of the way. */
         if (AGENTD_STATUS_SUCCESS !=
-            privsep_protect_descriptors(&logsock, &acceptsock, NULL))
+            privsep_protect_descriptors(logsock, acceptsock, NULL))
         {
             retval = AGENTD_ERROR_LISTENSERVICE_PRIVSEP_SETFDS_FAILURE;
             goto done;
@@ -117,8 +119,8 @@ int listenservice_proc(
         /* close standard file descriptors and set fds. */
         retval =
             privsep_setfds(
-                logsock, /* ==> */ AGENTD_FD_LISTENSERVICE_LOG,
-                acceptsock, /* ==> */ AGENTD_FD_LISTENSERVICE_ACCEPT,
+                *logsock, /* ==> */ AGENTD_FD_LISTENSERVICE_LOG,
+                *acceptsock, /* ==> */ AGENTD_FD_LISTENSERVICE_ACCEPT,
                 -1);
         if (0 != retval)
         {
@@ -210,6 +212,12 @@ int listenservice_proc(
     /* parent */
     else
     {
+        /* close sockets passed to child. */
+        close(*acceptsock);
+        *acceptsock = -1;
+        close(*logsock);
+        *logsock = -1;
+
         /* success. */
         retval = AGENTD_STATUS_SUCCESS;
         goto done;

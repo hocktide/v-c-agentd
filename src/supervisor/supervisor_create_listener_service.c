@@ -105,13 +105,9 @@ static int supervisor_start_listener_service(process_t* proc)
     /* attempt to create the listener service. */
     TRY_OR_FAIL(
         listenservice_proc(
-            listen_proc->bconf, listen_proc->conf, listen_proc->accept_lsocket,
-            *listen_proc->log_socket, &listen_proc->hdr.process_id, true),
+            listen_proc->bconf, listen_proc->conf, &listen_proc->accept_lsocket,
+            listen_proc->log_socket, &listen_proc->hdr.process_id, true),
         done);
-
-    /* if successful, the child process owns the sockets. */
-    *listen_proc->log_socket = -1;
-    listen_proc->accept_lsocket = -1;
 
     /* success */
     retval = AGENTD_STATUS_SUCCESS;
@@ -128,14 +124,14 @@ static void supervisor_dispose_listener_service(void* disposable)
     listener_process_t* listener = (listener_process_t*)disposable;
 
     /* clean up the accept socket if valid. */
-    if (listener->accept_lsocket > 0)
+    if (listener->accept_lsocket >= 0)
     {
         close(listener->accept_lsocket);
         listener->accept_lsocket = -1;
     }
 
     /* clean up the log socket if valid. */
-    if (*listener->log_socket > 0)
+    if (*listener->log_socket >= 0)
     {
         close(*listener->log_socket);
         *listener->log_socket = -1;

@@ -80,8 +80,9 @@ int listenservice_event_loop(int logsock, int acceptsock, int listenstart);
  *
  * \param bconf         The bootstrap configuration for this service.
  * \param conf          The configuration for this service.
- * \param acceptsock    Socket used to pass accepted sockets.
- * \param logsock       Socket used to communicate with the logger.
+ * \param acceptsock    Pointer to the socket used to pass accepted sockets.
+ * \param logsock       Pointer to the socket used to communicate with the
+ *                      logger.
  * \param listenpid     Pointer to the listen service pid, to be updated on
  *                      the successful completion of this function.
  * \param runsecure     Set to false if we are not being run in secure mode.
@@ -108,8 +109,8 @@ int listenservice_event_loop(int logsock, int acceptsock, int listenstart);
  *        process survived execution (weird!).      
  */
 int listenservice_proc(
-    const bootstrap_config_t* bconf, const agent_config_t* conf, int acceptsock,
-    int logsock, pid_t* listenpid, bool runsecure);
+    const bootstrap_config_t* bconf, const agent_config_t* conf,
+    int* acceptsock, int* logsock, pid_t* listenpid, bool runsecure);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
