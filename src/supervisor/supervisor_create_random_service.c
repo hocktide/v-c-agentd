@@ -93,12 +93,9 @@ static int supervisor_start_random_service(process_t* proc)
     TRY_OR_FAIL(
         randomservice_proc(
             random_prc->bconf, random_prc->conf,
-            *random_prc->log_socket, random_prc->proto_random_socket,
+            random_prc->log_socket, random_prc->proto_random_socket,
             &random_prc->hdr.process_id, true),
         done);
-
-    /* if successful, the child process owns the log socket. */
-    *random_prc->log_socket = -1;
 
     /* success */
     retval = AGENTD_STATUS_SUCCESS;
@@ -115,14 +112,14 @@ static void supervisor_dispose_random_service(void* disposable)
     random_process_t* random_prc = (random_process_t*)disposable;
 
     /* clean up the log socket if valid. */
-    if (*random_prc->log_socket > 0)
+    if (*random_prc->log_socket >= 0)
     {
         close(*random_prc->log_socket);
         *random_prc->log_socket = -1;
     }
 
     /* clean up the proto random socket if valid. */
-    if (*random_prc->proto_random_socket > 0)
+    if (*random_prc->proto_random_socket >= 0)
     {
         close(*random_prc->proto_random_socket);
         *random_prc->proto_random_socket = -1;

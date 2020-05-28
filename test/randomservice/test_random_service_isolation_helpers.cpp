@@ -47,7 +47,7 @@ void random_service_isolation_test::SetUp()
     /* spawn the random service process. */
     random_proc_status =
         randomservice_proc(
-            &bconf, &conf, rlogsock, &rprotosock, &randompid, false);
+            &bconf, &conf, &rlogsock, &rprotosock, &randompid, false);
 }
 
 void random_service_isolation_test::TearDown()
@@ -73,7 +73,8 @@ void random_service_isolation_test::TearDown()
 
     dispose((disposable_t*)&conf);
     dispose((disposable_t*)&bconf);
-    close(rlogsock);
+    if (rlogsock >= 0)
+        close(rlogsock);
     close(rprotosock);
 }
 

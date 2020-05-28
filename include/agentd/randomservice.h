@@ -80,8 +80,10 @@ int randomservice_event_loop(int random, int protosock, int logsock);
  *
  * \param bconf         The bootstrap configuration for this service.
  * \param conf          The configuration for this service.
- * \param logsock       Socket used to communicate with the logger.
- * \param protosock     Socket used to communicate with the protocol service.
+ * \param logsock       Pointer to the socket used to communicate with the
+ *                      logger.
+ * \param protosock     Pointer to the socket used to communicate with the
+ *                      protocol service.
  * \param randompid     Pointer to the random service pid, to be updated on
  *                      the successful completion of this function.
  * \param runsecure     Set to false if we are not being run in secure mode.
@@ -110,7 +112,7 @@ int randomservice_event_loop(int random, int protosock, int logsock);
  *        process survived execution (weird!).      
  */
 int randomservice_proc(
-    const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,
+    const bootstrap_config_t* bconf, const agent_config_t* conf, int* logsock,
     int* protosock, pid_t* randompid, bool runsecure);
 
 /* make this header C++ friendly. */

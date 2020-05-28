@@ -32,8 +32,10 @@
  *
  * \param bconf         The bootstrap configuration for this service.
  * \param conf          The configuration for this service.
- * \param logsock       Socket used to communicate with the logger.
- * \param protosock     Socket used to communicate with the protocol service.
+ * \param logsock       Pointer to the socket used to communicate with the
+ *                      logger.
+ * \param protosock     Pointer to the socket used to communicate with the
+ *                      protocol service.
  * \param randompid     Pointer to the random service pid, to be updated on
  *                      the successful completion of this function.
  * \param runsecure     Set to false if we are not being run in secure mode.
@@ -62,7 +64,7 @@
  *        process survived execution (weird!).      
  */
 int randomservice_proc(
-    const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,
+    const bootstrap_config_t* bconf, const agent_config_t* conf, int* logsock,
     int* protosock, pid_t* randompid, bool runsecure)
 {
     int retval = 1;
@@ -72,6 +74,8 @@ int randomservice_proc(
     /* parameter sanity checks. */
     MODEL_ASSERT(NULL != bconf);
     MODEL_ASSERT(NULL != conf);
+    MODEL_ASSERT(NULL != logsock);
+    MODEL_ASSERT(NULL != protosock);
     MODEL_ASSERT(NULL != randompid);
 
     /* verify that this process is running as root. */
@@ -150,7 +154,7 @@ int randomservice_proc(
         /* move the fds out of the way. */
         if (AGENTD_STATUS_SUCCESS !=
             privsep_protect_descriptors(
-                &random, &random_proto, &logsock, NULL))
+                &random, &random_proto, logsock, NULL))
         {
             retval = AGENTD_ERROR_CONFIG_PRIVSEP_SETFDS_FAILURE;
             goto done;
@@ -170,7 +174,7 @@ int randomservice_proc(
             privsep_setfds(
                 random, /* ==> */ AGENTD_FD_RANDOM_SERVICE_RANDOM_DEVICE,
                 random_proto, /* ==> */ AGENTD_FD_RANDOM_SERVICE_PROTOCOL_SERVICE,
-                logsock, /* ==> */ AGENTD_FD_RANDOM_SERVICE_LOG_SOCKET,
+                *logsock, /* ==> */ AGENTD_FD_RANDOM_SERVICE_LOG_SOCKET,
                 -1);
         if (0 != retval)
         {
@@ -216,6 +220,12 @@ int randomservice_proc(
     /* parent */
     else
     {
+        /* clean up child descriptors. */
+        close(*logsock);
+        *logsock = -1;
+        close(random_proto);
+        random_proto = -1;
+
         /* success. */
         retval = AGENTD_STATUS_SUCCESS;
         goto done;

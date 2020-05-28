@@ -165,7 +165,7 @@ void unauthorized_protocol_service_isolation_test::SetUp()
     /* spawn the random service process. */
     random_proc_status =
         randomservice_proc(
-            &bconf, &conf, rlogsock, &rprotosock, &randompid, false);
+            &bconf, &conf, &rlogsock, &rprotosock, &randompid, false);
 
     /* spawn the unauthorized protocol service process. */
     proto_proc_status =
@@ -221,7 +221,8 @@ void unauthorized_protocol_service_isolation_test::TearDown()
     dispose((disposable_t*)&conf);
     dispose((disposable_t*)&bconf);
     close(logsock);
-    close(rlogsock);
+    if (rlogsock >= 0)
+        close(rlogsock);
     close(datasock);
     close(acceptsock);
     free(path);
