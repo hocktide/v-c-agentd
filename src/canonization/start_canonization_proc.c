@@ -29,10 +29,14 @@
  *
  * \param bconf             The bootstrap configuration for this service.
  * \param conf              The configuration for this service.
- * \param logsock           Socket used to communicate with the logger.
- * \param datasock          Socket used to communicate with the data service.
- * \param randomsock        Socket used to communicate with the random service.
- * \param controlsock       Socket used to control the canonization service.
+ * \param logsock           Pointer to the socket used to communicate with the
+ *                          logger.
+ * \param datasock          Pointer to the socket used to communicate with the
+ *                          data service.
+ * \param randomsock        Pointer to the socket used to communicate with the
+ *                          random service.
+ * \param controlsock       Pointer to the socket used to control the
+ *                          canonization service.
  * \param canonizationpid   Pointer to the canonization service pid, to be
  *                          updated on the successful completion of this
  *                          function.
@@ -62,8 +66,8 @@
  *        the process survived execution (weird!).
  */
 int start_canonization_proc(
-    const bootstrap_config_t* bconf, const agent_config_t* conf, int logsock,
-    int datasock, int randomsock, int controlsock, pid_t* canonizationpid,
+    const bootstrap_config_t* bconf, const agent_config_t* conf, int* logsock,
+    int* datasock, int* randomsock, int* controlsock, pid_t* canonizationpid,
     bool runsecure)
 {
     int retval = 1;
@@ -135,7 +139,7 @@ int start_canonization_proc(
         /* move the fds out of the way. */
         if (AGENTD_STATUS_SUCCESS !=
             privsep_protect_descriptors(
-                &logsock, &datasock, &randomsock, &controlsock, NULL))
+                logsock, datasock, randomsock, controlsock, NULL))
         {
             retval = AGENTD_ERROR_CONFIG_PRIVSEP_SETFDS_FAILURE;
             goto done;
@@ -153,10 +157,10 @@ int start_canonization_proc(
         /* close standard file descriptors and set fds. */
         retval =
             privsep_setfds(
-                logsock, /* ==> */ AGENTD_FD_CANONIZATION_SVC_LOG,
-                datasock, /* ==> */ AGENTD_FD_CANONIZATION_SVC_DATA,
-                randomsock, /* ==> */ AGENTD_FD_CANONIZATION_SVC_RANDOM,
-                controlsock, /* ==> */ AGENTD_FD_CANONIZATION_SVC_CONTROL,
+                *logsock, /* ==> */ AGENTD_FD_CANONIZATION_SVC_LOG,
+                *datasock, /* ==> */ AGENTD_FD_CANONIZATION_SVC_DATA,
+                *randomsock, /* ==> */ AGENTD_FD_CANONIZATION_SVC_RANDOM,
+                *controlsock, /* ==> */ AGENTD_FD_CANONIZATION_SVC_CONTROL,
                 -1);
         if (0 != retval)
         {
@@ -207,6 +211,15 @@ int start_canonization_proc(
     /* parent */
     else
     {
+        close(*logsock);
+        *logsock = -1;
+        close(*datasock);
+        *datasock = -1;
+        close(*randomsock);
+        *randomsock = -1;
+        close(*controlsock);
+        *controlsock = -1;
+
         /* success. */
         retval = AGENTD_STATUS_SUCCESS;
         goto done;

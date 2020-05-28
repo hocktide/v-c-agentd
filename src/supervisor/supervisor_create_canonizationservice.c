@@ -121,18 +121,12 @@ static int supervisor_start_canonizationservice(process_t* proc)
     TRY_OR_FAIL(
         start_canonization_proc(
             canonization_proc->bconf, canonization_proc->conf,
-            *canonization_proc->log_socket, *canonization_proc->data_socket,
-            *canonization_proc->random_socket,
-            canonization_proc->control_socket,
+            canonization_proc->log_socket, canonization_proc->data_socket,
+            canonization_proc->random_socket,
+            &canonization_proc->control_socket,
             &canonization_proc->hdr.process_id,
             true),
         done);
-
-    /* if successful, the child process owns the sockets. */
-    *canonization_proc->log_socket = -1;
-    *canonization_proc->data_socket = -1;
-    *canonization_proc->random_socket = -1;
-    canonization_proc->control_socket = -1;
 
     /* attempt to send config data to the canonization proc. */
     TRY_OR_FAIL(

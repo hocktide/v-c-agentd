@@ -80,8 +80,8 @@ void canonizationservice_isolation_test::SetUp()
     /* spawn the canonization service process. */
     canonization_proc_status =
         start_canonization_proc(
-            &bconf, &conf, logsock, datasock_srv, rprotosock,
-            controlsock_srv, &canonizationpid, false);
+            &bconf, &conf, &logsock, &datasock_srv, &rprotosock,
+            &controlsock_srv, &canonizationpid, false);
 
     /* create the mock dataservice. */
     dataservice = make_unique<mock_dataservice::mock_dataservice>(datasock);
