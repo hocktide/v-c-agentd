@@ -28,5 +28,5 @@ void dataservice_child_details_delete(dataservice_instance_t* inst, int offset)
 
     /* place the child on the free store. */
     child->next = inst->child_head;
-    inst->child_head = child->next;
+    inst->child_head = child;
 }
