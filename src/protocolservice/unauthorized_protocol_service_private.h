@@ -528,6 +528,18 @@ void unauthorized_protocol_service_handle_request_artifact_last_txn_get(
     const uint8_t* breq, size_t size);
 
 /**
+ * \brief Handle a status get request.
+ *
+ * \param conn              The connection.
+ * \param request_offset    The offset of the request.
+ * \param breq              The bytestream of the request.
+ * \param size              The size of this request bytestream.
+ */
+void unauthorized_protocol_service_handle_request_status_get(
+    unauthorized_protocol_connection_t* conn, uint32_t request_offset,
+    const uint8_t* breq, size_t size);
+
+/**
  * \brief Request that a dataservice child context be created.
  *
  * \param conn      The connection to be assigned a child context when this
