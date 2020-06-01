@@ -2346,3 +2346,66 @@ TEST_F(unauthorized_protocol_service_isolation_test, artifact_last_txn_happy)
     /* clean up. */
     dispose((disposable_t*)&shared_secret);
 }
+
+/**
+ * Test the status api method.
+ */
+TEST_F(unauthorized_protocol_service_isolation_test, status_happy)
+{
+    uint32_t offset, status;
+    uint64_t client_iv = 0;
+    uint64_t server_iv = 0;
+    vccrypt_buffer_t shared_secret;
+
+    /* register dataservice helper mocks. */
+    ASSERT_EQ(0, dataservice_mock_register_helper());
+
+    /* start the mock. */
+    dataservice->start();
+
+    /* do the handshake, populating the shared secret on success. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+              do_handshake(&shared_secret, &server_iv, &client_iv));
+
+    /* send the status get request. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+              protocolservice_api_sendreq_status_get(
+                    protosock, &suite, &client_iv, &shared_secret));
+
+    /* get the response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+              protocolservice_api_recvresp_status_get(
+                    protosock, &suite, &server_iv, &shared_secret, &offset,
+                    &status));
+
+    /* the status should indicate success. */
+    ASSERT_EQ(
+        AGENTD_STATUS_SUCCESS, (int)status);
+    /* the offset should be zero. */
+    ASSERT_EQ(0U, offset);
+
+    /* send the close request. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+              protocolservice_api_sendreq_close(
+                    protosock, &suite, &client_iv, &shared_secret));
+
+    /* get the close response. */
+    ASSERT_EQ(AGENTD_STATUS_SUCCESS,
+              protocolservice_api_recvresp_close(
+                    protosock, &suite, &server_iv, &shared_secret));
+ 
+    /* close the socket */
+    close(protosock);
+
+    /* stop the mock. */
+    dataservice->stop();
+
+    /* verify proper connection setup. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_setup());
+
+    /* verify proper connection teardown. */
+    EXPECT_EQ(0, dataservice_mock_valid_connection_teardown());
+
+    /* clean up. */
+    dispose((disposable_t*)&shared_secret);
+}

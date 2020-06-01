@@ -40,6 +40,8 @@ typedef enum unauthorized_protocol_request_id
     UNAUTH_PROTOCOL_REQ_ID_ARTIFACT_FIRST_TXN_BY_ID_GET = 0x00000020,
     UNAUTH_PROTOCOL_REQ_ID_ARTIFACT_LAST_TXN_BY_ID_GET = 0x00000021,
 
+    UNAUTH_PROTOCOL_REQ_ID_STATUS_GET = 0x0000A000,
+
     UNAUTH_PROTOCOL_REQ_ID_CLOSE = 0x0000FFFF,
 } unauthorized_protocol_request_id_t;
 
@@ -1064,6 +1066,64 @@ int protocolservice_api_recvresp_artifact_last_txn_id_get(
     int sock, vccrypt_suite_options_t* suite, uint64_t* server_iv,
     const vccrypt_buffer_t* shared_secret, uint32_t* offset, uint32_t* status,
     uint8_t* last_txn_id);
+
+/**
+ * \brief Send a status get request.
+ *
+ * \param sock                      The socket to which this request is written.
+ * \param suite                     The crypto suite to use for this handshake.
+ * \param client_iv                 Pointer to the client IV, updated by this
+ *                                  call.
+ * \param shared_secret             The shared secret key for this request.
+ *
+ * This function sends a status get request to the server.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_WRITE_BLOCK_FAILURE if a blocking write on the socket
+ *        failed.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error.
+ *      - a non-zero error response if something else has failed.
+ */
+int protocolservice_api_sendreq_status_get(
+    int sock, vccrypt_suite_options_t* suite, uint64_t* client_iv,
+    const vccrypt_buffer_t* shared_secret);
+
+/**
+ * \brief Receive a status get response.
+ *
+ * \param sock                      The socket from which this response is read.
+ * \param suite                     The crypto suite to use to verify this
+ *                                  response.
+ * \param server_iv                 Pointer to the server IV, updated by this
+ *                                  call.
+ * \param shared_secret             The shared secret key for this response.
+ * \param offset                    The offset for this response.
+ * \param status                    The status for this response.
+ *
+ * On a successful return from this function, the status is updated with the
+ * status code from the API request.  This status should be checked.  A zero
+ * status indicates the request to the remote peer was successful, and a
+ * non-zero status indicates that the request to the remote peer failed.
+ *
+ * If the status code is updated with an error from the service, then this error
+ * will be reflected in the status variable, and a AGENTD_STATUS_SUCCESS will be
+ * returned by this function.  Thus, both the return value of this function and
+ * the upstream status code must be checked for correct operation.
+ *
+ * \returns a status code indicating success or failure.
+ *      - AGENTD_STATUS_SUCCESS on success.
+ *      - AGENTD_ERROR_IPC_READ_BLOCK_FAILURE if a blocking read on the socket
+ *        failed.
+ *      - AGENTD_ERROR_IPC_READ_UNEXPECTED_DATA_TYPE if the data type read from
+ *        the socket was unexpected.
+ *      - AGENTD_ERROR_GENERAL_OUT_OF_MEMORY if this operation encountered an
+ *        out-of-memory error.
+ */
+int protocolservice_api_recvresp_status_get(
+    int sock, vccrypt_suite_options_t* suite, uint64_t* server_iv,
+    const vccrypt_buffer_t* shared_secret, uint32_t* offset, uint32_t* status);
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
