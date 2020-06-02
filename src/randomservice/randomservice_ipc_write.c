@@ -46,14 +46,11 @@ void randomservice_ipc_write(
         {
             goto exit_failure;
         }
-        /* has there been a socket error? */
-        else if (bytes_written < 0)
+        /* has there been an unrecoverable socket error? */
+        else if (bytes_written < 0
+                 && (errno != EAGAIN && errno != EWOULDBLOCK))
         {
-            /* for any error except retrying, exit the loop. */
-            if (errno != EAGAIN && errno != EWOULDBLOCK)
-            {
-                goto exit_failure;
-            }
+            goto exit_failure;
         }
         /* if there is more data to write, re-activate the write callback. */
         else if (ipc_socket_writebuffer_size(ctx) > 0)
