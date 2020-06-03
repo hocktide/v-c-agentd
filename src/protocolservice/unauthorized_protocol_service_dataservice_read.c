@@ -11,6 +11,10 @@
 
 #include "unauthorized_protocol_service_private.h"
 
+/* forward decls. */
+static int unauthorized_protocol_service_handle_dataservice_packet(
+    unauthorized_protocol_service_instance_t* svc);
+
 /**
  * \brief Read data from the data service socket.
  *
@@ -20,11 +24,10 @@
  *                      service instance).
  */
 void unauthorized_protocol_service_dataservice_read(
-    ipc_socket_context_t* UNUSED(ctx), int UNUSED(event_flags),
+    ipc_socket_context_t* ctx, int UNUSED(event_flags),
     void* user_context)
 {
-    uint32_t* resp = NULL;
-    uint32_t resp_size = 0U;
+    int retval;
 
     /* get the instance from the user context. */
     unauthorized_protocol_service_instance_t* svc =
@@ -34,22 +37,44 @@ void unauthorized_protocol_service_dataservice_read(
     if (svc->force_exit)
         return;
 
+    /* loop until the read buffer is empty. */
+    do {
+        retval = unauthorized_protocol_service_handle_dataservice_packet(svc);
+    } while (AGENTD_STATUS_SUCCESS == retval
+             && ipc_socket_readbuffer_size(ctx) > 0);
+}
+
+/**
+ * \brief Handle a dataservice response packet.
+ *
+ * \param svc           The protocol service instance.
+ *
+ * \returns a status code indicating success or failure.
+ */
+static int unauthorized_protocol_service_handle_dataservice_packet(
+    unauthorized_protocol_service_instance_t* svc)
+{
+    uint32_t* resp = NULL;
+    uint32_t resp_size = 0U;
+    int retval;
+
     /* attempt to read a response packet. */
-    int retval = ipc_read_data_noblock(&svc->data, (void**)&resp, &resp_size);
+    retval = ipc_read_data_noblock(&svc->data, (void**)&resp, &resp_size);
     if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
     {
-        return;
+        goto done;
     }
     /* handle general failures from the data service socket read. */
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         unauthorized_protocol_service_exit_event_loop(svc);
-        return;
+        goto done;
     }
 
     /* verify that the size is at least large enough for a method. */
     if (resp_size < sizeof(uint32_t))
     {
+        retval = AGENTD_ERROR_DATASERVICE_RECVRESP_MALFORMED_PAYLOAD_DATA;
         unauthorized_protocol_service_exit_event_loop(svc);
         goto cleanup_resp;
     }
@@ -112,6 +137,7 @@ void unauthorized_protocol_service_dataservice_read(
         default:
             /* TODO - if this happens after everything is decoded, log and shut
              * down service. */
+            retval = AGENTD_ERROR_DATASERVICE_RECVRESP_UNEXPECTED_METHOD_CODE;
             unauthorized_protocol_service_exit_event_loop(svc);
             break;
     }
@@ -119,4 +145,7 @@ void unauthorized_protocol_service_dataservice_read(
 cleanup_resp:
     memset(resp, 0, resp_size);
     free(resp);
+
+done:
+    return retval;
 }
