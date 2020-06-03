@@ -20,7 +20,7 @@
  * \param user_context  The user context for this event.
  */
 void unauthorized_protocol_service_random_read(
-    ipc_socket_context_t* UNUSED(ctx), int UNUSED(event_flags),
+    ipc_socket_context_t* ctx, int UNUSED(event_flags),
     void* user_context)
 {
     void* resp = NULL;
@@ -40,17 +40,45 @@ void unauthorized_protocol_service_random_read(
     if (svc->force_exit)
         return;
 
+    /* loop over the input buffer. */
+    do
+    {
+        retval = unauthorized_protocol_service_handle_random_response(svc);
+    } while (AGENTD_STATUS_SUCCESS == retval
+             && ipc_socket_readbuffer_size(ctx) > 0);
+}
+
+/**
+ * \brief Handle a single response from the random service.
+ *
+ * \param svc               The protocol service instance.
+ *
+ * \returns a status code indicating success or failure.
+ */
+static int unauthorized_protocol_service_handle_random_response(
+    unauthorized_protocol_service_instance_t* svc)
+{
+    void* resp = NULL;
+    uint8_t* bresp = NULL;
+    uint32_t resp_size = 0U;
+    uint32_t size = 0U;
+
+    uint32_t request_id;
+    uint32_t request_offset;
+    uint32_t status;
+    int retval;
+
     /* attempt to read a response packet. */
-    int retval = ipc_read_data_noblock(&svc->random, &resp, &resp_size);
+    retval = ipc_read_data_noblock(&svc->random, &resp, &resp_size);
     if (AGENTD_ERROR_IPC_WOULD_BLOCK == retval)
     {
-        return;
+        goto done;
     }
     /* handle general failures from the random service socket read. */
     if (AGENTD_STATUS_SUCCESS != retval)
     {
         unauthorized_protocol_service_exit_event_loop(svc);
-        return;
+        goto done;
     }
 
     /* set up buffer pointer. */
@@ -60,6 +88,7 @@ void unauthorized_protocol_service_random_read(
     /* verify size */
     if (size < 3 * sizeof(uint32_t))
     {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_RESPONSE;
         unauthorized_protocol_service_exit_event_loop(svc);
         goto cleanup_resp;
     }
@@ -71,6 +100,7 @@ void unauthorized_protocol_service_random_read(
     request_id = ntohl(request_id);
     if (RANDOMSERVICE_API_METHOD_GET_RANDOM_BYTES != request_id)
     {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_RESPONSE;
         unauthorized_protocol_service_exit_event_loop(svc);
         goto cleanup_resp;
     }
@@ -82,6 +112,7 @@ void unauthorized_protocol_service_random_read(
     request_offset = ntohl(request_offset);
     if (request_offset >= svc->num_connections)
     {
+        retval = AGENTD_ERROR_PROTOCOLSERVICE_MALFORMED_RESPONSE;
         unauthorized_protocol_service_exit_event_loop(svc);
         goto cleanup_resp;
     }
@@ -94,10 +125,12 @@ void unauthorized_protocol_service_random_read(
         /* has the connection already been closed? */
         if (UPCS_HANDSHAKE_GATHER_ENTROPY_CLOSED == conn->state)
         {
+            retval = AGENTD_STATUS_SUCCESS;
             goto cleanup_resp;
         }
 
         /* force the connection closed. */
+        retval = AGENTD_STATUS_SUCCESS;
         unauthorized_protocol_service_close_connection(conn);
         goto cleanup_resp;
     }
@@ -110,6 +143,7 @@ void unauthorized_protocol_service_random_read(
     if (AGENTD_STATUS_SUCCESS != status)
     {
         /* log the error to the socket. */
+        retval = AGENTD_STATUS_SUCCESS;
         unauthorized_protocol_service_error_response(
             conn, UNAUTH_PROTOCOL_REQ_ID_HANDSHAKE_INITIATE, status, 0, false);
         goto cleanup_resp;
@@ -128,6 +162,7 @@ void unauthorized_protocol_service_random_read(
         unauthorized_protocol_service_write_handshake_request_response(
             conn))
     {
+        retval = AGENTD_STATUS_SUCCESS;
         unauthorized_protocol_service_close_connection(conn);
         goto cleanup_resp;
     }
@@ -137,4 +172,7 @@ void unauthorized_protocol_service_random_read(
 cleanup_resp:
     memset(resp, 0, resp_size);
     free(resp);
+
+done:
+    return retval;
 }
