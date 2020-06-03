@@ -64,7 +64,12 @@ int ipc_read_data_noblock(
 
     /* read data from the socket into our buffer. */
     retval = evbuffer_read(sock_impl->readbuf, sock->fd, -1);
-    if (retval < 0)
+    if (retval < 0 && (errno == EWOULDBLOCK || errno == EAGAIN))
+    {
+        retval = AGENTD_ERROR_IPC_WOULD_BLOCK;
+        /* fall through, since we might have enough data in the buffer. */
+    }
+    else if (retval < 0)
     {
         retval = AGENTD_ERROR_IPC_EVBUFFER_READ_FAILURE;
         goto done;
