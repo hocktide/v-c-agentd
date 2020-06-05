@@ -43,33 +43,37 @@ void auth_service_ipc_read(
     if (instance->auth_service_force_exit)
         return;
 
-    /* attempt to read a request. */
-    retval = ipc_read_data_noblock(ctx, &req, &size);
-    switch (retval)
-    {
-        /* on success, decode and dispatch. */
-        case 0:
-            if (0 !=
-                auth_service_decode_and_dispatch(instance, ctx, req, size))
-            {
+    /* loop until the read buffer is empty. */
+    do {
+        /* attempt to read a request. */
+        retval = ipc_read_data_noblock(ctx, &req, &size);
+        switch (retval)
+        {
+            /* on success, decode and dispatch. */
+            case 0:
+                if (0 !=
+                    auth_service_decode_and_dispatch(instance, ctx, req, size))
+                {
+                    auth_service_exit_event_loop(instance);
+                }
+
+                /* clear and free the request data. */
+                memset(req, 0, size);
+                free(req);
+                break;
+
+            /* Wait for more data on the socket. */
+            case AGENTD_ERROR_IPC_WOULD_BLOCK:
+                break;
+
+            /* any other error code indicates that we should no longer trust the
+             * socket. */
+            default:
                 auth_service_exit_event_loop(instance);
-            }
-
-            /* clear and free the request data. */
-            memset(req, 0, size);
-            free(req);
-            break;
-
-        /* Wait for more data on the socket. */
-        case AGENTD_ERROR_IPC_WOULD_BLOCK:
-            break;
-
-        /* any other error code indicates that we should no longer trust the
-         * socket. */
-        default:
-            auth_service_exit_event_loop(instance);
-            break;
-    }
+                break;
+        }
+    } while (AGENTD_STATUS_SUCCESS == retval
+             && ipc_socket_readbuffer_size(ctx) > 0);
 
     /* fire up the write callback if there is data to write. */
     if (ipc_socket_writebuffer_size(ctx) > 0)
