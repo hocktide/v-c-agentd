@@ -1,0 +1,6 @@
+[wrap-git]
+directory = vcdb
+revision = head
+url = git@github.com:velopayments/v-c-database.git
+push-url = git@github.com:velopayments/v-c-database.git
+

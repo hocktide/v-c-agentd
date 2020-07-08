@@ -27,16 +27,18 @@ void random_service_isolation_test::SetUp()
     conf.hdr.dispose = &config_dispose;
 
     /* set the path for running agentd. */
-    getcwd(wd, sizeof(wd));
-    oldpath = getenv("PATH");
-    if (NULL != oldpath)
+    if (NULL != getcwd(wd, sizeof(wd)))
     {
-        path =
-            strcatv(wd, "/build/host/release/bin", ":", oldpath, NULL);
-    }
-    else
-    {
-        path = strcatv(wd, "/build/host/release/bin");
+        oldpath = getenv("PATH");
+        if (NULL != oldpath)
+        {
+            path =
+                strcatv(wd, ":", oldpath, NULL);
+        }
+        else
+        {
+            path = strcatv(wd, NULL);
+        }
     }
 
     setenv("PATH", path, 1);

@@ -21,8 +21,8 @@
 #include <vpr/disposable.h>
 
 extern "C" {
-#include <config/agentd.tab.h>
-#include <config/agentd.yy.h>
+#include "agentd.tab.h"
+#include "agentd.yy.h"
 }
 
 /* this header will only work for C++. */

@@ -8,7 +8,7 @@
 
 %{
 #include <agentd/config.h>
-#include <config/agentd.tab.h>
+#include "agentd.tab.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <string.h>

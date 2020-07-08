@@ -14,8 +14,8 @@
 #include <vpr/disposable.h>
 
 extern "C" {
-#include <config/agentd.tab.h>
-#include <config/agentd.yy.h>
+#include "agentd.tab.h"
+#include "agentd.yy.h"
 }
 
 using namespace std;
@@ -98,7 +98,7 @@ TEST(config_set_defaults_test, empty_config)
     /* initialize bootstrap config. */
     bootstrap_config_init(&bconf);
     bconf.prefix_dir = strdup("build/isolation");
-    system("mkdir -p build/isolation");
+    ASSERT_EQ(0, system("mkdir -p build/isolation"));
 
     /* PRECONDITIONS: all config values are unset. */
     ASSERT_EQ(nullptr, user_context.config->logdir);

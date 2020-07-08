@@ -414,8 +414,11 @@ TEST_F(unauthorized_protocol_service_isolation_test,
     EXPECT_EQ(AGENTD_STATUS_SUCCESS, (int)status);
 
     /* write a garbage packet. */
-    write(
-        protosock, "test12345678901234567890123456789012345678901234567890", 54);
+    ASSERT_EQ(
+        54,
+        write(
+            protosock, "test12345678901234567890123456789012345678901234567890",
+            54));
 
     /* we'll get back an encrypted error response. */
     uint8_t* val;
