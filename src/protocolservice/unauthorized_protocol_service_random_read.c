@@ -12,6 +12,10 @@
 
 #include "unauthorized_protocol_service_private.h"
 
+/* forward decls. */
+static int unauthorized_protocol_service_handle_random_response(
+    unauthorized_protocol_service_instance_t* svc);
+
 /**
  * \brief Read data from the random service socket.
  *
@@ -23,14 +27,7 @@ void unauthorized_protocol_service_random_read(
     ipc_socket_context_t* ctx, int UNUSED(event_flags),
     void* user_context)
 {
-    void* resp = NULL;
-    uint8_t* bresp = NULL;
-    uint32_t resp_size = 0U;
-    uint32_t size = 0U;
-
-    uint32_t request_id;
-    uint32_t request_offset;
-    uint32_t status;
+    int retval;
 
     /* get the instance from the user context. */
     unauthorized_protocol_service_instance_t* svc =

@@ -1,0 +1,6 @@
+[wrap-git]
+directory = libevent
+revision = libevent-update
+url = git@github.com:velopayments/libevent.git
+push-url = git@github.com:velopayments/libevent.git
+

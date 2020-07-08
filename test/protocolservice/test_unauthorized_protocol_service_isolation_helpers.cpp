@@ -121,16 +121,18 @@ void unauthorized_protocol_service_isolation_test::SetUp()
     }
 
     /* set the path for running agentd. */
-    getcwd(wd, sizeof(wd));
-    oldpath = getenv("PATH");
-    if (NULL != oldpath)
+    if (NULL != getcwd(wd, sizeof(wd)))
     {
-        path =
-            strcatv(wd, "/build/host/release/bin", ":", oldpath, NULL);
-    }
-    else
-    {
-        path = strcatv(wd, "/build/host/release/bin");
+        oldpath = getenv("PATH");
+        if (NULL != oldpath)
+        {
+            path =
+                strcatv(wd, ":", oldpath, NULL);
+        }
+        else
+        {
+            path = strcatv(wd, NULL);
+        }
     }
 
     setenv("PATH", path, 1);
@@ -187,8 +189,7 @@ void unauthorized_protocol_service_isolation_test::SetUp()
     }
 
     /* set up directory test helper. */
-    string dbpath(wd);
-    dbpath += "/build/test/isolation/databases/";
+    string dbpath = "build/test/isolation/databases/";
     directory_test_helper::SetUp(dir_key, dbpath.c_str());
 }
 

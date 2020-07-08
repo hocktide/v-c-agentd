@@ -135,10 +135,10 @@ TEST(path_resolve, canonical_relative_path)
 {
     char* resolved = nullptr;
     char* pwd = getcwd(nullptr, PATH_MAX);
-    string expected_resolved = string(pwd) + "/build/host/checked/bin/agentd";
+    string expected_resolved = string(pwd) + "/agentd";
 
     ASSERT_EQ(0,
-        path_resolve("./build/host/checked/bin/agentd", "", &resolved));
+        path_resolve("./agentd", "", &resolved));
 
     EXPECT_STREQ(expected_resolved.c_str(), resolved);
 
@@ -154,10 +154,10 @@ TEST(path_resolve, canonical_relative_path2)
 {
     char* resolved = nullptr;
     char* pwd = getcwd(nullptr, PATH_MAX);
-    string expected_resolved = string(pwd) + "/build/host/checked/bin/agentd";
+    string expected_resolved = string(pwd) + "/agentd";
 
     ASSERT_EQ(0,
-        path_resolve("build/host/checked/bin/agentd", "", &resolved));
+        path_resolve("agentd", "", &resolved));
 
     EXPECT_STREQ(expected_resolved.c_str(), resolved);
 

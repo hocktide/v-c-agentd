@@ -913,7 +913,7 @@ TEST_F(ipc_test, ipc_read_uint8_reset_connection_2)
 
     /* write the type. */
     uint8_t type = IPC_DATA_TYPE_UINT8;
-    write(lhs, &type, sizeof(type));
+    ASSERT_EQ(sizeof(type), (size_t)write(lhs, &type, sizeof(type)));
 
     /* close the peer socket. */
     close(lhs);
@@ -938,11 +938,11 @@ TEST_F(ipc_test, ipc_read_uint8_bad_size)
 
     /* write the type. */
     uint8_t type = IPC_DATA_TYPE_UINT8;
-    write(lhs, &type, sizeof(type));
+    ASSERT_EQ(sizeof(type), (size_t)write(lhs, &type, sizeof(type)));
 
     /* write the size. */
     uint32_t size = htonl(12);
-    write(lhs, &size, sizeof(size));
+    ASSERT_EQ(sizeof(size), (size_t)write(lhs, &size, sizeof(size)));
 
     /* close the peer socket. */
     close(lhs);

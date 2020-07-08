@@ -1,0 +1,109 @@
+project('agentd', 'c', 'cpp',
+    default_options : ['c_std=gnu11', 'cpp_std=c++14', 'buildtype=release'],
+    meson_version : '>=0.53.0'
+)
+
+message('Using build type: ' + get_option('buildtype'))
+
+force_velo_toolchain = get_option('force_velo_toolchain')
+
+# TODO: Move this into mesons built in warning level.
+add_project_arguments('-Wall', '-Werror', '-Wextra', language : 'c')
+add_project_arguments('-Wall', '-Werror', '-Wextra', language : 'cpp')
+
+flex = find_program('flex', required : true)
+bison = find_program('bison', required : true)
+
+lgen = generator(
+    flex,
+    output : ['@PLAINNAME@.yy.c', '@BASENAME@.yy.h'],
+    arguments : ['--header-file=@OUTPUT1@', '-o', '@OUTPUT0@', '@INPUT@']
+)
+
+pgen = generator(
+    bison,
+    output : ['@BASENAME@.tab.c', '@BASENAME@.tab.h'],
+    arguments : ['@INPUT@', '--defines=@OUTPUT1@', '--output=@OUTPUT0@']
+)
+
+lfiles = lgen.process('src/config/agentd.l')
+pfiles = pgen.process('src/config/agentd.y')
+
+src_not_main = run_command(
+    'find', './src', '(', '-name', '*.c', '-or', '-name', '*.h' , ')', 
+            '-not', '-name', 'main.c', '-and', '-not', '-name', 'parser.y',
+    check : true
+).stdout().strip().split('\n')
+
+test_src = run_command(
+    'find', './test', '-name', '*.cpp', '-or', '-name', '*.h',
+    check : true
+).stdout().strip().split('\n')
+
+vcblockchain = dependency(
+    'vcblockchain',
+    required : true,
+    fallback : ['vcblockchain', 'vcblockchain_dep']
+)
+
+gtest = dependency(
+    'gtest',
+    main : true,
+    required : true,
+    fallback : ['gtest', 'gtest_dep']
+)
+
+threads = dependency('threads')
+
+agentd_include = include_directories('include')
+
+agentd_exe = executable(
+    'agentd',
+    './src/agentd/main.c',
+    src_not_main,
+    lfiles,
+    pfiles,
+    include_directories : agentd_include,
+    dependencies : [threads, vcblockchain]
+)
+
+agentd_test = executable(
+    'agentd-test',
+    src_not_main, test_src, lfiles, pfiles,
+    include_directories : agentd_include,
+    dependencies : [threads, vcblockchain, gtest]
+)
+
+test_env = environment()
+
+where_is_the_cat = run_command(
+    'which', 'cat', check : true
+).stdout().strip().split('\n')
+
+# There is the cat
+test_env.set(
+    'TEST_BIN',
+    where_is_the_cat
+)
+
+test_env.set(
+    'AGENTD_PATH',
+    meson.current_build_dir()
+)
+
+test_env.set(
+    'TEST_DB_PATH',
+    meson.current_build_dir() / 'testdb'
+)
+
+message(meson.current_build_dir() / 'testdb')
+
+test(
+    'agentd-test',
+    agentd_test,
+    env : test_env,
+    is_parallel : false
+)
+
+# TODO: Still working on generating the install stuff.
+#meson.add_install_script('scripts/install.sh')

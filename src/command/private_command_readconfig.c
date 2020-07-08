@@ -9,8 +9,8 @@
 #include <agentd/command.h>
 #include <agentd/config.h>
 #include <agentd/fds.h>
-#include <config/agentd.tab.h>
-#include <config/agentd.yy.h>
+#include "agentd.tab.h"
+#include "agentd.yy.h"
 #include <cbmc/model_assert.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -107,7 +107,11 @@ static void private_config_set_error(
     int len = snprintf(buf, sizeof(buf), "error: %s\n", msg);
 
     if (len > 0)
-        write(AGENTD_FD_CONFIG_OUT, buf, len);
+    {
+        int res = write(AGENTD_FD_CONFIG_OUT, buf, len);
+        if (res != len)
+            exit(1);
+    }
 
     exit(1);
 }
