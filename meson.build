@@ -7,6 +7,16 @@ message('Using build type: ' + get_option('buildtype'))
 
 force_velo_toolchain = get_option('force_velo_toolchain')
 
+# Should we enable attestation?
+enable_attestation = get_option('enable_attestation')
+if enable_attestation
+    add_project_arguments('-DATTESTATION=1', language: 'c')
+    add_project_arguments('-DATTESTATION=1', language: 'cpp')
+else
+    add_project_arguments('-DATTESTATION=0', language: 'c')
+    add_project_arguments('-DATTESTATION=0', language: 'cpp')
+endif
+
 # TODO: Move this into mesons built in warning level.
 add_project_arguments('-Wall', '-Werror', '-Wextra', language : 'c')
 add_project_arguments('-Wall', '-Werror', '-Wextra', language : 'cpp')
