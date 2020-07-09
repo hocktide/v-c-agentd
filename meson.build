@@ -1,4 +1,5 @@
 project('agentd', 'c', 'cpp',
+    version : '0.7.2',
     default_options : ['c_std=gnu11', 'cpp_std=c++14', 'buildtype=release'],
     meson_version : '>=0.53.0'
 )
@@ -115,5 +116,13 @@ test(
     is_parallel : false
 )
 
-# TODO: Still working on generating the install stuff.
-#meson.add_install_script('scripts/install.sh')
+VERSION=meson.project_version()
+
+package = custom_target(
+    'package',
+    input : [agentd_exe, 'share/default-agentd.conf'],
+    output : 'agentd-@VERSION@.tar.xz',
+    command: ['@SOURCE_DIR@/scripts/package.sh', meson.project_version(),
+              '@SOURCE_DIR@/share/default-agentd.conf'],
+    build_by_default : true
+)
