@@ -1,10 +1,12 @@
 CBMC_DIR?=/opt/cbmc
 CBMC?=$(CBMC_DIR)/bin/cbmc
-LIBEVENT_DIR?=../lib/vcblockchain/lib/libevent
-VCCRYPT_DIR?=../lib/vcblockchain/lib/vccrypt
-VCMODEL_DIR?=../lib/vcblockchain/lib/vcmodel
-VPR_DIR?=../lib/vcblockchain/lib/vpr
-MODEL_CHECK_DIR?=../lib/vcblockchain/lib/vcmodel
+LIBEVENT_DIR?=../subprojects/libevent
+LIBEVENT_CONFIG_INCLUDE_DIR?=\
+    $(MESON_BUILD_ROOT)/subprojects/libevent/__CMake_build/include
+VCCRYPT_DIR?=../subprojects/vccrypt
+VCMODEL_DIR?=../subprojects/vcmodel
+VPR_DIR?=../subprojects/vpr
+MODEL_CHECK_DIR?=../subprojects/vcmodel
 
 include $(MODEL_CHECK_DIR)/model_check.mk
 
@@ -17,6 +19,7 @@ ALL:
     --unwindset __builtin___memset_chk.0:60 \
 	-I $(VCMODEL_DIR)/include -I ../include -I $(VPR_DIR)/include \
     -I $(VCCRYPT_DIR)/include -I $(LIBEVENT_DIR)/include \
+	-I $(LIBEVENT_CONFIG_INCLUDE_DIR) \
 	$(MODEL_CHECK_SOURCES) \
 	$(VPR_DIR)/src/disposable/dispose.c \
     ../src/inet/htonll.c \

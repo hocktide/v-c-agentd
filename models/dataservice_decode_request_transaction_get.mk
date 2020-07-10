@@ -1,8 +1,8 @@
 CBMC_DIR?=/opt/cbmc
 CBMC?=$(CBMC_DIR)/bin/cbmc
-VCMODEL_DIR?=../lib/vcblockchain/lib/vcmodel
-VPR_DIR?=../lib/vcblockchain/lib/vpr
-MODEL_CHECK_DIR?=../lib/vcblockchain/lib/vcmodel
+VCMODEL_DIR?=../subprojects/vcmodel
+VPR_DIR?=../subprojects/vpr
+MODEL_CHECK_DIR?=../subprojects/vcmodel
 
 include $(MODEL_CHECK_DIR)/model_check.mk
 
