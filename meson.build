@@ -126,3 +126,8 @@ package = custom_target(
               '@SOURCE_DIR@/share/default-agentd.conf'],
     build_by_default : true
 )
+
+#Model checking
+run_target(
+    'model-check',
+    command : ['scripts/model-check.sh', 'models'])
