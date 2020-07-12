@@ -20,11 +20,17 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <vpr/disposable.h>
+#include <vpr/uuid.h>
 
 /* make this header C++ friendly. */
 #ifdef __cplusplus
 extern "C" {
 #endif  //__cplusplus
+
+#define MATERIALIZED_VIEW_CRUD_CREATE 0x0001
+#define MATERIALIZED_VIEW_CRUD_UPDATE 0x0002
+#define MATERIALIZED_VIEW_CRUD_APPEND 0x0004
+#define MATERIALIZED_VIEW_CRUD_DELETE 0x0008
 
 /**
  * \brief Forward declaration of bootstrap config.
@@ -72,6 +78,57 @@ typedef struct config_canonization
     int64_t block_max_transactions;
 } config_canonization_t;
 
+/**
+ * \brief Disposable list node.
+ */
+typedef struct config_disposable_list_node
+{
+    disposable_t hdr;
+    struct config_disposable_list_node* next;
+} config_disposable_list_node_t;
+
+/**
+ * \brief Materialized field type.
+ */
+typedef struct config_materialized_field_type
+{
+    config_disposable_list_node_t hdr;
+    vpr_uuid field_code;
+    uint16_t short_code;
+    uint32_t field_crud_flags;
+} config_materialized_field_type_t;
+
+/**
+ * \brief Materialized transaction type.
+ */
+typedef struct config_materialized_transaction_type
+{
+    config_disposable_list_node_t hdr;
+    vpr_uuid transaction_type;
+    uint32_t artifact_crud_flags;
+    config_materialized_field_type_t* head;
+} config_materialized_transaction_type_t;
+
+/**
+ * \brief Materialized artifact type.
+ */
+typedef struct config_materialized_artifact_type
+{
+    config_disposable_list_node_t hdr;
+    vpr_uuid artifact_type;
+    config_materialized_transaction_type_t* head;
+} config_materialized_artifact_type_t;
+
+/**
+ * \brief Materialized view data.
+ */
+typedef struct config_materialized_view
+{
+    config_disposable_list_node_t hdr;
+    const char* name;
+    config_materialized_artifact_type_t* head;
+} config_materialized_view_t;
+
 #define CONFIG_STREAM_TYPE_BOM 0x00
 #define CONFIG_STREAM_TYPE_LOGDIR 0x01
 #define CONFIG_STREAM_TYPE_LOGLEVEL 0x02
@@ -107,6 +164,7 @@ typedef struct agent_config
     config_listen_address_t* listen_head;
     const char* chroot;
     config_user_group_t* usergroup;
+    config_materialized_view_t* view_head;
 } agent_config_t;
 
 /**
@@ -115,12 +173,17 @@ typedef struct agent_config
 typedef union config_val
 {
     int64_t number;
+    vpr_uuid id;
     const char* string;
     struct in_addr* addr;
     agent_config_t* config;
     config_user_group_t* usergroup;
     config_listen_address_t* listenaddr;
     config_canonization_t* canonization;
+    config_materialized_view_t* view;
+    config_materialized_artifact_type_t* view_artifact;
+    config_materialized_transaction_type_t* view_transaction;
+    config_materialized_field_type_t* view_field;
 } config_val_t;
 
 /* forward decl for config_context. */
