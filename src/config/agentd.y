@@ -64,6 +64,39 @@ static config_canonization_t* add_max_milliseconds(
 static config_canonization_t* add_max_transactions(
     config_context_t*, config_canonization_t*, int64_t);
 void canonization_dispose(void* disp);
+static agent_config_t* fold_view(
+    config_context_t*, agent_config_t*, config_materialized_view_t*);
+static config_materialized_view_t* view_new(
+    config_context_t*);
+static config_materialized_view_t* view_add_name(
+    config_context_t*, config_materialized_view_t*, const char*);
+static config_materialized_view_t* view_add_artifact(
+    config_context_t*, config_materialized_view_t*,
+    config_materialized_artifact_type_t*);
+void view_dispose(void* disp);
+static config_materialized_artifact_type_t* view_artifact_new(
+    config_context_t*);
+static config_materialized_artifact_type_t* view_artifact_add_uuid(
+    config_context_t*, config_materialized_artifact_type_t*, vpr_uuid*);
+static config_materialized_artifact_type_t* view_artifact_add_transaction(
+    config_context_t*, config_materialized_artifact_type_t*,
+    config_materialized_transaction_type_t*);
+void view_artifact_dispose(void* disp);
+static config_materialized_transaction_type_t* view_transaction_new(
+    config_context_t*);
+static config_materialized_transaction_type_t* view_transaction_add_uuid(
+    config_context_t*, config_materialized_transaction_type_t*, vpr_uuid*);
+static config_materialized_transaction_type_t* view_transaction_add_crud(
+    config_context_t*, config_materialized_transaction_type_t*, int64_t);
+static config_materialized_transaction_type_t* view_transaction_add_field(
+    config_context_t*, config_materialized_transaction_type_t*,
+    config_materialized_field_type_t*);
+void view_transaction_dispose(void* disp);
+static config_materialized_field_type_t* view_field_new(
+    config_context_t*);
+static config_materialized_field_type_t* view_field_add_uuid(
+    config_context_t*, config_materialized_field_type_t*, vpr_uuid*);
+void view_field_dispose(void* disp);
 %}
 
 /* use the full pure API for Bison. */
@@ -76,10 +109,16 @@ void canonization_dispose(void* disp);
 %parse-param {config_context_t* context}
 
 /* Tokens. */
+%token <string> APPEND
+%token <string> ARTIFACT
+%token <string> CANONIZATION
 %token <string> CHROOT
 %token <string> COLON
-%token <string> CANONIZATION
+%token <string> COMMA
+%token <string> CREATE
 %token <string> DATASTORE
+%token <string> DELETE
+%token <string> FIELD
 %token <string> IDENTIFIER
 %token <addr> IP
 %token <string> INVALID
@@ -88,6 +127,7 @@ void canonization_dispose(void* disp);
 %token <string> LISTEN
 %token <string> LOGDIR
 %token <string> LOGLEVEL
+%token <string> MATERIALIZED
 %token <string> MAX
 %token <number> NUMBER
 %token <string> PATH
@@ -95,8 +135,14 @@ void canonization_dispose(void* disp);
 %token <string> ROOTBLOCK
 %token <string> MILLISECONDS
 %token <string> SECRET
+%token <string> TRANSACTION
 %token <string> TRANSACTIONS
+%token <string> TYPE
+%token <string> UPDATE
 %token <string> USERGROUP
+%token <id> UUID
+%token <id> UUID_INVALID
+%token <string> VIEW
 
 /* Types for branch nodes.. */
 %type <config> conf
@@ -110,6 +156,16 @@ void canonization_dispose(void* disp);
 %type <string> rootblock
 %type <string> secret
 %type <usergroup> usergroup
+%type <view> view
+%type <view> view_block
+%type <view_artifact> view_artifact
+%type <view_artifact> view_artifact_block
+%type <view_transaction> view_transaction
+%type <view_transaction> view_transaction_block
+%type <number> view_artifact_crud
+%type <number> view_artifact_crud_block
+%type <view_field> view_field
+%type <view_field> view_field_block
 
 %%
 
@@ -145,6 +201,9 @@ conf : {
     | conf canonization {
             /* fold in canonization data. */
             MAYBE_ASSIGN($$, fold_canonization(context, $1, $2)); }
+    | conf view {
+            /* fold in a materialized view. */
+            MAYBE_ASSIGN($$, fold_view(context, $1, $2)); }
     ;
 
 /* Provide a log directory that is either a simple identifier or a path. */
@@ -233,6 +292,106 @@ canonization_block
             MAYBE_ASSIGN($$, add_max_transactions(context, $$, $4)); }
     ;
 
+/* handle materialized view. */
+view
+    : MATERIALIZED VIEW IDENTIFIER LBRACE view_block RBRACE {
+        /* ownership is forwarded. */
+        MAYBE_ASSIGN($$, view_add_name(context, $5, $3)); }
+    ;
+
+view_block
+    : {
+            /* create a new view block. */
+            MAYBE_ASSIGN($$, view_new(context)); }
+    | view_block view_artifact {
+            /* add artifact type to this view. */
+            MAYBE_ASSIGN($$, view_add_artifact(context, $1, $2)); }
+    ;
+
+/* handle materialized view artifact. */
+view_artifact
+    : ARTIFACT TYPE UUID LBRACE view_artifact_block RBRACE {
+            /* ownership is forwarded. */
+            MAYBE_ASSIGN($$, view_artifact_add_uuid(context, $5, &$3)); }
+    ;
+
+view_artifact_block
+    : {
+            /* create a new artifact block. */
+            MAYBE_ASSIGN($$, view_artifact_new(context)); }
+    | view_artifact_block view_transaction {
+            /* add transaction type to artifact type. */
+            MAYBE_ASSIGN($$, view_artifact_add_transaction(context, $1, $2)); }
+    ;
+
+/* handle materialized view transaction. */
+view_transaction
+    : TRANSACTION TYPE UUID LBRACE view_transaction_block RBRACE {
+            /* ownership is forwarded. */
+            MAYBE_ASSIGN($$, view_transaction_add_uuid(context, $5, &$3)); }
+    ;
+
+view_transaction_block
+    : {
+            /* create a new transaction block. */
+            MAYBE_ASSIGN($$, view_transaction_new(context)); }
+    | view_transaction_block view_artifact_crud {
+            /* add artifact detail to transaction block. */
+            MAYBE_ASSIGN($$, view_transaction_add_crud(context, $1, $2)); }
+    | view_transaction_block view_field {
+            /* add field type to transaction block. */
+            MAYBE_ASSIGN($$, view_transaction_add_field(context, $1, $2)); }
+    ;
+
+/* handle artifact level CRUD flags. */
+view_artifact_crud
+    : ARTIFACT LBRACE view_artifact_crud_block RBRACE {
+            /* ownership is forwarded. */
+            $$ = $3; }
+    ;
+
+view_artifact_crud_block
+    : {
+            /* create a new set of crud flags. */
+            $$ = 0; }
+    | view_artifact_crud_block CREATE {
+            /* add CREATE crud flag. */
+            $$ |= MATERIALIZED_VIEW_CRUD_CREATE; }
+    | view_artifact_crud_block UPDATE {
+            /* add an UPDATE crud flag. */
+            $$ |= MATERIALIZED_VIEW_CRUD_UPDATE; }
+    | view_artifact_crud_block APPEND {
+            /* add an APPEND crud flag. */
+            $$ |= MATERIALIZED_VIEW_CRUD_APPEND; }
+    | view_artifact_crud_block DELETE {
+            /* add a DELETE crud flag. */
+            $$ |= MATERIALIZED_VIEW_CRUD_DELETE; }
+    ;
+
+/* handle materialized view field. */
+view_field
+    : FIELD TYPE UUID LBRACE view_field_block RBRACE {
+            /* ownership is forwarded. */
+            MAYBE_ASSIGN($$, view_field_add_uuid(context, $5, &$3)); }
+    ;
+
+view_field_block
+    : {
+            /* create a new field block. */
+            MAYBE_ASSIGN($$, view_field_new(context)); }
+    | view_field_block CREATE {
+            /* add CREATE crud flag. */
+            $$->field_crud_flags |= MATERIALIZED_VIEW_CRUD_CREATE; }
+    | view_field_block UPDATE {
+            /* add UPDATE crud flag. */
+            $$->field_crud_flags |= MATERIALIZED_VIEW_CRUD_UPDATE; }
+    | view_field_block APPEND {
+            /* add APPEND crud flag. */
+            $$->field_crud_flags |= MATERIALIZED_VIEW_CRUD_APPEND; }
+    | view_field_block DELETE {
+            /* add DELETE crud flag. */
+            $$->field_crud_flags |= MATERIALIZED_VIEW_CRUD_DELETE; }
+    ;
 %%
 
 /**
@@ -458,6 +617,16 @@ void config_dispose(void* disp)
         free((char*)cfg->usergroup->group);
         free(cfg->usergroup);
     }
+
+    while (NULL != cfg->view_head)
+    {
+        config_materialized_view_t* tmp =
+            (config_materialized_view_t*)cfg->view_head->hdr.next;
+        cfg->view_head->hdr.next = NULL;
+        dispose((disposable_t*)cfg->view_head);
+        free(cfg->view_head);
+        cfg->view_head = tmp;
+    }
 }
 
 /**
@@ -576,6 +745,326 @@ void canonization_dispose(void* disp)
 
     /* nothing to do here yet, as it currently contains just ints and bools.  */
     (void)cfg;
+}
+
+/**
+ * \brief Fold materialized view data into the config.
+ */
+static agent_config_t* fold_view(
+    config_context_t* context, agent_config_t* cfg,
+    config_materialized_view_t* view)
+{
+    /* scan the list for a view matching this name. */
+    config_materialized_view_t* tmp = cfg->view_head;
+    while (NULL != tmp)
+    {
+        if (!strcmp(tmp->name, view->name))
+        {
+            CONFIG_ERROR("Duplicate materialized view names.");
+        }
+
+        tmp = (config_materialized_view_t*)tmp->hdr.next;
+    }
+
+    /* if there are no duplicates, add this to our list. */
+    view->hdr.next = &cfg->view_head->hdr;
+    cfg->view_head = view;
+
+    return cfg;
+}
+
+/**
+ * \brief Create a new view structure.
+ */
+static config_materialized_view_t* view_new(config_context_t* context)
+{
+    config_materialized_view_t* ret =
+        (config_materialized_view_t*)malloc(sizeof(config_materialized_view_t));
+    if (NULL == ret)
+    {
+        CONFIG_ERROR("Out of memory in view_new().");
+    }
+
+    memset(ret, 0, sizeof(config_materialized_view_t));
+    ret->hdr.hdr.dispose = &view_dispose;
+
+    return ret;
+}
+
+/**
+ * \brief dispose of a view structure.
+ */
+void view_dispose(void* disp)
+{
+    config_materialized_view_t* view = (config_materialized_view_t*)disp;
+
+    if (NULL != view->name)
+    {
+        free((char*)view->name);
+    }
+
+    while (NULL != view->artifact_head)
+    {
+        config_materialized_artifact_type_t* tmp =
+            (config_materialized_artifact_type_t*)view->artifact_head->hdr.next;
+        view->artifact_head->hdr.next = NULL;
+        dispose((disposable_t*)view->artifact_head);
+        free(view->artifact_head);
+        view->artifact_head = tmp;
+    }
+}
+
+/**
+ * \brief Add a name to the view.
+ */
+static config_materialized_view_t* view_add_name(
+    config_context_t* UNUSED(context), config_materialized_view_t* view,
+    const char* name)
+{
+    view->name = name;
+
+    return view;
+}
+
+/**
+ * \brief Add an artifact type to a view.
+ */
+static config_materialized_view_t* view_add_artifact(
+    config_context_t* context, config_materialized_view_t* view,
+    config_materialized_artifact_type_t* artifact)
+{
+    /* scan the list for an artifact matching this type. */
+    config_materialized_artifact_type_t* tmp = view->artifact_head;
+    while (NULL != tmp)
+    {
+        if (
+            !memcmp(
+                &tmp->artifact_type, &artifact->artifact_type,
+                sizeof(vpr_uuid)))
+        {
+            CONFIG_ERROR("Duplicate artifact types.");
+        }
+
+        tmp = (config_materialized_artifact_type_t*)tmp->hdr.next;
+    }
+
+    /* if there are no duplicaes, add this to our list. */
+    artifact->hdr.next = &view->artifact_head->hdr;
+    view->artifact_head = artifact;
+
+    return view;
+}
+
+/**
+ * \brief Create a new artifact view structure.
+ */
+static config_materialized_artifact_type_t* view_artifact_new(
+    config_context_t* context)
+{
+    config_materialized_artifact_type_t* ret =
+        (config_materialized_artifact_type_t*)malloc(
+            sizeof(config_materialized_artifact_type_t));
+    if (NULL == ret)
+    {
+        CONFIG_ERROR("Out of memory in view_artifact_new().");
+    }
+
+    memset(ret, 0, sizeof(config_materialized_artifact_type_t));
+    ret->hdr.hdr.dispose = &view_artifact_dispose;
+
+    return ret;
+}
+
+/**
+ * \brief dispose of an artifact view structure.
+ */
+void view_artifact_dispose(void* disp)
+{
+    config_materialized_artifact_type_t* artifact =
+        (config_materialized_artifact_type_t*)disp;
+
+    while (NULL != artifact->transaction_head)
+    {
+        config_materialized_transaction_type_t* tmp =
+            (config_materialized_transaction_type_t*)
+            artifact->transaction_head->hdr.next;
+        artifact->transaction_head->hdr.next = NULL;
+        dispose((disposable_t*)artifact->transaction_head);
+        free(artifact->transaction_head);
+        artifact->transaction_head = tmp;
+    }
+}
+
+/**
+ * \brief Add the uuid to an artifact type.
+ */
+static config_materialized_artifact_type_t* view_artifact_add_uuid(
+    config_context_t* UNUSED(context),
+    config_materialized_artifact_type_t* artifact, vpr_uuid* uuid)
+{
+    memcpy(&artifact->artifact_type, uuid, sizeof(vpr_uuid));
+
+    return artifact;
+}
+
+/**
+ * \brief Add a transaction type to an artifact type.
+ */
+static config_materialized_artifact_type_t* view_artifact_add_transaction(
+    config_context_t* context, config_materialized_artifact_type_t* artifact,
+    config_materialized_transaction_type_t* transaction)
+{
+    /* scan the list for a transaction matching this type. */
+    config_materialized_transaction_type_t* tmp = artifact->transaction_head;
+    while (NULL != tmp)
+    {
+        if (
+            !memcmp(
+                &tmp->transaction_type, &transaction->transaction_type,
+                sizeof(vpr_uuid)))
+        {
+            CONFIG_ERROR("Duplicate transaction types.");
+        }
+
+        tmp = (config_materialized_transaction_type_t*)tmp->hdr.next;
+    }
+
+    /* if there are no duplicates, add this to our list. */
+    transaction->hdr.next = &artifact->transaction_head->hdr;
+    artifact->transaction_head = transaction;
+
+    return artifact;
+}
+
+/**
+ * \brief Create a new transaction view structure.
+ */
+static config_materialized_transaction_type_t* view_transaction_new(
+    config_context_t* context)
+{
+    config_materialized_transaction_type_t* ret =
+        (config_materialized_transaction_type_t*)malloc(
+            sizeof(config_materialized_transaction_type_t));
+    if (NULL == ret)
+    {
+        CONFIG_ERROR("Out of memory in view_transaction_new().");
+    }
+
+    memset(ret, 0, sizeof(config_materialized_transaction_type_t));
+    ret->hdr.hdr.dispose = &view_transaction_dispose;
+
+    return ret;
+}
+
+/**
+ * \brief dispose of a transaction view structure.
+ */
+void view_transaction_dispose(void* disp)
+{
+    config_materialized_transaction_type_t* transaction =
+        (config_materialized_transaction_type_t*)disp;
+
+    while (NULL != transaction->field_head)
+    {
+        config_materialized_field_type_t* tmp =
+            (config_materialized_field_type_t*)
+            transaction->field_head->hdr.next;
+        transaction->field_head->hdr.next = NULL;
+        dispose((disposable_t*)transaction->field_head);
+        free(transaction->field_head);
+        transaction->field_head = tmp;
+    }
+}
+
+/**
+ * \brief Add the uuid to a transaction type.
+ */
+static config_materialized_transaction_type_t* view_transaction_add_uuid(
+    config_context_t* UNUSED(context),
+    config_materialized_transaction_type_t* transaction, vpr_uuid* uuid)
+{
+    memcpy(&transaction->transaction_type, uuid, sizeof(vpr_uuid));
+
+    return transaction;
+}
+
+/**
+ * \brief Add crud flags to this transaction type.
+ */
+static config_materialized_transaction_type_t* view_transaction_add_crud(
+    config_context_t* UNUSED(context),
+    config_materialized_transaction_type_t* transaction, int64_t flags)
+{
+    transaction->artifact_crud_flags = (uint32_t)flags;
+
+    return transaction;
+}
+
+/**
+ * \brief Add a field to a transaction type.
+ */
+static config_materialized_transaction_type_t* view_transaction_add_field(
+    config_context_t* context,
+    config_materialized_transaction_type_t* transaction,
+    config_materialized_field_type_t* field)
+{
+    /* scan the list for a field matching this type. */
+    config_materialized_field_type_t* tmp = transaction->field_head;
+    while (NULL != tmp)
+    {
+        if (!memcmp(&tmp->field_code, &field->field_code, sizeof(vpr_uuid)))
+        {
+            CONFIG_ERROR("Duplicate field types.");
+        }
+
+        tmp = (config_materialized_field_type_t*)tmp->hdr.next;
+    }
+
+    /* if there are no duplicates, add this to our list. */
+    field->hdr.next = &transaction->field_head->hdr;
+    transaction->field_head = field;
+
+    return transaction;
+}
+
+/**
+ * \brief Create a new field view structure.
+ */
+static config_materialized_field_type_t* view_field_new(
+    config_context_t* context)
+{
+    config_materialized_field_type_t* ret =
+        (config_materialized_field_type_t*)malloc(
+            sizeof(config_materialized_field_type_t));
+    if (NULL == ret)
+    {
+        CONFIG_ERROR("Out of memory in view_field_new().");
+    }
+
+    memset(ret, 0, sizeof(config_materialized_field_type_t));
+    ret->hdr.hdr.dispose = &view_field_dispose;
+
+    return ret;
+}
+
+/**
+ * \brief dispose of a field view structure.
+ */
+void view_field_dispose(void* UNUSED(disp))
+{
+    /* nothing needs to be done here. */
+}
+
+/**
+ * \brief Add the uuid to a field type.
+ */
+static config_materialized_field_type_t* view_field_add_uuid(
+    config_context_t* UNUSED(context), config_materialized_field_type_t* field,
+    vpr_uuid* uuid)
+{
+    memcpy(&field->field_code, uuid, sizeof(vpr_uuid));
+
+    return field;
 }
 
 /**

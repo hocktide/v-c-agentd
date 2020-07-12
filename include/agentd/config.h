@@ -106,7 +106,7 @@ typedef struct config_materialized_transaction_type
     config_disposable_list_node_t hdr;
     vpr_uuid transaction_type;
     uint32_t artifact_crud_flags;
-    config_materialized_field_type_t* head;
+    config_materialized_field_type_t* field_head;
 } config_materialized_transaction_type_t;
 
 /**
@@ -116,7 +116,7 @@ typedef struct config_materialized_artifact_type
 {
     config_disposable_list_node_t hdr;
     vpr_uuid artifact_type;
-    config_materialized_transaction_type_t* head;
+    config_materialized_transaction_type_t* transaction_head;
 } config_materialized_artifact_type_t;
 
 /**
@@ -126,7 +126,7 @@ typedef struct config_materialized_view
 {
     config_disposable_list_node_t hdr;
     const char* name;
-    config_materialized_artifact_type_t* head;
+    config_materialized_artifact_type_t* artifact_head;
 } config_materialized_view_t;
 
 #define CONFIG_STREAM_TYPE_BOM 0x00
