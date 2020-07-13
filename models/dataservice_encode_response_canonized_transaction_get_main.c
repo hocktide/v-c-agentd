@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
     int retval =
         dataservice_encode_response_canonized_transaction_get(
             &payload, &payload_size, txn_id, prev_id, next_id, artifact_id,
-            block_id, net_state, cert, cert_size);
+            block_id, net_state, true, cert, cert_size);
     if (AGENTD_STATUS_SUCCESS != retval)
         return 0;
 

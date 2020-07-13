@@ -8,7 +8,7 @@
 
 %{
 #include <agentd/config.h>
-#include <config/agentd.tab.h>
+#include "agentd.tab.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <string.h>
@@ -45,16 +45,75 @@ FILE* config_set_input_filedescriptor(
     return IP;
 }
 
+([0-9a-fA-F]){8}[-]([0-9a-fA-F]){4}[-]([0-9a-fA-F]){4}[-]([0-9a-fA-F]){4}[-]([0-9a-fA-F]){12} {
+    /* UUID */
+    memset(&yylval->id, 0, sizeof(yylval->id));
+    if (VPR_STATUS_SUCCESS != vpr_uuid_from_string(&yylval->id, yytext))
+    {
+        return UUID_INVALID;
+    }
+
+    return UUID;
+}
+
 -?([0-9])+ {
     /* a number token */
     yylval->number = atol(yytext);
     return NUMBER;
 }
 
+append {
+    /* append keyword */
+    yylval->string = "append";
+    return APPEND;
+}
+
+artifact {
+    /* artifact keyword */
+    yylval->string = "artifact";
+    return ARTIFACT;
+}
+
 canonization {
     /* canonization keyword */
     yylval->string = "canonization";
     return CANONIZATION;
+}
+
+chroot {
+    /* chroot keyword */
+    yylval->string = "chroot";
+    return CHROOT;
+}
+
+create {
+    /* create keyword */
+    yylval->string = "create";
+    return CREATE;
+}
+
+datastore {
+    /* datastore keyword */
+    yylval->string = "datastore";
+    return DATASTORE;
+}
+
+delete {
+    /* delete keyword */
+    yylval->string = "delete";
+    return DELETE;
+}
+
+field {
+    /* field keyword */
+    yylval->string = "field";
+    return FIELD;
+}
+
+listen {
+    /* listen keyword */
+    yylval->string = "listen";
+    return LISTEN;
 }
 
 logdir {
@@ -69,6 +128,12 @@ loglevel {
     return LOGLEVEL;
 }
 
+materialized {
+    /* materialized keyword */
+    yylval->string = "materialized";
+    return MATERIALIZED;
+}
+
 max {
     /* max keyword */
     yylval->string = "max";
@@ -81,10 +146,22 @@ milliseconds {
     return MILLISECONDS;
 }
 
+rootblock {
+    /* rootblock keyword */
+    yylval->string = "rootblock";
+    return ROOTBLOCK;
+}
+
 secret {
     /* secret keyword */
     yylval->string = "secret";
     return SECRET;
+}
+
+transaction {
+    /* transaction keyword */
+    yylval->string = "transaction";
+    return TRANSACTION;
 }
 
 transactions {
@@ -93,34 +170,28 @@ transactions {
     return TRANSACTIONS;
 }
 
-rootblock {
-    /* rootblock keyword */
-    yylval->string = "rootblock";
-    return ROOTBLOCK;
+type {
+    /* type keyword */
+    yylval->string = "type";
+    return TYPE;
 }
 
-datastore {
-    /* datastore keyword */
-    yylval->string = "datastore";
-    return DATASTORE;
-}
-
-listen {
-    /* listen keyword */
-    yylval->string = "listen";
-    return LISTEN;
-}
-
-chroot {
-    /* chroot keyword */
-    yylval->string = "chroot";
-    return CHROOT;
+update {
+    /* update keyword */
+    yylval->string = "update";
+    return UPDATE;
 }
 
 usergroup {
     /* usergroup keyword */
     yylval->string = "usergroup";
     return USERGROUP;
+}
+
+view {
+    /* view keyword */
+    yylval->string = "view";
+    return VIEW;
 }
 
 [{] {
@@ -133,6 +204,12 @@ usergroup {
     /* rbrace token */
     yylval->string = "}";
     return RBRACE;
+}
+
+[,] {
+    /* comma token */
+    yylval->string = ",";
+    return COMMA;
 }
 
 (([^./[:space:]][^/[:space:]]*)|[.])([/][^./[:space:]][^/[:space:]]*)+ {

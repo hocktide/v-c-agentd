@@ -5,3 +5,15 @@ cscope*
 *.core
 *.gcda
 *.gcno
+
+# don't commit source for subprojects
+subprojects/googletest
+subprojects/libevent
+subprojects/lmdb
+subprojects/vcblockchain
+subprojects/vccert
+subprojects/vccrypt
+subprojects/vcdb
+subprojects/vcmodel
+subprojects/vpr
+

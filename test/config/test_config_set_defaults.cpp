@@ -14,8 +14,8 @@
 #include <vpr/disposable.h>
 
 extern "C" {
-#include <config/agentd.tab.h>
-#include <config/agentd.yy.h>
+#include "agentd.tab.h"
+#include "agentd.yy.h"
 }
 
 using namespace std;
@@ -98,7 +98,7 @@ TEST(config_set_defaults_test, empty_config)
     /* initialize bootstrap config. */
     bootstrap_config_init(&bconf);
     bconf.prefix_dir = strdup("build/isolation");
-    system("mkdir -p build/isolation");
+    ASSERT_EQ(0, system("mkdir -p build/isolation"));
 
     /* PRECONDITIONS: all config values are unset. */
     ASSERT_EQ(nullptr, user_context.config->logdir);
@@ -111,6 +111,7 @@ TEST(config_set_defaults_test, empty_config)
     ASSERT_EQ(nullptr, user_context.config->listen_head);
     ASSERT_EQ(nullptr, user_context.config->chroot);
     ASSERT_EQ(nullptr, user_context.config->usergroup);
+    ASSERT_EQ(nullptr, user_context.config->view_head);
 
     /* set the defaults for this config. */
     ASSERT_EQ(0, config_set_defaults(user_context.config, &bconf));
@@ -131,6 +132,7 @@ TEST(config_set_defaults_test, empty_config)
     ASSERT_NE(nullptr, user_context.config->usergroup);
     ASSERT_STREQ("veloagent", user_context.config->usergroup->user);
     ASSERT_STREQ("veloagent", user_context.config->usergroup->group);
+    ASSERT_EQ(nullptr, user_context.config->view_head);
 
     /* clean up. */
     dispose((disposable_t*)&user_context);

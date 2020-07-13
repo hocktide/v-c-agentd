@@ -54,6 +54,16 @@ int directory_test_helper::createDirectoryName(uint64_t arg, string& dname)
         return retval;
     }
 
+    /* delete the old directory if it already exists. */
+    string rmcmd("rm -rf ");
+    rmcmd += dname;
+
+    retval = system(rmcmd.c_str());
+    if (retval != 0)
+    {
+        return retval;
+    }
+
     /* create the command to set the directory path. */
     string cmd("mkdir -p ");
     cmd += dname;

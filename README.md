@@ -8,38 +8,48 @@ Building
 --------
 
 Building this project requires that the Velo Toolchain has been successfully
-installed, and that this either exists in the default installation location, or
-that `TOOLCHAIN_DIR` is specified, pointing to this location.
+installed and that the tools are in the current path.  Additionally, both
+[Meson][meson] and [ninja][ninja] are required.
 
-To build, run the following command:
+[meson]: https://mesonbuild.com/
+[ninja]: https://ninja-build.org/
 
-    make
+To build, first clone this project.
 
-By default, this runs a single-threaded build.  The jobs parameter can be set to
-the number of cores on the build machine to parallelize the build.  For
-instance, to build using 8 cores:
+    git clone git@github.com:VeloPayments/v-c-agentd
 
-    make -j8
+Alternatively, use https://github.com/VeloPayments/v-c-agentd as the remote.
+
+Create a build directory in the root of this tree and cd into it.
+
+    cd v-c-agentd
+    mkdir build
+    cd build
+
+Run Meson:
+
+    meson ..
+
+Run ninja to perform the build:
+
+    ninja
 
 Testing
 -------
 
 To run the unit testing suite, run the following command:
 
-    make test
+    ninja test
 
 To run the model checking suite, run the following command:
 
-    make model-check
+    ninja model-check
 
 Installation
 ------------
 
-To install `agentd`, the command `make install` should be run as root.  By
-default, `agentd` will be installed to `/opt/velo-blockchain`.  This can be
-overridden using the `PREFIX` environment variable.
-
-    make install
+A tarball, called `agentd-version.tar.xz`, will be created in the build
+directory.  This can be installed by untarring it in an appropriate location.
 
 By default, an example root blockchain and simple secrets will be used.  These
 are _not secure_, but can be used to demonstrate that the blockchain agent is
@@ -49,7 +59,7 @@ Additionally, `agentd` is set up with a default configuration file that points
 to secrets and a data store created in the install prefix.  The `agentd` service
 boots as root and chroots child processes under this prefix by default.  All of
 this can be controlled via `agentd.config`, which is installed by default in
-`/opt/velo-blockchain/etc`.
+`etc`.
 
 Configuration
 -------------
